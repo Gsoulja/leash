@@ -1,557 +1,540 @@
 # Agent on a Leash — Technical details
 
-This document describes the technical material available to participants: the
-synthetic data pack, the sandbox API, the event protocol, and the local usage
-flow. It defines the interface to build against; it does not prescribe a
-policy, model, user interface, or decision strategy, and it contains no
-expected decisions or reference solution.
+You are building a solution that keeps a customer in control when an AI shopping
+agent wants to spend their money.
 
-## What you receive
+**Your solution can use an AI model, a decision layer, rules, or a combination.**
+For example, a model could understand customer instructions, assess unusual
+activity, or detect misleading shop text. You choose how the solution works.
+The challenge brief explicitly welcomes machine learning, language models,
+behavioral signals, rules, and interface design.
 
-The challenge environment provides:
+Whatever approach you choose, your prototype has two jobs:
 
-- A REST API for synthetic cardholder profiles, mandates, scenario runs, and
-  authorization decisions.
-- A versioned synthetic data pack in [`data/`](data/), including catalogues,
-  historical authorizations, scenario fixtures, examples, and JSON Schemas.
-- Five public scenarios, each with one cardholder, one card, a
-  natural-language instruction, and an ordered sequence of purchase attempts
-  with cart lines and session signals. Together they deliver 45 actionable
-  decision requests. Across the scenario set, the attempts include ordinary,
-  ambiguous, unsafe, and manipulated cases, so neither a scenario label nor an
-  event's position in the sequence determines the right control action.
-  Depending on the policy and evidence, an attempt may reasonably be approved,
-  declined, or paused for human confirmation; the judging approach is described in
-  [`challenge_public.md`](challenge_public.md#judging-criteria).
-- Machine-readable JSON Schema contracts for the data pack, the historical
-  file, and the live authorization request.
-- No managed LLM is part of the sandbox contract. You may use your own model
-  or provider, but your solution must not depend on organizer-hosted model
-  access, network availability, or credentials that are not explicitly
-  supplied by the organizers.
+1. **Let the customer control what is allowed.** Help them explain their wishes,
+   review the permissions your system understands, and confirm, tighten, or
+   revoke them (withdraw permission).
+2. **Decide whether each purchase should go ahead.** Consider those permissions,
+   the purchase facts, and relevant past activity. Explain the result and
+   remember earlier decisions when they affect the next purchase.
 
-The sandbox is a simulation. It has no connection to real cards, accounts,
-payment networks, Viseca systems, credentials, customer data, or real money.
-Teams may build a web application, service, notebook, command-line worker, or
-another prototype that uses only the parts of the interface useful to their
-idea.
+The API calls the customer's spending permissions a **wallet policy**. This is
+one input to your solution; it does not prescribe the technology you must build.
+An AI-based solution still needs to respect the customer's confirmed limits
+and support the decisions below.
 
-## Before the API opens
+| Your decision | What it means |
+| --- | --- |
+| `approve` | Allow this purchase. |
+| `decline` | Stop this purchase. |
+| `step_up` | Pause this purchase and ask the customer to approve or decline it. |
 
-The sandbox API is live at:
+The customer controls those permissions. The shopping agent and the shop cannot
+change them. The supplied simulator provides the shopping agent's proposed
+purchases; your solution provides the independent trust and control layer.
 
 ```text
-https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io
+Customer describes what is allowed → Your solution explains → Customer confirms
+                                                                  ↓
+Simulator proposes a purchase → Your solution considers permissions and evidence
+                                      ├── approve or decline → Record the result
+                                      └── ask the customer
+                                              ↓
+                                      Human approves or declines → Record the result
+
 ```
 
-Each team receives its own **team API key on the day of the event**; keys are
-never published in this repository. Until then the authenticated endpoints are
-not callable — and you do not need them, because the 45 public attempts are the
-same fixtures the API delivers. You can develop and replay the complete flow
-offline.
+Everything is synthetic: there are no real cards, customers, payments, or money.
+You can use any language, framework, database, or model. No model is hosted for
+you. If you use a model, your app must still give a predictable response when
+the model or another external service is unavailable.
 
-There is no server to run. The sandbox implementation is private and is
-operated by the organizers, so there is no command to start an API from a clone
-of this repository. On the day, point `LEASH_BASE_URL` at the URL above and use
-the API key you were given.
+## Where to begin
 
-What you can do before that:
+**On the event day:** connect your app to the hosted API and test the full flow.
+An API lets your app exchange requests and responses with the simulator.
+There is no local API server to install or start.
 
-- **Compile the instructions.** The five `cardholder_instruction` values in
-  `scenario_catalogue.csv` are the heart of the problem. Turning natural
-  language into something you can enforce needs no API at all.
-- **Study the behaviour.** `authorization_history.csv` holds 4,701 historical
-  authorizations for the same cardholders, with familiarity, velocity, and
-  spending context already joined.
-- **Build your parser.**
-  [`data/scenario_fixtures/example_authorization_request.json`](data/scenario_fixtures/example_authorization_request.json)
-  is a neutral, complete `authorization.request` and shows the exact shape your
-  engine must accept. It is not a scenario attempt. Validate it against
-  [`data/schemas/authorization_event.schema.json`](data/schemas/authorization_event.schema.json)
-  with any JSON Schema library.
-- **Replay the scenarios offline.** Join `purchase_attempts.csv` to
-  `purchase_attempt_items.csv` and `merchants.csv`, emit the rows in
-  `replay_order`, and you have the same 45 events the API will deliver in a
-  public development run. Watch the types: the CSV gives you strings, and the
-  event schema wants numbers and integers. `spend_in_period_before_chf` is
-  empty in the public CSV and null in the event. `delivery_by` and
-  `related_authorization_*` are optional, but some public attempts populate
-  them. `recent_attempt_count_10m` is the count of earlier attempts in the
-  same scenario whose simulated timestamp is within the preceding ten minutes;
-  the interval includes the ten-minute boundary and excludes the current
-  attempt. It counts attempts regardless of their eventual decision.
+This guide explains how to get started, understand the provided data, and use the API to build and test your solution.
 
-`purchase_attempts.csv` is the single source of runtime attempts: all 45
-events, including SCEN0000's, come from that file.
-`scenario_fixtures/connection_check.json` is a read-only copy of row `AU0001`
-for inspection, not a second event. A participant solution may communicate with
-the documented API using any HTTP client and may use the public CSV and JSON
-files directly.
+## 1. Choose a scenario
 
-## Public data pack
+A **scenario** is one test story: one customer, one card, one instruction, and
+an ordered set of proposed purchases. A **run** is one execution of that story.
 
-The full file-by-file explanation is in [`data/README.md`](data/README.md), and
-field definitions, units, null values, joins, chronology, and provenance are in
-[`data/data_dictionary.md`](data/data_dictionary.md).
+The pack contains **five scenarios with 45 purchases in total**. Start with
+`SCEN0000`, the one-purchase connection check. See the
+[scenario overview](data/README.md#the-five-public-scenarios) for the other topics
+and purchase counts. Read the selected scenario's exact `cardholder_instruction`
+in [data/scenario_catalogue.csv](data/scenario_catalogue.csv).
 
-| File | Contents | Typical use |
-| --- | --- | --- |
-| `customers.csv` | 20 fictional customer personas | Optional customer context |
-| `accounts.csv` | 31 synthetic accounts | Join account and customer context |
-| `cards.csv` | 41 synthetic cards and statuses | Card capability and lifecycle context |
-| `merchants.csv` | 58 fictional merchants, MCCs, countries, and categories | Merchant context and familiarity |
-| `items.csv` | 66 fictional items and CHF price ranges | Cart and item context |
-| `fx_rates.csv` | Four fixed synthetic conversion rates | Convert supported currencies to CHF |
-| `authorization_history.csv` | 4,701 historical authorizations | Optional behavioural or familiarity features |
-| `scenario_catalogue.csv` | Scenario instructions and metadata | Select a scenario and read its raw intent |
-| `scenario_authorities.csv` | One fixture identity per scenario | Connect a scenario to its synthetic customer and card |
-| `purchase_attempts.csv` | 45 ordered runtime attempts | Offline scenario development |
-| `purchase_attempt_items.csv` | Cart lines for the runtime attempts | Offline cart analysis |
-| `scenario_fixtures/connection_check.json` | Authoring fixture behind the SCEN0000 connection check | Read the SCEN0000 attempt offline |
-| `scenario_fixtures/example_authorization_request.json` | One complete `authorization.request`, schema-valid | Validate an event parser offline |
-| `schemas/` | Machine-readable data and event contracts | Validate files and requests |
+There are no expected-decision labels or answer keys. Decide from the customer's
+policy and the purchase facts. Do not look up an outcome using a scenario name,
+ID, description, or position in the sequence. Unfamiliar purchases are not
+automatically wrong; blocking ordinary shopping unnecessarily is also a failure.
 
-The simple path needs `scenario_catalogue.csv` and the authorization events
-delivered by the API. The other tables are optional context. For a customer
-join, use:
+## 2. Understand what the customer allows
 
-```text
-authorization_history.card_id
-  -> cards.card_id
-  -> accounts.account_id
-  -> customers.customer_id
+For this challenge, the scenario instruction is the customer's input to your
+solution. Keep its exact original wording when sending it to the API.
+Your solution turns that input into permissions it can apply. You can use
+natural-language understanding, a form, rules, or a combination to do this.
+
+The connection-check instruction is:
+
+> Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.
+
+Your app needs to check the amount, what is being bought, and the shop's
+familiarity. It also needs a clear way to handle uncertainty.
+
+A **mandate** is the API's record of the customer's instructions and permissions.
+It starts as a draft and becomes active after the customer confirms it. The API
+stores the mandate; your solution interprets it and makes the purchase decisions.
+
+For example, the price part could be written as:
+
+```json
+{
+  "field": "authorization.billing_amount_chf",
+  "operator": "<=",
+  "value": 20,
+  "currency": "CHF",
+  "scope": "purchase"
+}
 ```
 
-For merchant context, join `authorization_history.merchant_id` to
-`merchants.merchant_id` — on the identifier, never on `merchant_name`, because
-at least one pair of merchants has deliberately similar names. Historical
-`status` is an observed authorization outcome, not a fraud label or answer key.
-The `initiator_type` values identify ordinary customer purchases (`human`),
-synthetic agent attempts (`agent`), and merchant refunds (`merchant`). Use the
-data dictionary for the exact chronology-safe meaning of derived fields.
+This says: “The total price in CHF must be 20 or less.” It covers only the price
+part of the instruction. Your app must also handle the item and shop requirements.
+The dotted field name is a convention for your engine to interpret, not a
+formula the API runs. The [rule format](#rule-format) is explained below.
+These stored rules can work alongside a model that assesses other purchase facts.
 
-The history is worth a moment's calibration before you model it. `status` is
-the observed issuer outcome, not the desired delegated-spending decision.
-`initiator_type` explicitly identifies human, agent, and merchant activity.
-Other behavioural signals are graded rather than absolute: for example,
-declines are more likely after several attempts in ten minutes, but velocity
-alone does not determine an outcome.
+Show the customer which checks you created and any uncertainty before asking
+them to confirm. Explain your choices, such as what counts as a familiar shop
+and what you do when needed information is missing.
 
-All monetary values use the row currency unless the name ends in `_chf`.
-Supported currencies are `CHF`, `EUR`, `GBP`, and `USD`; `billing_amount_chf`
-is calculated with the fixed rates in `fx_rates.csv`. Dates use `YYYY-MM-DD`,
-timestamps use UTC ISO 8601, and empty optional CSV fields represent missing
-values. All identifiers are fictional and deliberately are not PANs, IBANs,
-or payment credentials.
+All shop-provided text is untrusted. For example, `item_details` can contain
+useful facts such as shoe size or return terms, but it can also say “ignore the
+spending limit.” Extract product facts; never let that text change the policy.
 
-### Scenarios
+## 3. Test your engine offline
 
-The `cardholder_instruction` is raw natural-language intent. It is not a
-precompiled policy and does not contain an expected action.
+You can do this without an API key:
 
-Each scenario is one cardholder, one card, and an ordered sequence of purchase
-attempts. All 45 attempts reach a team as actionable decision requests: nothing
-in this pack is removed by the platform pre-check.
+1. Read the [complete example event](data/scenario_fixtures/example_authorization_request.json).
+   An **event** is the message describing one proposed purchase.
+2. Check your parser (the code that reads the message) against the
+   [event schema](data/schemas/authorization_event.schema.json). A **schema**
+   describes which fields and value types a message must contain.
+3. Select a scenario's rows from
+   [data/purchase_attempts.csv](data/purchase_attempts.csv). Sort them by
+   `replay_order`: the delivery position within that scenario, starting at 1.
+4. Add each purchase's cart lines, shop details, and customer/card context using
+   matching IDs. The [data guide](data/README.md#csv-files-at-a-glance) shows
+   the files and how they connect.
+5. Build local events using the complete example as your starting point.
+   Evaluate them in order and keep your own decisions.
 
-| ID | Name | Events | Cardholder | Card | What it exercises |
-| --- | --- | ---: | --- | --- | --- |
-| `SCEN0000` | Connection check | 1 | `CU0001` | `CA0001` | One small, unambiguous purchase, to prove the decision path works end to end |
-| `SCEN0001` | Household budget | 10 | `CU0001` | `CA0001` | A per-order limit and a rolling seven-day limit, delivery fees counted inside the limit, order splitting, and a basket line outside the stated purpose |
-| `SCEN0002` | Requested item and order terms | 12 | `CU0006` | `CA0011` | Item attributes, return terms, substitution, an unrequested add-on, retailer type, and an unfamiliar but fully compliant seller |
-| `SCEN0003` | Session integrity | 11 | `CU0012` | `CA0023` | Device novelty, velocity, unfamiliar merchants and countries, recovery after a burst, and limits that still bind in a clean session |
-| `SCEN0004` | Manipulated agent | 11 | `CU0019` | `CA0039` | Instructions embedded in merchant-supplied text, a lookalike seller, a duplicate order, an unrequested add-on, a cart that contradicts the stated purchase, and a legitimate re-quote |
-| **Total** | | **45** | | | |
+The complete example is for testing your parser; it is not a scenario answer.
+The separate
+[connection-check fixture](data/scenario_fixtures/connection_check.json)
+is a readable copy of purchase `AU0001`, not an extra purchase or a complete
+live event.
 
-The `event_count` column in `scenario_catalogue.csv` matches these counts, and
-every event has a row in `purchase_attempts.csv`. `SCEN0000`'s attempt is
-`AU0001`, and `scenario_fixtures/connection_check.json` is the same attempt in
-authoring-fixture form rather than an extra event.
+When turning CSV rows into events, convert amounts and counts to numbers,
+keep string fields as strings, and use `null` for empty nullable fields.
+Add the nested shop and item objects, your mandate, context from your decisions,
+and consistent local IDs. Preserve simulated purchase times, but assign fresh
+real-clock deadlines. The [message guide](#understand-the-purchase-message)
+explains the required types and IDs.
 
-The 45 public attempts are a repeatable exercise set designed to explore many
-combinations of intent, purchase facts, order terms, history, and session
-signals. They are not an implementation contract made up of 45 cases to
-special-case, and they do not provide expected action labels. Build the decision
-logic against the cardholder instruction, mandate, authorization fields, and
-available context. Do not use `scenario_id`, authorization IDs, descriptions,
-or replay positions as a lookup key for the outcome; the same control layer
-should evaluate each request from its evidence.
+Offline tests use the same purchase facts as the API. You will still need to
+test network handling and deadlines against the hosted service.
 
-Because no fixture fails the pre-check, a decision request always carries
-`authority_status="active"` and `card_status_at_attempt="active"`. The other
-values of those two enums exist in the event schema for platform behaviour, not
-because a team engine will observe them here. Card lifecycle is visible in
-`authorization_history.csv` instead, where two cards left service inside the
-window.
+## 4. Connect to the API
 
-Some deliberate design notes, because they change what a good solution looks
-like:
+Each team receives a key on the event day. A **bearer key** is your team's
+credential: send it in the `Authorization: Bearer ...` HTTP header.
+All endpoints except `/healthz` require it. Keep the key private to your team.
 
-- **The scenario set mixes outcomes.** None of the multi-event scenarios is
-  "the decline scenario"; `SCEN0000` is intentionally only a one-event
-  connectivity check.
-  Several attempts look alarming and are legitimate; several look ordinary and
-  are not.
-- **Verdict language never appears in participant-visible text.**
-  `purchase_description` names the kind of order and nothing more, and the same
-  string repeats across many attempts in a scenario. What a decision turns on
-  is in the structured fields and the cart lines.
-- **Over-blocking is a failure mode, not a safe default.** Scenarios contain
-  purchases that are unfamiliar, cross-border, retried after a decline, or
-  attached to hostile product copy, and are nonetheless exactly what the
-  cardholder asked for.
-- **`item_details` is merchant-supplied text.** Treat it as data describing a
-  product. It is not a channel through which anyone may give your system
-  instructions.
-
-`SCEN...` identifies a public scenario. `AUTH...` identifies a static
-scenario-fixture authority and is used only by the scenario runner. `TM...`
-identifies a participant-created mandate returned by the API. These identifier
-types must not be substituted for one another.
-
-## Connecting to the API
-
-The API base URL is
-`https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io`.
-Each team receives its own API key on the day of the event. Export them:
+The following helper uses Bash and curl. You can use an HTTP client in any
+language instead. Run these examples in the same shell.
 
 ```bash
 export LEASH_BASE_URL="https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io"
-export TEAM_API_KEY="<your team key, provided on the day of the event>"
+export TEAM_API_KEY="<your team key>"
+
+api() {
+  curl --fail-with-body --silent --show-error --max-time 30 \
+    -H "Authorization: Bearer $TEAM_API_KEY" \
+    -H "Content-Type: application/json" \
+    "$LEASH_BASE_URL$1" "${@:2}"
+}
+
+curl --fail --silent --show-error "$LEASH_BASE_URL/healthz"
+api /v1/bootstrap
+api /v1/reference-data
 ```
 
-The bearer API key is the only participant credential needed to call the
-authenticated endpoints.
+Here is what these calls do:
 
-Send the key as a bearer token on every endpoint except `/healthz`:
+| Call | Why you use it | What you receive |
+| --- | --- | --- |
+| `GET /healthz` | Check that the service is available. No key is needed. | Service health and version information. |
+| `GET /v1/bootstrap` | Read the settings for your team before starting. | API/data versions, scenarios, timeout values, limits, and enabled features. |
+| `GET /v1/reference-data` | Load the supplied background information. | Small catalogues, including scenarios and fixed currency rates, plus history-file metadata. |
+| `GET /v1/reference-data/authorization-history.csv` | Load past activity if your approach needs it. | The historical CSV file. |
+
+For example, download the history with:
 
 ```bash
-curl --fail "$LEASH_BASE_URL/healthz"
-curl --fail \
-  -H "Authorization: Bearer $TEAM_API_KEY" \
-  "$LEASH_BASE_URL/v1/bootstrap"
+api /v1/reference-data/authorization-history.csv -o authorization-history.csv
 ```
 
-The API returns JSON errors in an `error` envelope. The API contract version is
-reported by `/v1/bootstrap`. Use it to read the versions, available scenarios,
-timeout values, and enabled features instead of hard-coding them. The supported
-currencies and fixed FX rates are returned by `/v1/reference-data`.
+API errors are returned as JSON under `error`. Check the HTTP status before
+treating a response as a successful result.
 
-## API surface
+## 5. Create and confirm the mandate
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/healthz` | Unauthenticated health and version check |
-| `GET` | `/v1/bootstrap` | Team, API/data versions, profile, scenarios, limits, and features |
-| `GET` | `/v1/reference-data` | Public catalogues and historical-file metadata |
-| `GET` | `/v1/reference-data/authorization-history.csv` | Download the canonical historical CSV |
-| `POST` | `/v1/mandates` | Store a participant-produced mandate draft |
-| `POST` | `/v1/mandates/{draft_id}/confirm` | Confirm a draft and activate the mandate |
-| `GET` | `/v1/mandates/{mandate_id}` | Read a mandate |
-| `PATCH` | `/v1/mandates/{mandate_id}` | Preserve or tighten the active mandate |
-| `DELETE` | `/v1/mandates/{mandate_id}` | Revoke a mandate |
-| `POST` | `/v1/scenario-runs` | Start one public scenario |
-| `GET` | `/v1/scenario-runs/{run_id}` | Read run progress and counters |
-| `GET` | `/v1/decision-requests/next?wait=25` | Long-poll the next actionable authorization |
-| `POST` | `/v1/authorizations/{authorization_id}/decision` | Submit `approve`, `decline`, or `step_up` |
-| `POST` | `/v1/authorizations/{authorization_id}/resolve` | Resolve a pending human step-up with `approve` or `decline` |
-| `GET` | `/v1/authorizations` | Read finalized and pending runtime authorizations |
-| `GET` | `/v1/events?since=0` | Read the append-only event feed using a cursor |
-| `POST` | `/v1/team/reset` | Reset the local team's mandates, runs, decisions, and cursor |
+This request demonstrates how to submit the price rule from step 2. Complete
+your app's handling of the full instruction before using it as a finished policy.
+`hard_rules` holds your checks, and `uncertainty_policy` says how to handle
+uncertainty. `guidance` and `open_questions` hold explanatory text and questions
+for the customer; they can be empty lists (`[]`).
+`uncertainty_policy` accepts `ask`, `decline`, or `approve`; your solution must
+explain and apply the customer's choice.
 
-## End-to-end protocol
-
-### 1. Read the supplied context
-
-Call `/v1/bootstrap` and `/v1/reference-data`. The reference response exposes
-the scenario catalogue and small catalogues as JSON. Download the history only
-if your prototype needs it; runtime purchase attempts are delivered through
-scenario runs and are also available in the public fixture files for offline
-development.
-
-### 2. Create a participant mandate
-
-Your system owns the interpretation of the cardholder's natural-language
-instruction. The sandbox does not turn text into rules. Submit the original
-instruction together with the structured fields your prototype wants the
-cardholder to review:
-
-```json
-{
-  "instruction": "<cardholder instruction>",
-  "hard_rules": [],
+```bash
+api /v1/mandates -X POST -d '{
+  "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+  "hard_rules": [
+    {
+      "field": "authorization.billing_amount_chf",
+      "operator": "<=",
+      "value": 20,
+      "currency": "CHF",
+      "scope": "purchase"
+    }
+  ],
   "uncertainty_policy": "ask",
-  "guidance": ["<human-readable guidance>"],
-  "open_questions": ["<question that still needs a human answer>"]
-}
+  "guidance": [],
+  "open_questions": []
+}'
 ```
 
-`POST /v1/mandates` returns a `draft_id` and echoes the submitted content. A
-draft is not active until the cardholder confirms it:
+The response contains `draft_id` and the submitted content. Show the policy to
+the customer. **Only after they agree**, confirm the draft:
 
-```json
-{"confirmed": true}
+```bash
+DRAFT_ID="<draft_id from the response>"
+api "/v1/mandates/$DRAFT_ID/confirm" -X POST -d '{"confirmed":true}'
 ```
 
-Send that body to `POST /v1/mandates/{draft_id}/confirm`. The response contains
-the active `mandate_id`; use that ID when starting a scenario. The supported
-uncertainty policies are `ask`, `decline`, and `approve`.
+The confirmation response contains `mandate_id`. Save that returned value:
 
-The mandate-rule format is deliberately small:
+```bash
+MANDATE_ID="<mandate_id from the confirmation response>"
+```
 
-| Field | Meaning |
+Do not submit customer, card, or profile IDs when creating a mandate. The
+platform assigns them when the run starts. A profile ID is a platform
+identifier for the context used in the run.
+
+## 6. Prepare your worker, then start a run
+
+A **worker** is the part of your app that keeps receiving and answering requests
+automatically. Have it ready before starting a run: the default decision deadline
+is **8 seconds from when a request is queued**, including time before delivery.
+Manually reading a request and typing a decision can take too long.
+
+Your worker asks for the next request with:
+
+```bash
+api '/v1/decision-requests/next?wait=25'
+```
+
+This is **long-polling**: the server holds the request for up to 25 seconds and
+returns early when a purchase is available.
+
+| Response | What your worker does |
 | --- | --- |
-| `field` | Field name from the authorization or context |
-| `operator` | One of `<`, `<=`, `=`, `!=`, `>`, `>=`, `in`, `not_in` |
-| `value` | Integer, number, string, or list of strings |
-| `currency` | Optional `CHF`, `EUR`, `GBP`, or `USD` qualifier |
-| `scope` | Optional `purchase` or `period` |
-| `period_days` | Optional positive period length for a period rule |
+| HTTP `200` | Read the purchase event inside the response's `data` field. |
+| HTTP `204` | There is no body to parse. Check run progress and poll again while work remains. |
 
-The API stores the submitted mandate unchanged and repeats its decision-bearing
-content in every live event. It does not judge whether a team's rules are good;
-that is part of the challenge.
+`204` does not mean the run has finished. The 25-second polling wait is also
+separate from the purchase's decision deadline.
 
-`PATCH /v1/mandates/{mandate_id}` accepts only an active mandate. Omitted fields
-are preserved. If `hard_rules` is supplied, it must preserve every existing
-rule and may add rules; rules cannot be removed or replaced. The
-`uncertainty_policy` may only be tightened from `approve` or `ask` to `decline`.
-`guidance` and `open_questions` are replaced when supplied and are explanatory
-metadata rather than enforced decision rules. A run keeps the mandate snapshot
-captured at its start; patches apply to later runs.
+The outer response is called an **envelope**. Keep its `run_id` to identify the
+run. The API calls a proposed purchase an **authorization**. Validate the
+envelope's `data` against the event schema. Use
+`data.authorization.authorization_id` as the live purchase ID.
+See [what the message contains](#understand-the-purchase-message).
 
-For every API scenario run, the submitted `instruction` must exactly match the
-original `cardholder_instruction` for the selected scenario. The sandbox rejects
-a changed or empty instruction; teams may structure the policy, but may not
-replace the cardholder's intent.
+Once the worker is ready, start the connection check:
 
-Two fields behave differently from the rest. `guidance` and `open_questions`
-are stored on the mandate resource and are returned by
-`GET /v1/mandates/{mandate_id}`, but they are **not** carried on the live
-event: the `mandate` object in an `authorization.request` is restricted by
-`authorization_event.schema.json` to `mandate_id`, `status`,
-`customer_id`, `card_id`, `instruction`, `hard_rules`, `uncertainty_policy`,
-and `profile_id`. Read them back from the mandate resource if your prototype
-needs them at decision time.
-
-The last three identity fields are assigned by the platform, not submitted by
-you. `POST /v1/mandates` carries no identity, because a mandate is bound to a
-scenario only when a run starts. Each scenario has exactly one authority, one
-customer, and one card, so these three values are constant for a whole run and
-equal `authorization.card_id` and `authorization.profile_id` on every event of
-that run. A hard rule scoped to the mandate's card is therefore well defined
-for the entire run.
-
-### 3. Start a scenario
-
-```json
+```bash
+api /v1/scenario-runs -X POST --data-binary @- <<EOF
 {
   "scenario_id": "SCEN0000",
-  "mandate_id": "TM..."
+  "mandate_id": "$MANDATE_ID"
 }
+EOF
 ```
 
-Send this to `POST /v1/scenario-runs`. The run response includes a `run_id`,
-the selected scenario, the bound mandate ID, fixture profiles, and event
-counters. The complete mandate resource remains available from
-`GET /v1/mandates/{mandate_id}`; each live authorization event includes the
-decision-bearing mandate snapshot described above. A run requires an active
-mandate. Each run emits its attempts in the
-one-based `replay_order` defined by the scenario catalogue. The mandate is
-snapshotted when the run starts, so later mandate patches affect new runs, not
-events already belonging to this run.
+The response includes `run_id`, the selected scenario, the bound mandate,
+fixture profiles, and event counters. Save `run_id` to check progress later.
+A run uses a **snapshot**: the copy of the mandate taken when that run starts.
 
-### 4. Poll for authorization requests
-
-Call:
+This is the worker's outline, not runnable code:
 
 ```text
-GET /v1/decision-requests/next?wait=25
+While the run has work remaining:
+    Poll for a request.
+    If the response is 204, check progress and continue.
+    If the response is an error, handle it before reading purchase data.
+    Read the envelope's run ID and validate its data event.
+    If this live purchase ID was already handled, reconcile its saved result.
+    Otherwise, evaluate the policy and submit a decision before deadline_at.
+    Record the result accepted by the API.
+    If it needs a human answer, show it in the customer interface.
+    Keep receiving requests while the interface waits for the customer.
+
+Separately, when the customer answers:
+    Submit their answer through /resolve and record the accepted result.
 ```
 
-The server may hold the ordinary HTTPS request for up to 25 seconds. A pending
-request returns HTTP `200` with an envelope. The schema-valid
-`authorization.request` event is in the envelope's `data` field. If nothing is
-actionable before the wait expires, it returns HTTP `204` with no body. The
-default decision deadline is eight seconds from event generation. The
-deadline is assigned when the next attempt is queued, so a request that waits
-undelivered past its deadline is declined before delivery. Use
-`data.deadline_at` and the values reported by `/v1/bootstrap` as the runtime
-contract.
+## 7. Send a decision and handle the human answer
 
-The successful response has this shape (the `data` event is abbreviated here):
+Send your engine's result to:
+
+```text
+POST /v1/authorizations/{authorization_id}/decision
+```
+
+Use the live ID in both the URL and body. Here is the request format for a
+purchase that your engine has decided needs customer confirmation:
 
 ```json
 {
-  "event_id": 1,
-  "type": "authorization.request",
-  "run_id": "RUN_...",
-  "authorization_id": "AU...",
-  "status": "awaiting_decision",
-  "occurred_at": "2026-08-12T09:00:00Z",
-  "data": {
-    "type": "authorization.request",
-    "request_id": "req_...",
-    "deadline_at": "2026-08-12T09:00:08Z",
-    "authorization": {
-      "authorization_id": "AU...",
-      "source_authorization_id": "AU...",
-      "scenario_id": "SCEN0000",
-      "replay_order": 1,
-      "mandate_id": "TM...",
-      "profile_id": "PROFILE_...",
-      "card_id": "CA...",
-      "initiator_type": "agent",
-      "merchant": {"merchant_id": "ME...", "merchant_category": "..."},
-      "amount": 20.0,
-      "currency": "CHF",
-      "billing_amount_chf": 20.0,
-      "channel": "ecommerce",
-      "customer_device_id": "DV...",
-      "authority_status": "active",
-      "card_status_at_attempt": "active",
-      "items": []
-    },
-    "mandate": {"mandate_id": "TM...", "hard_rules": [], "instruction": "..."},
-    "context": {"approved_spend_in_period_chf": 0.0, "recent_authorizations": []},
-    "runtime": {"received_at": "...", "history_window_minutes": 10}
-  }
+  "authorization_id": "<live authorization ID>",
+  "decision": "step_up",
+  "reason_codes": ["customer_confirmation"],
+  "customer_message": "Please review this purchase."
 }
 ```
 
-The example above is abbreviated: it shortens the `merchant` object and omits
-`runtime.context_basis` and several required authorization fields. The envelope
-itself is not an `authorization.request` event; validate its `data` value against
-the event schema. For a complete, schema-valid request use
-[`data/scenario_fixtures/example_authorization_request.json`](data/scenario_fixtures/example_authorization_request.json),
-and validate against the versioned schema in
-[`data/schemas/authorization_event.schema.json`](data/schemas/authorization_event.schema.json).
-The complete authorization includes merchant fields, cart lines, currency and
-CHF amounts, fulfilment and order terms, lifecycle status, related-transaction
-fields, recent attempts, and the active mandate.
+Only `authorization_id` and `decision` are required. Your engine chooses
+`approve`, `decline`, or `step_up` from the policy and evidence. The example
+does not prescribe a decision for the connection check.
+You can also send `reason_codes`, `customer_message`, `evidence` (facts supporting
+the result), and `engine_version` (your solution's version) to explain the decision.
 
-An event carries two different spend counters, and they answer different
-questions:
+`step_up` pauses the purchase; it does not approve it. Show the reason and
+purchase details to the real customer. If they choose to approve, send:
 
-| Field | Meaning |
-| --- | --- |
-| `authorization.spend_in_period_before_chf` | The fixture's authored value, taken from `purchase_attempts.csv`. It is **`null` on every attempt in this pack**: period tracking is deliberately left to you, because carrying a running total across a sequence of your own decisions is part of what the challenge tests. |
-| `context.approved_spend_in_period_chf` | The live value, recomputed by the platform from the decisions actually taken in this run, as recorded by `runtime.context_basis="run_decisions_and_scenario_timestamps"`. |
-| `authorization.recent_attempt_count_10m` | The number of earlier attempts generated in this run whose simulated timestamp satisfies `current timestamp - 10 minutes <= timestamp < current timestamp`. It counts attempts irrespective of whether they were approved, declined, timed out, or platform-rejected. |
-
-Use `context.approved_spend_in_period_chf`, or your own running total, to
-evaluate a cumulative or period rule. A stepped-up authorization is paused
-rather than approved and does not enter approved spend until it is resolved.
-For an `N`-day rolling window, include final approvals whose simulated
-timestamps satisfy `current timestamp - N days <= timestamp < current
-timestamp`; compare timestamps in UTC.
-
-SCEN0001 is built around this. Its instruction caps spending "across any seven
-days", which is a window that rolls. A late order may fit after earlier
-over-limit attempts were declined and older approved orders have aged out of
-the window. If a policy approves every preceding attempt, the same late order
-will not fit. The platform counter is therefore based on the approvals your
-team actually finalizes, not on a fixed answer encoded in the fixture; a
-solution that instead sums every approved order since the run began can decline
-a grocery delivery whose older approvals have legitimately left the window.
-
-### 5. Submit a decision
-
-```json
-{
-  "authorization_id": "AU...",
-  "decision": "approve",
-  "reason_codes": ["<your_reason>"],
-  "customer_message": "<explanation for the cardholder>",
-  "evidence": [{"field": "<field>", "value": "<observed value>"}],
-  "engine_version": "<your-version>"
-}
+```text
+POST /v1/authorizations/{authorization_id}/resolve
 ```
-
-Post the payload to
-`/v1/authorizations/{authorization_id}/decision`. Only `authorization_id` and
-`decision` are required. `decision` must be `approve`, `decline`, or `step_up`.
-The other fields are optional but make a decision auditable and understandable.
-
-`step_up` pauses the authorization for a human. It is not a final payment
-outcome. Resolve it through
-`POST /v1/authorizations/{authorization_id}/resolve`:
 
 ```json
 {
   "decision": "approve",
-  "customer_message": "<what the human confirmed>",
+  "customer_message": "The customer confirmed this purchase.",
   "evidence": []
 }
 ```
 
-The default step-up window is 120 seconds. The final resolution can be only
-`approve` or `decline`. The endpoint represents the cardholder's human
-confirmation in the participant's own application; it is not an additional
-automated decision type.
+If they reject it, send `decline` and explain their choice. Do not invent a human
+answer or send a second automated decision after `step_up`; use `/resolve`.
 
-After `step_up` has been submitted, the decision endpoint will not accept a
-second automated `approve`, `decline`, or `step_up` for that authorization. Use
-`/resolve` to record the human outcome.
+The default human window is **120 seconds**. Read current timeout settings from
+`/v1/bootstrap`; `data.deadline_at` is the automated deadline.
 
-### 6. Inspect and reset
+## 8. Remember results and keep the customer in control
 
-Use `/v1/scenario-runs/{run_id}` for progress, `/v1/authorizations` for
-runtime outcomes, and `/v1/events?since=<cursor>` for the append-only event
-feed. Event-feed responses include `next_cursor`; store it and pass it as
-`since` on the next request. Use `/v1/team/reset` while developing to clear
-local state and repeat a run from a clean team context. Reset is disabled
-during judging.
+Earlier purchases can affect the next decision. In particular:
 
-## Platform behaviour you can rely on
+- Count final approvals when enforcing spending limits. A purchase waiting for
+  a human answer is not yet approved.
+- Use simulated purchase time for spending windows, and the real clock for
+  response deadlines.
+- Recognize repeated delivery by its live purchase ID. Record it once, so a
+  retry does not add the amount twice.
+- Check distinct but similar purchases against earlier outcomes; different IDs
+  can still describe an unwanted duplicate order.
 
-- A revoked or expired participant mandate, inactive scenario authority, or
-  blocked card is rejected by the platform before an actionable request reaches
-  the decision queue.
-- The scenario runner delivers synthetic requests in fixture order. An
-  authorization ID is stable for duplicate delivery within one run, but a new
-  run receives a new run-scoped suffix. `source_authorization_id` remains the
-  public fixture ID. When a fixture contains `related_authorization_id`, the
-  live event rewrites it to the corresponding run-scoped authorization ID.
-- Requests may be delivered at least once. Treat the authorization ID as the
-  idempotency key and make repeated responses safe.
-- A missing, invalid, or late decision does not become an approval.
-- A scenario run and its optional event feed expose platform rejections and
-  final states; those records are useful for explaining what the platform
-  handled before a team decision was possible.
-- Each team is isolated by its bearer key. Do not share keys between teams.
+### Read, change, or revoke permissions
 
-## Pre-launch check
+`GET /v1/mandates/{mandate_id}` returns the stored mandate. Use it to display
+the customer's current permissions. It also returns `guidance` and
+`open_questions`, which are explanatory text and are absent from live events.
 
-Before opening the challenge, organizers should complete one dry run from a
-clean clone and verify:
+`PATCH /v1/mandates/{mandate_id}` updates an active mandate:
 
-- setup instructions work without organizer knowledge;
-- changed instructions and judging resets are rejected by the API;
-- duplicate delivery, late decisions, prompt injection, lookalike merchants,
-  re-quotes, rolling-window boundaries, and recovery after suspicious activity
-  behave as documented;
-- no expected actions, logs, or keys appear in the public repository or API
-  responses.
+- Omitted fields stay unchanged.
+- If you send `hard_rules`, keep every existing rule unchanged. You may add
+  rules, but cannot remove or replace them.
+- You may change `uncertainty_policy` from `approve` or `ask` to `decline`.
+  The documented PATCH rules do not allow changing `approve` to `ask`.
+- Supplied `guidance` and `open_questions` replace those lists.
+- Changes affect later runs. An existing run keeps its original snapshot.
 
-## Contracts and validation
+For example, this updates an active mandate that currently uses `ask` or `approve`:
 
-The machine-readable contracts are:
+```bash
+api "/v1/mandates/$MANDATE_ID" -X PATCH -d '{"uncertainty_policy":"decline"}'
+```
 
-- [`data/schemas/authorization_event.schema.json`](data/schemas/authorization_event.schema.json)
-  — a strict validator for each live `authorization.request` event. Validate a
-  full event body with it before evaluating a purchase.
-- [`data/schemas/data_pack.schema.json`](data/schemas/data_pack.schema.json)
-  — a validator for the pack manifest ([`metadata.json`](data/metadata.json))
-  plus, in its `x-csv-contracts`, `x-currency-contract`, and `x-enums` sections,
-  the documented CSV headers, foreign keys, FX formula, and shared enums.
-- [`data/schemas/authorization_history.schema.json`](data/schemas/authorization_history.schema.json)
-  — the canonical column contract for the historical CSV: the exact column
-  order and, in `x-csv-column-contract`, the type, format, enum, and
-  nullability of every history column.
+`DELETE /v1/mandates/{mandate_id}` revokes the mandate, withdrawing permission:
 
-`metadata.json` is the authoritative pack manifest: it lists every file with its
-row count and SHA-256 hash, the history window and outcome profile, and the
-scenario-pack summary. All CSV headers and the documented row counts are checked
-against the manifest. Validate received events against the event schema if your
-client benefits from strict parsing; the challenge does not require a particular
-programming language, database, model provider, or UI framework.
+```bash
+api "/v1/mandates/$MANDATE_ID" -X DELETE
+```
+
+The platform rejects revoked or expired mandates, inactive fixture authorities,
+and blocked cards before queueing an actionable request. The effect of revoking
+a mandate while one of its purchases is already queued or waiting for a human
+is not yet specified. Show cancellation only when the platform confirms it.
+
+### Start a clean development session
+
+`POST /v1/team/reset` clears your team's mandates, runs, decisions, and event
+cursor so you can test from a clean state. It is disabled during judging.
+After a reset, create a new mandate and run instead of reusing the old IDs.
+
+## What to show in your demo
+
+Show these three things:
+
+1. An ordinary purchase completes with little friction.
+2. An ambiguous, unsafe, or manipulated purchase gets a useful intervention.
+3. The customer can use the human approval, rejection, or revocation path.
+
+For each result, explain what the app allowed, which facts it used, and why.
+Make uncertainty visible. Let the audience see that the customer stays in control.
+
+## Where to find the data details
+
+The [data README](data/README.md) explains the pack. Use these sections when
+you need more detail:
+
+| What you need | Where to look |
+| --- | --- |
+| File contents, row counts, and how records connect | [Files and joins](data/README.md#csv-files-at-a-glance) |
+| Past purchases, refunds, and agent activity | [Using the history](data/README.md#how-to-use-the-history) |
+| Exact field meanings, currencies, missing values, and time calculations | [Data dictionary](data/data_dictionary.md) |
+| Example files, schemas, and the file manifest | [Supporting files](data/README.md#other-files) |
+
+Use IDs to connect records, not names. Historical outcomes are context for your
+analysis, not expected answers for new purchases.
+
+## Rule format
+
+The API stores a list of checks in `hard_rules`. Your solution decides how to
+interpret those checks and how they work with any models or other analysis.
+The live-event schema defines these fields for each rule:
+
+| Field | Required? | Allowed value |
+| --- | --- | --- |
+| `field` | Yes | A nonempty string naming the fact to check. |
+| `operator` | Yes | `<`, `<=`, `=`, `!=`, `>`, `>=`, `in`, or `not_in`. |
+| `value` | Yes | A number, a string, or a list containing only strings. |
+| `currency` | No | `"CHF"`, `"EUR"`, `"GBP"`, `"USD"`, or `null`. |
+| `scope` | No | `"purchase"`, `"period"`, or `null`. |
+| `period_days` | No | A whole number of days, at least 1, or `null`. |
+
+No extra rule fields are allowed. A rule's `value` cannot be a boolean, `null`,
+an object, or a list of numbers. Omit unused optional fields in new mandate
+requests; the nulls above describe what the live-event schema accepts.
+
+Explain how your solution reads field names, handles every item in a basket,
+combines checks, and deals with missing facts. These choices belong to your
+solution. Adding a rule must not weaken a customer's existing restriction.
+
+## Understand the purchase message
+
+The poll response's outer envelope includes `run_id`, `event_id`, `type`,
+`authorization_id`, `status`, and `occurred_at`. The complete purchase event is
+inside `data`. Keep the envelope for run tracking; validate `data` as the event.
+
+| Event field | What it means |
+| --- | --- |
+| `type` | Always `"authorization.request"`. |
+| `request_id` | The event's request identifier. |
+| `deadline_at` | The real-clock deadline for the automated answer. |
+| `authorization` | Purchase, shop, cart, and session facts. |
+| `mandate` | The confirmed instructions and permissions saved when this run started. |
+| `context` | Spend and recent authorization information from this run. |
+| `runtime` | Real-clock receipt time and information about how the context was built. |
+
+### Use the correct value types
+
+| Field or value | Correct live JSON type |
+| --- | --- |
+| Amounts and prices | Numbers, such as `20.0`, not `"20.00"`. |
+| `quantity`, `line_no`, `replay_order` | Whole numbers, at least 1. |
+| `recent_attempt_count_10m` | A whole number, at least 0. |
+| `merchant_mcc` | A four-digit string, such as `"5411"`. |
+| `order_returnable`, `order_cancellable` | Strings: `"true"`, `"false"`, `"unknown"`, or `"not_applicable"`. |
+| Merchant `recurring_capable` | Only the strings `"true"` or `"false"`. |
+| `delivery_by` | A date string such as `"2026-08-10"`, or `null`. The field is required. |
+| `related_authorization_id` | A string or `null`. The field is required. |
+| `related_authorization_status` | `"pending"`, `"approved"`, `"declined"`, `"cancelled"`, or `null`. The field is required. |
+
+`unknown` means information was not supplied. `not_applicable` means the term
+does not apply to that kind of order. A `null` field is present but has no value;
+it must not be silently dropped, changed to zero, or treated as permission.
+`items` must contain at least one cart line. Every live scenario purchase has
+`initiator_type: "agent"`.
+
+Useful facts such as shoe size and return-window length can be in `item_details`;
+there are no dedicated live fields named `shoe_size` or `return_period_days`.
+A shop's category also does not establish every basket item's category.
+
+### Keep the IDs separate
+
+Keep the `draft_id`, `mandate_id`, and `run_id` returned by their API calls.
+For each purchase, distinguish these two IDs:
+
+- Live `authorization_id`: submit or resolve its decision and recognize repeated
+  delivery. It stays the same within a run but changes between runs.
+- `source_authorization_id`: find the original `AU...` row in the purchase CSV.
+
+The API also rewrites a non-null `related_authorization_id` to the related
+purchase's live ID in that run. Keep the same mapping in your offline events.
+For historical IDs and CSV relationships, see the
+[identifier guide](data/data_dictionary.md#identifier-namespaces).
+
+### Calculate money consistently
+
+`amount` already includes delivery; `billing_amount_chf` is that total in CHF.
+Do not add delivery again. Use the row's currency, not the shop's country,
+when converting prices. The [units and currency guide](data/data_dictionary.md#units-and-nulls)
+lists the fixed rates, item-price units, and rounding rules.
+
+## All API calls in one place
+
+An **endpoint** is an API address for an operation. `GET` reads information,
+`POST` submits or starts an operation, `PATCH` updates selected fields, and
+`DELETE` revokes a mandate here. All calls except `/healthz` need the bearer key.
+Replace names in braces, such as `{run_id}`, with values returned by the API.
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/healthz` | Reports whether the service is available, plus version information. |
+| `GET` | `/v1/bootstrap` | Gives your team's versions, scenarios, limits, timeout settings, and features. |
+| `GET` | `/v1/reference-data` | Returns small catalogues, currency rates, and history-file metadata. |
+| `GET` | `/v1/reference-data/authorization-history.csv` | Downloads the historical CSV for your analysis. |
+| `POST` | `/v1/mandates` | Stores the original instruction and your structured permissions as a draft; returns `draft_id`. |
+| `POST` | `/v1/mandates/{draft_id}/confirm` | Records the customer's agreement and activates the mandate; returns `mandate_id`. |
+| `GET` | `/v1/mandates/{mandate_id}` | Reads the full stored mandate, including guidance and open questions. |
+| `PATCH` | `/v1/mandates/{mandate_id}` | Preserves or tightens an active mandate for later runs, following step 8's update rules. |
+| `DELETE` | `/v1/mandates/{mandate_id}` | Revokes that mandate. See step 8 for the limitation affecting existing pending work. |
+| `POST` | `/v1/scenario-runs` | Starts the selected scenario with an active mandate; returns `run_id` and run information. |
+| `GET` | `/v1/scenario-runs/{run_id}` | Reads the run's progress and event counters. |
+| `GET` | `/v1/decision-requests/next?wait=25` | Waits up to 25 seconds for work; returns a `200` envelope or an empty `204`. |
+| `POST` | `/v1/authorizations/{authorization_id}/decision` | Records your solution's `approve`, `decline`, or `step_up` decision. |
+| `POST` | `/v1/authorizations/{authorization_id}/resolve` | Records a real customer's `approve` or `decline` after `step_up`. |
+| `GET` | `/v1/authorizations` | Lists pending and final runtime authorizations so you can inspect results. |
+| `GET` | `/v1/events?since=0` | Reads the event feed; use returned `next_cursor` as the next `since`. |
+| `POST` | `/v1/team/reset` | Clears team development state. Disabled during judging. |

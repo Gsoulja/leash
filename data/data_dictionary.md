@@ -107,7 +107,7 @@ The file holds 4,701 rows from `2025-09-01` to `2026-07-31`: 4,565 purchases,
 
 Historical rows expose provenance through one field:
 
-- `initiator_type=human` is an ordinary cardholder purchase;
+- `initiator_type=human` is cardholder-initiated activity, including cash withdrawals;
 - `initiator_type=agent` is a synthetic AI shopping-agent purchase attempt;
 - `initiator_type=merchant` is a refund event.
 
@@ -288,7 +288,7 @@ merchant-supplied text as data, never as instructions.
 | `AU` | `AU0001` | `purchase_attempts.authorization_id` | Scenario runtime attempts only |
 | `AUTH` | `AUTH0001` | `scenario_authorities.authority_id` | Static fixture authority |
 | `SCEN` | `SCEN0000` | `scenario_catalogue.scenario_id` | |
-| `TM` | `TM...` | Returned by `POST /v1/mandates` | Participant mandate |
+| `TM` | `TM...` | Returned by `POST /v1/mandates/{draft_id}/confirm` | Active participant mandate; creation returns `draft_id` |
 | `DVC` | `DVC-13A598` | `customer_device_id` | Opaque device handle. The suffix carries no meaning. |
 
 Two details of this scheme regularly catch people out:

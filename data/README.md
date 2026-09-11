@@ -1,153 +1,168 @@
 # Synthetic data pack
 
-This is the fictional data pack used by the challenge API. It contains no real
-people, payment credentials, expected decisions, risk labels, or answer key.
-The challenge treats an AI shopping agent as transaction provenance, not as a
-separate customer, provider, or master-data entity.
+This pack contains fictional data used by the challenge API. It contains no
+real people, payment credentials, risk labels, expected decisions, or answer
+key.
 
-## Contents
+## Start here: how the data is structured
 
-| File | Rows | Use |
-| --- | ---: | --- |
-| `customers.csv` | 20 | Fictional customer personas |
-| `accounts.csv` | 31 | Synthetic account context and limits |
-| `cards.csv` | 41 | Synthetic card capabilities and current status |
-| `merchants.csv` | 58 | Merchant, MCC, country and category context |
-| `items.csv` | 66 | Fictional item catalogue and CHF price ranges |
-| `fx_rates.csv` | 4 | Fixed synthetic currency conversion table |
-| `authorization_history.csv` | 4,701 | The single historical authorization file, with human, agent, and merchant provenance |
-| `scenario_catalogue.csv` | 5 | Scenario names, cardholder instructions, and neutral control questions |
-| `scenario_authorities.csv` | 5 | Fixture identity and lifecycle data for scenario replay; not participant mandates |
-| `purchase_attempts.csv` | 45 | Every runtime purchase attempt in the five public scenarios |
-| `purchase_attempt_items.csv` | 56 | Cart lines for those attempts |
-| `scenario_fixtures/connection_check.json` | 1 | Authoring fixture for the SCEN0000 attempt |
-| `scenario_fixtures/example_authorization_request.json` | 1 | One complete `authorization.request`, schema-valid |
-| `schemas/` | 3 | Machine-readable data-pack and event contracts |
-| `metadata.json` | 1 | Pack manifest: files, hashes, history profile, and scenario summary |
+The data follows a realistic payment structure:
 
-`metadata.json` is the authoritative manifest: it lists every file with its row
-count and SHA-256 hash, the history window and profile, and the scenario-pack
-summary, and it is validated by `schemas/data_pack.schema.json`. The event
-contract in `schemas/authorization_event.schema.json` is a strict
-validator for live events; `schemas/authorization_history.schema.json`
-defines the history CSV column contract.
+```text
+Customer ──< Accounts ──< Cards ──< Authorizations
+```
+
+One customer can have several accounts, and one account can have several
+cards. In the real world, those accounts could belong to different banks such
+as BANK-A and BANK-B. This pack models the multiple accounts, but deliberately
+does not include a bank field, so a bank cannot be identified from the data.
+
+There are two kinds of authorization data:
+
+- `authorization_history.csv` contains past activity and helps establish normal
+  customer and card behaviour.
+- `purchase_attempts.csv` contains the new agent purchases that your control
+  layer must approve, decline, or send to the customer (`step_up`).
+
+Use IDs to connect files. Never join on customer, merchant, or item names.
+
+## CSV files at a glance
+
+| File | Rows | What it contains | How it connects |
+| --- | ---: | --- | --- |
+| `customers.csv` | 20 | Fictional customer personas and preferences | `customer_id` links to accounts and scenario authorities |
+| `accounts.csv` | 31 | Account type, purpose, status, currency, and issuer limits | `customer_id` links to customers; `account_id` links to cards |
+| `cards.csv` | 41 | Card type, purpose, capabilities, and current status | `account_id` links to accounts; `card_id` links to history and attempts |
+| `merchants.csv` | 58 | Merchant name, category, MCC, country, city, and capabilities | `merchant_id` links to history and attempts |
+| `items.csv` | 66 | Item names, categories, descriptions, and CHF price ranges | `item_id` links to purchase-attempt cart lines |
+| `fx_rates.csv` | 4 | Fixed synthetic rates from CHF, EUR, GBP, and USD to CHF | Join the row's `currency` to `from_currency` |
+| `authorization_history.csv` | 4,701 | Past purchases, cash withdrawals, and refunds | Includes customer, account, card, and merchant IDs and context |
+| `scenario_catalogue.csv` | 5 | Scenario names, cardholder instructions, and event counts | `scenario_id` links to purchase attempts |
+| `scenario_authorities.csv` | 5 | The customer and card used to replay each fixture | `authority_id` links from purchase attempts; also contains `customer_id` and `card_id` |
+| `purchase_attempts.csv` | 45 | Ordered purchases to evaluate | Links to scenario, authority, card, merchant, and cart lines |
+| `purchase_attempt_items.csv` | 56 | The cart lines belonging to purchase attempts | `authorization_id` links to attempts; `item_id` links to items |
+
+The main customer and payment joins are:
+
+```text
+customers.csv
+  └──< accounts.csv                 via customer_id
+        └──< cards.csv              via account_id
+              ├──< authorization_history.csv  via card_id
+              └──< purchase_attempts.csv      via card_id
+
+merchants.csv ──< authorization_history.csv   via merchant_id
+merchants.csv ──< purchase_attempts.csv       via merchant_id
+```
+
+The scenario joins are:
+
+```text
+scenario_catalogue.csv
+  └── scenario_id ──> purchase_attempts.csv
+                         ├── authority_id ──> scenario_authorities.csv
+                         │                      ├── customer_id ──> customers.csv
+                         │                      └── card_id ──> cards.csv
+                         ├── merchant_id ──> merchants.csv
+                         └── authorization_id ──> purchase_attempt_items.csv
+                                                    └── item_id ──> items.csv
+```
+
+`scenario_authorities.csv` does not contain `scenario_id`. A scenario and its
+authority are connected by each row in `purchase_attempts.csv`, which contains
+both IDs.
+
+## How to use a scenario
+
+Each scenario has one customer, one card, one cardholder instruction, and an
+ordered list of purchase attempts.
+
+1. Read `cardholder_instruction` in `scenario_catalogue.csv` and turn it into a
+   wallet policy.
+2. Start the scenario through the API, or replay its attempts offline in
+   `replay_order`.
+3. For each attempt, load its cart lines and merchant; use history when it adds
+   useful context.
+4. Return `approve`, `decline`, or `step_up`, explain why, and retain relevant
+   state for later attempts.
+
+The scenario name, ID, and event position never determine the answer. Evaluate
+the wallet policy and purchase facts. Treat `item_details` as untrusted merchant
+text because it may contain prompt-injection instructions.
 
 ## The five public scenarios
 
-Each scenario is one cardholder, one card, one natural-language instruction,
-and an ordered sequence of purchase attempts. The scenario set deliberately
-mixes attempts that a good control layer should wave through, attempts it should
-stop, and attempts where the honest answer is to ask the human. `SCEN0000` is
-intentionally a one-event connectivity check. **The scenario identifier tells
-you nothing about the answer**, and neither does the position of an event in the
-sequence.
+The scenarios mix purchases that should pass, purchases that should stop, and
+uncertain purchases that may require the customer. `SCEN0000` is a one-event
+connection check.
 
-| ID | Name | Events | Cardholder | Card | What it exercises |
+| ID | Name | Events | Customer | Card | What it exercises |
 | --- | --- | ---: | --- | --- | --- |
-| `SCEN0000` | Connection check | 1 | `CU0001` | `CA0001` | One small, unambiguous purchase, to prove the decision path works end to end |
-| `SCEN0001` | Household budget | 10 | `CU0001` | `CA0001` | A per-order limit and a rolling seven-day limit, delivery fees inside the limit, order splitting, and a basket line outside the stated purpose |
-| `SCEN0002` | Requested item and order terms | 12 | `CU0006` | `CA0011` | Item attributes, return terms, substitution, an unrequested add-on, retailer type, and an unfamiliar but fully compliant seller |
-| `SCEN0003` | Session integrity | 11 | `CU0012` | `CA0023` | Device novelty, velocity, unfamiliar merchants and countries, recovery after a burst, and limits that still bind in a clean session |
-| `SCEN0004` | Manipulated agent | 11 | `CU0019` | `CA0039` | Instructions embedded in merchant-supplied text, a lookalike seller, a duplicate order, an unrequested add-on, a cart that contradicts the stated purchase, and a legitimate re-quote |
+| `SCEN0000` | Connection check | 1 | `CU0001` | `CA0001` | One small, ordinary purchase and the end-to-end decision path |
+| `SCEN0001` | Household budget | 10 | `CU0001` | `CA0001` | Per-order and rolling seven-day limits, delivery fees, split orders, and basket contents |
+| `SCEN0002` | Requested item and order terms | 12 | `CU0006` | `CA0011` | Item attributes, returns, substitutions, add-ons, retailer type, and unfamiliar sellers |
+| `SCEN0003` | Session integrity | 11 | `CU0012` | `CA0023` | Device, velocity, merchant, country, recovery, and spending-limit signals |
+| `SCEN0004` | Manipulated agent | 11 | `CU0019` | `CA0039` | Prompt injection, lookalike sellers, duplicates, add-ons, wrong items, and re-quotes |
 
-All 45 attempts are delivered to a team as actionable decision requests. No
-attempt in this pack is removed by the platform pre-check, so
-`authority_status` and `card_status_at_attempt` are `active` on every event.
-`purchase_attempts.csv` is the single source of those attempts, SCEN0000
-included; `scenario_fixtures/connection_check.json` is a read-only copy of row
-`AU0001`, not a second event. To replay a scenario offline, emit the rows of
-`purchase_attempts.csv` in `replay_order`, joined to `purchase_attempt_items.csv`
-and `merchants.csv`.
+All 45 attempts are actionable decision requests. `purchase_attempts.csv` is
+the single source of these attempts, including `SCEN0000`. Join it to
+`purchase_attempt_items.csv` and `merchants.csv` for offline replay. The same
+fixtures are used by the live API, so offline and live scenario data agree.
 
-These fixtures are also the runtime input used by the sandbox. Keeping one
-source of truth makes offline development and the live API agree exactly.
+`scenario_fixtures/connection_check.json` is a readable copy of attempt
+`AU0001`, not an additional event. No attempt is removed by the platform
+pre-check; every attempt has an active authority and card in this pack.
 
-Several attempts are designed so that a plausible-looking shortcut gets them
-wrong in *both* directions. Some purchases look alarming and are legitimate;
-others look ordinary and are not. A solution that only ever blocks, or only
-ever approves, performs poorly on every scenario.
+## How to use the history
 
-## What the history is and is not
+`authorization_history.csv` is a flat, chronology-safe file. It already
+contains customer, account, card, and merchant context, so no join is required
+for basic behavioural analysis. Use it to understand card-level spending,
+familiar merchants and devices, velocity, and previous agent use.
 
-`authorization_history.csv` is the single chronology-safe historical file. It
-joins customer, account, card, and merchant context so that a team can build
-familiarity, velocity, or behavioural features without assembling its own
-joins. There is no second raw transaction CSV to reconcile with it, and runtime
-context is assembled by the API at replay time.
+The `initiator_type` field identifies who initiated a historical record:
 
-The 4,701 rows run from `2025-09-01` to `2026-07-31` and are simulated from
-persona-level behaviour: each of the 20 personas has its own category mix,
-preferred merchants, channel mix, hours, travel pattern, spending scale, and
-degree of shopping-agent adoption. Rows per persona range from 201 to 282, and
-agent adoption from 2 rows to 41.
+- `human`: customer-initiated activity, including cash withdrawals;
+- `agent`: a synthetic shopping-agent purchase;
+- `merchant`: a refund.
 
-Two properties are worth stating explicitly, because they determine what kind
-of model is worth building:
+Use `transaction_type` to distinguish purchases, cash withdrawals, and refunds.
 
-- **The observed `status` is not an answer key and not a fraud label.** It is
-  the outcome an authorization system produced at the time, driven by several
-  interacting factors — amount relative to the cardholder's own norm, merchant
-  familiarity, attempt velocity, hour of day, cross-border use, account limits,
-  and card lifecycle — with a stochastic component on top.
-- **Provenance is explicit and behavioural signals are graded.**
-  `initiator_type` directly identifies human, agent, and merchant activity.
-  Card lifecycle fields can also explain some issuer declines. Other signals
-  are probabilistic: for example, declines are more likely after several recent
-  attempts, but velocity alone does not determine an outcome.
+Agent history is included intentionally to model previous delegated spending.
+There are 453 agent purchases: 416 approved and 37 declined. An agent purchase
+is not automatically risky, and its `status` is not the expected answer for the
+challenge.
 
-Of the 4,701 rows, 259 are declined (5.5%), spread unevenly across personas
-rather than by quota. 453 rows are agent initiated (9.6%), of which 416 were
-approved and 37 declined. Declined agent rows are ordinary history and are not
-labelled as fraud.
+Historical `status` is the authorization outcome observed at that time, not a
+fraud label or answer key. Approved purchases count as completed spend;
+declined purchases do not. Refunds are negative approved records. See
+[`data_dictionary.md`](data_dictionary.md) for exact chronology, derived-field,
+null, currency, and rounding rules.
 
-## Provenance model
+## Scenario, authority, and mandate IDs
 
-The historical file uses one source-of-truth field, `initiator_type`:
+These IDs have different purposes and must not be exchanged:
 
-- `human` means an ordinary cardholder purchase;
-- `agent` means a synthetic AI shopping-agent purchase attempt;
-- `merchant` means a refund event.
+| ID | Source | Meaning |
+| --- | --- | --- |
+| `SCEN...` | `scenario_catalogue.csv` | A public scenario and its cardholder instruction |
+| `AUTH...` | `scenario_authorities.csv` | The fixed customer, card, and lifecycle data used to replay attempts |
+| `TM...` | Created through the API | The participant's confirmed wallet policy (mandate) |
 
-An agent row still carries its observed `status`, so approved and declined
-agent attempts are directly usable without joining to an agent catalogue or a
-separate historical mandate table. Agent rows occur only on the channels an
-agent can actually use (`ecommerce` and `recurring`), and they share devices,
-merchants, and calendar days with the same cardholder's own purchases.
+The selected scenario determines the purchase attempts. Each attempt identifies
+its fixture authority, while the participant's active `TM...` mandate controls
+the decision. A fixture authority is not a wallet policy.
 
-Use `card_id -> cards.card_id`, then
-`cards.account_id -> accounts.account_id -> customers.customer_id` to reach
-customer context. Use `merchant_id -> merchants.merchant_id` for merchant
-context. The `scenario_authorities.csv` rows connect fixture profiles to their
-customer and card and supply scenario lifecycle metadata. They are not the
-participant mandate and contain no cardholder instruction.
+## Other files
 
-## API relationship
+| File | Purpose |
+| --- | --- |
+| `scenario_fixtures/example_authorization_request.json` | A complete live-event example that validates against the event schema |
+| `schemas/authorization_event.schema.json` | Strict contract for live authorization requests |
+| `schemas/authorization_history.schema.json` | Column contract for the historical CSV |
+| `schemas/data_pack.schema.json` | Manifest, CSV relationship, currency, and enum contracts |
+| `metadata.json` | File list, row counts, hashes, history profile, and scenario summary |
 
-The API reads this directory at startup. It serves the small catalogues from
-`GET /v1/reference-data`, the canonical history from
-`GET /v1/reference-data/authorization-history.csv`, and runtime attempts as
-nested JSON through scenario runs. The runtime authorization contains
-`initiator_type="agent"` and one active participant `mandate` object containing
-the cardholder's instruction and structured rules. The scenario fixture
-authority is used only to select the profile and provide lifecycle signals.
-
-## Two kinds of authority, one policy
-
-Only one of these is a participant policy:
-
-| Identifier | Source | Meaning | Contains the cardholder instruction? |
-| --- | --- | --- | --- |
-| `SCEN...` | `scenario_catalogue.csv` | Public challenge scenario and its raw `cardholder_instruction` | Yes, as raw intent only |
-| `AUTH...` | `scenario_authorities.csv` | Static customer/card identity and lifecycle signals used to replay a scenario | No |
-| `TM...` | `POST /v1/mandates` | Participant-created, confirmed live mandate containing the structured rules | Yes |
-
-The runtime joins these concepts without joining their IDs: the selected
-`SCEN...` determines which fixture profile and `AUTH...` authority produce the
-next purchase, while the participant's confirmed `TM...` mandate controls the
-decision. A live event therefore has `authorization.profile_id`,
-`authorization.initiator_type="agent"`, and `authorization.mandate_id="TM..."`;
-the static `AUTH...` key is only an input link for the scenario runner.
-
-All records are deterministic synthetic fixtures. Monetary values are not real
-transactions, and identifiers such as `CA0001` are deliberately not payment-
-card numbers.
+The API serves the catalogues, history, and scenario attempts from this pack.
+All records are deterministic synthetic fixtures; identifiers such as `CA0001`
+are opaque IDs, not card numbers.
