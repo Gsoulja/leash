@@ -18,6 +18,7 @@ from typing import Any, Protocol
 import asyncpg
 import httpx
 
+from leash.adapters.postgres.repository import PostgresRepository
 from leash.adapters.viseca_api.client import VisecaApiError
 
 log = logging.getLogger("leash.outbox")
@@ -57,12 +58,20 @@ class OutboxSender:
         self._base, self._max = base_backoff_seconds, max_backoff_seconds
 
     async def mark_sent(self, authorization_id: str, endpoint: str = "decision") -> None:
-        """The worker's immediate send succeeded: close its row so it is never resent."""
-        async with self._pool.acquire() as conn:
+        """The worker's immediate send succeeded: close its row, and record the acceptance with it."""
+        at = self._clock()
+        async with self._pool.acquire() as conn, conn.transaction():
+            # `last_error = null`: an earlier retryable failure left one, and `sent_to_viseca` reads
+            # `last_error is null` to mean "the platform took this body". A stale error would hide a
+            # decision Viseca did accept.
             await conn.execute(
-                """update outbox set sent_at = $3, attempts = attempts + 1, last_attempt_at = $3
+                """update outbox set sent_at = $3, attempts = attempts + 1, last_attempt_at = $3,
+                       last_error = null
                    where authorization_id = $1 and endpoint = $2 and sent_at is null""",
-                authorization_id, endpoint, self._clock())
+                authorization_id, endpoint, at)
+            if endpoint == "decision":
+                await PostgresRepository.record_delivery(conn, authorization_id, accepted=True,
+                                                         outcome="accepted", at=at)
 
     async def send_pending(self) -> int:
         """Send every eligible unsent row once, in order. Returns how many were delivered or closed."""
@@ -101,15 +110,26 @@ class OutboxSender:
                     await self._api.post_decision(row["authorization_id"], body)
             except Exception as exc:
                 retry = _retryable(exc)
+                at = self._clock()
                 await conn.execute(
                     """update outbox set attempts = attempts + 1, last_attempt_at = $2::timestamptz, last_error = $3,
                            sent_at = case when $4::boolean then null else $2::timestamptz end where id = $1""",
-                    row["id"], self._clock(), _describe(exc), retry)  # backoff counts from when it failed
+                    row["id"], at, _describe(exc), retry)  # backoff counts from when it failed
+                if not retry and row["endpoint"] == "decision":
+                    # Terminal: the platform will never accept this answer. The purchase leaves its
+                    # decided state, which is what releases the spend it was holding (LEASH-130). Same
+                    # transaction as closing the row, so the two can never disagree.
+                    await PostgresRepository.record_delivery(conn, row["authorization_id"], accepted=False,
+                                                             outcome=_describe(exc), at=at)
                 level = logging.WARNING if retry else logging.ERROR
                 log.log(level, "outbox %s for %s failed (%s); %s", row["endpoint"], row["authorization_id"],
-                        _describe(exc), "will retry" if retry else "closed without delivery",
+                        _describe(exc), "will retry" if retry else "refused: recorded as not sent",
                         extra={"authorization_id": row["authorization_id"]})
                 return 0 if retry else 1
+            at = self._clock()
             await conn.execute("update outbox set attempts = attempts + 1, last_attempt_at = $2, sent_at = $2, "
-                               "last_error = null where id = $1", row["id"], self._clock())
+                               "last_error = null where id = $1", row["id"], at)
+            if row["endpoint"] == "decision":
+                await PostgresRepository.record_delivery(conn, row["authorization_id"], accepted=True,
+                                                         outcome="accepted", at=at)
             return 1

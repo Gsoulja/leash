@@ -27,6 +27,7 @@ paths:
                 with_question:
                   value:
                     draft_id: LD-01
+                    revision: 1
                     instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
                       less. Do not add anything I did not ask for. Ask me when uncertain.
                     status: needs_answers
@@ -108,6 +109,7 @@ paths:
                 ready:
                   value:
                     draft_id: LD-01
+                    revision: 1
                     instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
                       less. Do not add anything I did not ask for. Ask me when uncertain.
                     status: ready
@@ -216,6 +218,16 @@ paths:
       summary: Post the finished policy to Viseca as a platform draft
       tags:
       - policy
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRequest'
+            examples:
+              reviewed:
+                value:
+                  revision: 1
       responses:
         '200':
           description: OK
@@ -380,6 +392,7 @@ paths:
                 with_question:
                   value:
                     draft_id: LD-01
+                    revision: 1
                     instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
                       less. Do not add anything I did not ask for. Ask me when uncertain.
                     status: needs_answers
@@ -1116,6 +1129,8 @@ paths:
                         unit_price: '289.00'
                       engine_verdict: approve
                       final_state: approved
+                      delivery: accepted
+                      platform_outcome: accepted
                       resolved_by: engine
                       customer_message: Paid CHF 289.00 to PixelHarbor for 27-inch computer monitor. All your rules passed.
                     - authorization_id: AZ-81c2
@@ -1138,6 +1153,8 @@ paths:
                         unit_price: '289.00'
                       engine_verdict: step_up
                       final_state: waiting
+                      delivery: pending
+                      platform_outcome: null
                       resolved_by: null
                       customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
                     - authorization_id: AZ-9d10
@@ -1160,6 +1177,8 @@ paths:
                         unit_price: '520.00'
                       engine_verdict: decline
                       final_state: declined
+                      delivery: accepted
+                      platform_outcome: accepted
                       resolved_by: engine
                       customer_message: CHF 520.00 is over your CHF 400.00 per-order limit.
       parameters:
@@ -1204,6 +1223,8 @@ paths:
                       unit_price: '289.00'
                     engine_verdict: step_up
                     final_state: waiting
+                    delivery: pending
+                    platform_outcome: null
                     resolved_by: null
                     customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
                     checks:
@@ -1270,6 +1291,8 @@ paths:
                       unit_price: '299.00'
                     engine_verdict: null
                     final_state: not_sent
+                    delivery: refused
+                    platform_outcome: deadline_passed
                     resolved_by: platform
                     customer_message: 'Not sent: you revoked the agent''s permission, so the platform rejected it before it
                       reached the engine.'
@@ -1338,6 +1361,8 @@ paths:
                           unit_price: '289.00'
                         engine_verdict: step_up
                         final_state: waiting
+                        delivery: pending
+                        platform_outcome: null
                         resolved_by: null
                         customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
                       reasons:
@@ -1375,6 +1400,8 @@ paths:
                           unit_price: '289.00'
                         engine_verdict: step_up
                         final_state: waiting
+                        delivery: pending
+                        platform_outcome: null
                         resolved_by: null
                         customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
                       reasons:
@@ -1424,6 +1451,8 @@ paths:
                       unit_price: '289.00'
                     engine_verdict: step_up
                     final_state: approved
+                    delivery: accepted
+                    platform_outcome: accepted
                     resolved_by: customer
                     customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
         '409':
@@ -1513,6 +1542,8 @@ paths:
                     period_days: 7
                     limit_chf: '300.00'
                     approved_chf: '234.50'
+                    accepted_chf: '234.50'
+                    awaiting_platform_chf: '0.00'
                     remaining_chf: '65.50'
                     platform_counter_chf: '234.50'
                     mismatch: false
@@ -1522,6 +1553,8 @@ paths:
                     period_days: null
                     limit_chf: null
                     approved_chf: '289.00'
+                    accepted_chf: '289.00'
+                    awaiting_platform_chf: '0.00'
                     remaining_chf: null
                     platform_counter_chf: null
                     mismatch: false
@@ -1696,6 +1729,7 @@ components:
       additionalProperties: false
       required:
       - draft_id
+      - revision
       - instruction
       - status
       - rules
@@ -1707,6 +1741,12 @@ components:
       properties:
         draft_id:
           type: string
+        revision:
+          type: integer
+          minimum: 1
+          description: 'Which revision of this draft you are looking at (LEASH-101). A correction
+            before activation creates the next revision and marks the previous one superseded;
+            submit and confirm may name the revision that was reviewed and refuse a stale one.'
         instruction:
           type: string
         status:
@@ -1800,6 +1840,21 @@ components:
       properties:
         confirmed:
           const: true
+        revision:
+          type: integer
+          minimum: 1
+          description: 'The draft revision the customer reviewed. Omit to confirm whatever is
+            current; send it to be refused with 409 stale_revision if the draft moved on.'
+    SubmitRequest:
+      type: object
+      additionalProperties: false
+      description: 'Optional body for submitDraft (LEASH-101).'
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          description: 'The draft revision the customer reviewed. Omit to submit whatever is
+            current; send it to be refused with 409 stale_revision if the draft moved on.'
     Mandate:
       type: object
       additionalProperties: false
@@ -1919,11 +1974,30 @@ components:
       - items
       - engine_verdict
       - final_state
+      - delivery
+      - platform_outcome
       - resolved_by
       - customer_message
       properties:
         authorization_id:
           type: string
+        delivery:
+          type: string
+          enum:
+          - pending
+          - accepted
+          - refused
+          description: >-
+            What the platform did with our decision, kept apart from the decision itself (LEASH-130).
+            `pending` — decided and submitted, not yet acknowledged. `accepted` — the platform accepted
+            the decision; that is all it means, and never that anything was settled, shipped or
+            delivered. `refused` — terminally refused (for example `deadline_passed`); the purchase is
+            then `not_sent` and counts toward nothing.
+        platform_outcome:
+          type:
+          - string
+          - 'null'
+          description: What the platform said, verbatim where it said anything. Null while pending.
         source_authorization_id:
           type:
           - string
@@ -1999,8 +2073,14 @@ components:
           - waiting
           - timed_out
           - not_sent
-          description: 'Cockpit: approved=Paid, waiting=Waiting for you, declined=Blocked, timed_out=No answer, not_sent=Not
-            sent (platform rejected it before it reached the engine, e.g. permission revoked).'
+          description: >-
+            What the engine decided, and what the customer or the platform did about it. Read it with
+            `delivery`, never alone: approved+accepted is shown as "Approved" — never "Paid", because the
+            platform accepting a decision says nothing about settlement — approved+pending as
+            "Approved · sending", waiting as "Waiting for you", declined as "Blocked", timed_out as "No
+            answer". `not_sent` is either a purchase the platform rejected before it reached the engine
+            (no verdict, e.g. permission revoked) or a decision it terminally refused (delivery
+            `refused`); the two read differently in the app.
         resolved_by:
           type:
           - string
@@ -2169,6 +2249,8 @@ components:
       - period_days
       - limit_chf
       - approved_chf
+      - accepted_chf
+      - awaiting_platform_chf
       - remaining_chf
       - platform_counter_chf
       - mismatch
@@ -2184,6 +2266,15 @@ components:
           - $ref: '#/components/schemas/Money'
           - type: 'null'
         approved_chf:
+          description: What the engine approved. The limit is enforced against this, so spend still
+            awaiting the platform's acknowledgement is already reserved and cannot be spent twice.
+          $ref: '#/components/schemas/Money'
+        accepted_chf:
+          description: The part the platform has accepted. Never proof of settlement, shipment or
+            delivery — only that the authorization decision was accepted.
+          $ref: '#/components/schemas/Money'
+        awaiting_platform_chf:
+          description: Approved locally, not yet acknowledged. Reserved, not spendable again.
           $ref: '#/components/schemas/Money'
         remaining_chf:
           anyOf:
@@ -2376,6 +2467,38 @@ components:
           - tightened
           - revoked
           - expired
+    PaymentDeliveredData:
+      type: object
+      additionalProperties: false
+      required:
+      - authorization_id
+      - delivery
+      - platform_outcome
+      - final_state
+      description: >-
+        What the platform did with a decision already made (LEASH-130). Never a new verdict: the engine
+        decided earlier, and this says only whether the answer was accepted. `accepted` is not evidence
+        of settlement, shipment or delivery.
+      properties:
+        authorization_id:
+          type: string
+        delivery:
+          type: string
+          enum:
+          - accepted
+          - refused
+        platform_outcome:
+          type:
+          - string
+          - 'null'
+        final_state:
+          type: string
+          enum:
+          - approved
+          - declined
+          - waiting
+          - timed_out
+          - not_sent
     IntegrityAlertData:
       type: object
       additionalProperties: false
@@ -2391,6 +2514,7 @@ components:
           - unsupported_mandate_rule
           - mandate_snapshot_mismatch
           - amount_mismatch
+          - platform_delivery_mismatch
         run_id:
           type:
           - string
@@ -2414,6 +2538,7 @@ components:
           - ask.created
           - ask.resolved
           - payment.decided
+          - payment.delivered
           - mandate.changed
           - integrity.alert
         at:
@@ -2438,6 +2563,14 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/AskResolvedData'
+      - if:
+          properties:
+            type:
+              const: payment.delivered
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/PaymentDeliveredData'
       - if:
           properties:
             type:

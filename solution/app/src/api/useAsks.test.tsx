@@ -34,7 +34,8 @@ function ask(id: string, merchant = "PixelHarbor"): Ask {
     payment: {
       authorization_id: id, run_id: "RUN-01", merchant: { merchant_id: "ME0022", name: merchant, category: "electronics", country: "CH" },
       sim_time: "2026-08-12T10:05:00Z", amount: "289.00", currency: "CHF", billing_amount_chf: "289.00", items: [],
-      engine_verdict: "step_up", final_state: "waiting", resolved_by: null, customer_message: "Please check",
+      engine_verdict: "step_up", final_state: "waiting", delivery: "accepted", platform_outcome: "accepted",
+      resolved_by: null, customer_message: "Please check",
     },
     reasons: ["Same order as at 11:40."], passed: [], expires_at: "2026-09-23T14:02:00Z", can_approve: true,
     cannot_approve_reason: null,

@@ -15,7 +15,7 @@ import time
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -168,10 +168,21 @@ class PostgresDecisionStore:
             return committed
 
     async def mark_sent(self, authorization_id: str) -> None:
-        async with self._pool.acquire() as conn:
-            await conn.execute("update outbox set sent_at = now(), attempts = attempts + 1, last_attempt_at = now() "
+        """The POST succeeded: close the outbox row and record the platform's acceptance together.
+
+        One transaction, because a projection that says "sent" while the authorization still reads
+        `pending` is a disagreement the reconciler would have to clean up after us (LEASH-130).
+        """
+        now = datetime.now(timezone.utc)
+        async with self._pool.acquire() as conn, conn.transaction():
+            # `last_error = null` for the same reason as in OutboxSender: a stale error from an earlier
+            # retryable attempt would make `sent_to_viseca` report nothing for an accepted decision.
+            await conn.execute("update outbox set sent_at = $2, attempts = attempts + 1, last_attempt_at = $2, "
+                               "last_error = null "
                                "where authorization_id = $1 and endpoint = 'decision' and sent_at is null",
-                               authorization_id)
+                               authorization_id, now)
+            await PostgresRepository.record_delivery(conn, authorization_id, accepted=True,
+                                                     outcome="accepted", at=now)
 
 
 @dataclass(frozen=True)

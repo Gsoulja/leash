@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
-import { statusOf } from "./status";
+import { deliveryNote, statusOf } from "./status";
 
 const STATUS: Record<string, string> = { pass: "Passed", fail: "Failed", warn: "Check", info: "Info", integrity: "Check" };
 const ENGINE: Record<string, string> = { approve: "Engine: approved", decline: "Engine: declined", step_up: "Engine: asked you" };
@@ -69,6 +69,7 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
               <span className={`chip ${statusOf(p)[1]}`}>{statusOf(p)[0]}</span>
             </div>
             {p.customer_message && <p className="message">{p.customer_message}</p>}
+            {deliveryNote(p) && <p className="small">{deliveryNote(p)}</p>}
             {p.checks.length > 0 && (
               <table className="cmp" aria-label="What you agreed vs this payment">
                 <thead>

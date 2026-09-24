@@ -151,6 +151,34 @@ def test_spending_totals_match_the_ledger(db):
     assert (body["period_days"], body["limit_chf"], body["approved_chf"], body["remaining_chf"]) == (
         7, "300.00", "180.00", "120.00")  # A 120 + C 60; B waits, D declined
     assert body["platform_counter_chf"] == "120.00" and body["mismatch"] is False  # as of D's arrival
+    # LEASH-130: approved is what the limit is enforced against (a reservation the moment it is
+    # decided); accepted is the narrower fact. Nothing here has been acknowledged by the platform yet.
+    assert (body["accepted_chf"], body["awaiting_platform_chf"]) == ("0.00", "180.00")
+
+
+def test_accepted_spend_is_measured_over_the_same_window_as_approved_spend(db):
+    """Otherwise `accepted_chf` can exceed the total it is documented as being part of, and
+    `awaiting_platform_chf` clamps to zero while spend is genuinely outstanding."""
+    import asyncio
+
+    import asyncpg
+
+    async def acknowledge_everything() -> None:
+        conn = await asyncpg.connect(db)
+        try:
+            await conn.execute("update authorizations set delivery = 'accepted', platform_outcome = 'accepted' "
+                               "where state = 'approved'")
+        finally:
+            await conn.close()
+
+    asyncio.run(acknowledge_everything())
+    with client(db) as c:
+        body = c.get("/api/spending", params={"run_id": "RUN1"}).json()
+    assert body["approved_chf"] == "180.00"
+    assert body["accepted_chf"] == "180.00", "everything in the window is acknowledged"
+    assert body["awaiting_platform_chf"] == "0.00"
+    assert Decimal(body["accepted_chf"]) <= Decimal(body["approved_chf"]), \
+        "accepted is a part of approved, never more than it"
 
 
 def test_mandate_versions(db):

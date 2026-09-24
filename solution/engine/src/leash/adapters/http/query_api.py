@@ -57,6 +57,9 @@ def payment_view(row: asyncpg.Record) -> dict[str, Any]:
                   for i in p.items],
         "engine_verdict": row["engine_verdict"],
         "final_state": row["state"] if row["state"] != "received" else "waiting",
+        # Kept apart from the verdict on purpose: what we decided, and what the platform did with it.
+        "delivery": row["delivery"],
+        "platform_outcome": row["platform_outcome"],
         "resolved_by": row["resolved_by"],
         "customer_message": response.get("customer_message", ""),
     }
@@ -82,7 +85,8 @@ async def approval_check(conn: asyncpg.Connection, pool: asyncpg.Pool, mandates:
     return (not failing), (failing[0].detail if failing else None)
 
 
-PAYMENT_COLUMNS = "a.authorization_id, a.run_id, a.state, a.engine_verdict, a.resolved_by, a.checks, a.purchase"
+PAYMENT_COLUMNS = ("a.authorization_id, a.run_id, a.state, a.engine_verdict, a.resolved_by, a.checks, "
+                   "a.purchase, a.delivery, a.platform_outcome")
 _ORDER = """(select min(e.seq) from decision_events e
              where e.authorization_id = a.authorization_id and e.kind = 'received')"""
 
@@ -108,8 +112,11 @@ def query_router(pool: Callable[[], asyncpg.Pool], mandates: MandateSource, cloc
                                       f"where a.authorization_id = $1", authorization_id)
             if row is None:
                 return _not_found("payment")
+            # `last_error is null` matters: the outbox closes a terminally refused row too, so
+            # `sent_at` alone would report a body the platform never accepted (LEASH-130).
             sent = await conn.fetchval("select body from outbox where authorization_id = $1 and endpoint = 'decision' "
-                                       "and sent_at is not null order by id limit 1", authorization_id)
+                                       "and sent_at is not null and last_error is null order by id limit 1",
+                                       authorization_id)
         stored = json.loads(row["checks"]) if row["checks"] else {}
         response = stored.get("response") or {}
         reader = stored.get("reader") or {"name": "unknown", "model_unavailable": False}
@@ -156,6 +163,9 @@ def query_router(pool: Callable[[], asyncpg.Pool], mandates: MandateSource, cloc
                                                                  conn=conn)
             last = await conn.fetchrow(f"select a.authorization_id, a.event, a.purchase from authorizations a "
                                        f"where a.run_id = $1 order by {_ORDER} desc limit 1", run)
+            acknowledged = {r["authorization_id"] for r in await conn.fetch(
+                "select authorization_id from authorizations where run_id = $1 and state = 'approved' "
+                "and delivery = 'accepted'", run)}
             approved_before = [] if last is None else await conn.fetch(
                 """select a.authorization_id from authorizations a where a.run_id = $1 and a.state = 'approved'
                    and (select min(e.seq) from decision_events e where e.authorization_id = a.authorization_id
@@ -166,9 +176,9 @@ def query_router(pool: Callable[[], asyncpg.Pool], mandates: MandateSource, cloc
         approved = [p.purchase for p in snapshot.prior if p.state == "approved"]
         periods = mandates.for_run(run).periods
         period = periods[0] if periods else None
-        if period is not None and approved:
-            latest: SimTime = max(p.sim_time for p in approved)
-            spent = snapshot.approved_spend_in_window(latest, timedelta(days=period.days))
+        latest_at: SimTime | None = max((p.sim_time for p in approved), default=None)
+        if period is not None and approved and latest_at is not None:
+            spent = snapshot.approved_spend_in_window(latest_at, timedelta(days=period.days))
         else:
             spent = sum((p.billing_amount_chf for p in approved), Decimal("0.00"))
         # The platform's counter in an event is the spend *before* that purchase (DEC-010): compare it with our
@@ -186,10 +196,26 @@ def query_router(pool: Callable[[], asyncpg.Pool], mandates: MandateSource, cloc
                               and p.authorization_id != current.authorization_id
                               and current.sim_time.within(p.sim_time, window)), Decimal("0.00"))
                 mismatch = Decimal(str(counter)).quantize(Decimal("0.01")) != before
+        # `approved_chf` is what the *engine* approved — a reservation the moment it is decided, whether
+        # or not the platform has acknowledged it yet. It is what the limit is enforced against, because
+        # counting only acknowledged spend would let two concurrent purchases both pass while their
+        # acknowledgements were still outstanding. `accepted_chf` is the narrower fact: the part the
+        # platform has actually accepted. A terminal refusal releases its reservation by leaving
+        # `approved`, so the difference is only ever spend still in flight (LEASH-130).
+        # Over the *same* window as `approved_chf`, or the two are not comparable: an accepted purchase
+        # outside the period would otherwise make `accepted_chf` exceed the total it is a part of, and
+        # `awaiting_platform_chf` would clamp to zero while spend was genuinely outstanding.
+        counted = [p for p in approved
+                   if period is None or latest_at is None
+                   or latest_at.within(p.sim_time, timedelta(days=period.days))]
+        accepted_chf = sum((p.billing_amount_chf for p in counted if p.authorization_id in acknowledged),
+                           Decimal("0.00"))
         return {
             "run_id": run, "period_days": period.days if period else None,
             "limit_chf": _money(period.limit.value) if period else None,
             "approved_chf": _money(spent),
+            "accepted_chf": _money(accepted_chf),
+            "awaiting_platform_chf": _money(max(spent - accepted_chf, Decimal("0.00"))),
             "remaining_chf": _money(max(period.limit.value - spent, Decimal("0"))) if period else None,
             "platform_counter_chf": _money(counter) if counter is not None else None,
             "mismatch": mismatch,

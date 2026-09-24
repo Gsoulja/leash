@@ -74,6 +74,28 @@ The engine answered a purchase. Sent for every verdict, including `step_up` (whi
 }
 ```
 
+### `payment.delivered`
+
+What the payment platform did with a decision the engine had already made (LEASH-130). Never a new
+verdict — the verdict arrived earlier in `payment.decided`; this says only whether the answer was
+accepted. `accepted` means the platform took the decision, and nothing more: it is not evidence that
+anything was settled, shipped or delivered. `refused` means it never will, so the purchase is `not_sent`
+and stops counting toward spend, familiarity, duplicates and the purchase count.
+
+```json
+{
+  "id": "45",
+  "type": "payment.delivered",
+  "at": "2026-09-23T14:01:07Z",
+  "data": {
+    "authorization_id": "AZ-9d10",
+    "delivery": "refused",
+    "platform_outcome": "HTTP 422 deadline_passed",
+    "final_state": "not_sent"
+  }
+}
+```
+
 ### `mandate.changed`
 
 The permission was confirmed, tightened or revoked. Tightening applies to later runs (DEC-006); revocation shows only what the platform confirmed (DEC-017).

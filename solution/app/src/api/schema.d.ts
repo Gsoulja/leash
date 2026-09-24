@@ -341,6 +341,8 @@ export interface components {
         /** @description Local draft: not yet sent to Viseca (DEC-003, LEASH-123). */
         PolicyDraft: {
             draft_id: string;
+            /** @description Which revision of this draft you are looking at (LEASH-101). A correction before activation creates the next revision and marks the previous one superseded; submit and confirm may name the revision that was reviewed and refuse a stale one. */
+            revision: number;
             instruction: string;
             /** @enum {string} */
             status: "needs_answers" | "ready";
@@ -371,6 +373,13 @@ export interface components {
         ConfirmRequest: {
             /** @constant */
             confirmed: true;
+            /** @description The draft revision the customer reviewed. Omit to confirm whatever is current; send it to be refused with 409 stale_revision if the draft moved on. */
+            revision?: number;
+        };
+        /** @description Optional body for submitDraft (LEASH-101). */
+        SubmitRequest: {
+            /** @description The draft revision the customer reviewed. Omit to submit whatever is current; send it to be refused with 409 stale_revision if the draft moved on. */
+            revision?: number;
         };
         Mandate: {
             mandate_id: string;
@@ -412,6 +421,13 @@ export interface components {
         };
         Payment: {
             authorization_id: string;
+            /**
+             * @description What the platform did with our decision, kept apart from the decision itself (LEASH-130). `pending` — decided and submitted, not yet acknowledged. `accepted` — the platform accepted the decision; that is all it means, and never that anything was settled, shipped or delivered. `refused` — terminally refused (for example `deadline_passed`); the purchase is then `not_sent` and counts toward nothing.
+             * @enum {string}
+             */
+            delivery: "pending" | "accepted" | "refused";
+            /** @description What the platform said, verbatim where it said anything. Null while pending. */
+            platform_outcome: string | null;
             source_authorization_id?: string | null;
             run_id: string;
             merchant: {
@@ -439,7 +455,7 @@ export interface components {
             /** @enum {string|null} */
             engine_verdict: "approve" | "decline" | "step_up" | null;
             /**
-             * @description Cockpit: approved=Paid, waiting=Waiting for you, declined=Blocked, timed_out=No answer, not_sent=Not sent (platform rejected it before it reached the engine, e.g. permission revoked).
+             * @description What the engine decided, and what the customer or the platform did about it. Read it with `delivery`, never alone: approved+accepted is shown as "Approved" — never "Paid", because the platform accepting a decision says nothing about settlement — approved+pending as "Approved · sending", waiting as "Waiting for you", declined as "Blocked", timed_out as "No answer". `not_sent` is either a purchase the platform rejected before it reached the engine (no verdict, e.g. permission revoked) or a decision it terminally refused (delivery `refused`); the two read differently in the app.
              * @enum {string}
              */
             final_state: "approved" | "declined" | "waiting" | "timed_out" | "not_sent";
@@ -501,7 +517,12 @@ export interface components {
             run_id: string;
             period_days: number | null;
             limit_chf: components["schemas"]["Money"] | null;
+            /** @description What the engine approved. The limit is enforced against this, so spend still awaiting the platform's acknowledgement is already reserved and cannot be spent twice. */
             approved_chf: components["schemas"]["Money"];
+            /** @description The part the platform has accepted. Never proof of settlement, shipment or delivery — only that the authorization decision was accepted. */
+            accepted_chf: components["schemas"]["Money"];
+            /** @description Approved locally, not yet acknowledged. Reserved, not spendable again. */
+            awaiting_platform_chf: components["schemas"]["Money"];
             remaining_chf: components["schemas"]["Money"] | null;
             platform_counter_chf: components["schemas"]["Money"] | null;
             /** @description Our ledger and the platform counter disagree (DEC-010). */
@@ -564,20 +585,29 @@ export interface components {
             /** @enum {string} */
             change: "confirmed" | "tightened" | "revoked" | "expired";
         };
+        /** @description What the platform did with a decision already made (LEASH-130). Never a new verdict: the engine decided earlier, and this says only whether the answer was accepted. `accepted` is not evidence of settlement, shipment or delivery. */
+        PaymentDeliveredData: {
+            authorization_id: string;
+            /** @enum {string} */
+            delivery: "accepted" | "refused";
+            platform_outcome: string | null;
+            /** @enum {string} */
+            final_state: "approved" | "declined" | "waiting" | "timed_out" | "not_sent";
+        };
         IntegrityAlertData: {
             /** @enum {string} */
-            kind: "spend_counter_mismatch" | "unsupported_mandate_rule" | "mandate_snapshot_mismatch" | "amount_mismatch";
+            kind: "spend_counter_mismatch" | "unsupported_mandate_rule" | "mandate_snapshot_mismatch" | "amount_mismatch" | "platform_delivery_mismatch";
             run_id: string | null;
             detail: string;
         };
         StreamEvent: {
             id: string;
             /** @enum {string} */
-            type: "ask.created" | "ask.resolved" | "payment.decided" | "mandate.changed" | "integrity.alert";
+            type: "ask.created" | "ask.resolved" | "payment.decided" | "payment.delivered" | "mandate.changed" | "integrity.alert";
             /** Format: date-time */
             at: string;
             data: Record<string, never>;
-        } & (unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown);
     };
     responses: never;
     parameters: never;
@@ -673,7 +703,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

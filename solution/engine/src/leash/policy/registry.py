@@ -192,7 +192,11 @@ SHARED_ENFORCEMENT: tuple[str, ...] = (
     "leash.application.resolve",  # which rules can block a customer's approval (DEC-012)
 )
 # Schema files are part of the live meaning too (e.g. the familiarity view defines "prior purchase").
-SHARED_FILES: tuple[str, ...] = ("migrations/versions/*",)  # every file, not only Python (e.g. a .sql input)
+# `env.py` is in here as well (LEASH-135): it decides how every revision is applied — the lock and
+# statement bounds, and the transaction they run in — so a change there can change what a migration does
+# without any revision file moving.
+SHARED_FILES: tuple[str, ...] = ("migrations/versions/*",  # every file, not only Python (e.g. a .sql input)
+                                 "migrations/env.py")
 
 # Every other module, with the reason it can't change a field's meaning. A new module must be classified
 # here or above before the tests pass, so nothing on the live path is added silently.
@@ -206,6 +210,8 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
     "leash.application.clarify": "turns the customer's answers into a recompiled draft; readings come from the compiler",
     "leash.service": "process wiring: routers, background loops, health and readiness",
     "leash.adapters.postgres.migrate": "runs the migrations and the pack seed; the seed itself is hashed",
+    "leash.adapters.postgres.reset": "clears demo tables and reloads the pack for a rehearsal (LEASH-151); "
+                                     "it writes no decision state and is never on the live path",
     "leash.adapters.http.policy_api": "draft, submit and confirm endpoints; rules pass through hard_rules and the compiler, "
                                       "never evaluated here",
     "leash.adapters.viseca_api.client": "HTTP transport",
@@ -213,6 +219,9 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
     "leash.adapters.viseca_api.event_schema": "structural validation only: rejects, never changes a value",
     "leash.adapters.viseca_api.outbox_sender": "resends stored bodies unchanged",
     "leash.application.replay": "offline replay only",
+    "leash.application.reconcile": "compares our delivery record with the platform's after the fact "
+                                   "(LEASH-130); it repairs a pending delivery or raises an integrity "
+                                   "alert, and can never make a purchase less restrictive",
     "leash.application.permission_context": "background for the permission conversation: bounded profile and "
                                             "history context that suggests questions, never rules; not read at "
                                             "decision time",

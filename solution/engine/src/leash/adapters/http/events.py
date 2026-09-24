@@ -18,8 +18,8 @@ On connect a client first gets the current open asks — without an `id:` line, 
 moves backwards — then everything after a valid `Last-Event-ID`, then live events. Shop text never appears
 in events (the injection excerpt lives in check evidence, not in messages or reasons).
 
-A ledger/platform status mismatch has no `integrity.alert` kind in the contract yet; only spend mismatches
-are streamed (as `spend_counter_mismatch`). The rest stay in decision_events and the server log.
+Spend mismatches stream as `spend_counter_mismatch`, and a reconciler disagreement about delivery as
+`platform_delivery_mismatch` (LEASH-130). Anything else stays in decision_events and the server log.
 """
 
 import asyncio
@@ -185,6 +185,13 @@ class EventHub:
             return [(2 * seq, {"id": str(2 * seq), "type": "ask.resolved", "at": _iso(at), "data": {
                 "authorization_id": row["authorization_id"], "outcome": payload["state"],
                 "resolved_by": "customer" if kind == "customer_resolved" else "platform"}})]
+        if kind == "delivered" and payload.get("delivery") in ("accepted", "refused"):
+            # A decision already made; only its fate at the platform is new. The app reloads its read
+            # model on this, which is how a refusal stops showing as an approval without a page refresh.
+            return [(2 * seq, {"id": str(2 * seq), "type": "payment.delivered", "at": _iso(at), "data": {
+                "authorization_id": row["authorization_id"], "delivery": payload["delivery"],
+                "platform_outcome": payload.get("platform_outcome"),
+                "final_state": payload.get("state") or row["state"]}})]
         if kind == "integrity_alert" and payload.get("kind") == "unsupported_mandate_rule":
             fields = ", ".join(payload.get("fields", []))
             mandate = payload.get("mandate_id") or "unknown mandate"
@@ -201,6 +208,13 @@ class EventHub:
             if spend:
                 return [(2 * seq, {"id": str(2 * seq), "type": "integrity.alert", "at": _iso(at), "data": {
                     "kind": "spend_counter_mismatch", "run_id": row["run_id"], "detail": "; ".join(spend)}})]
+            if others and payload.get("source") == "reconcile":
+                # Our record and the platform's disagree about something already settled (LEASH-130).
+                # Nothing was changed; a person has to look, so it reaches the screen rather than only
+                # the log.
+                return [(2 * seq, {"id": str(2 * seq), "type": "integrity.alert", "at": _iso(at), "data": {
+                    "kind": "platform_delivery_mismatch", "run_id": row["run_id"],
+                    "detail": "; ".join(others)}})]
         return []
 
     async def events_between(self, conn: asyncpg.Connection, after_id: int, upto_seq: int, *,

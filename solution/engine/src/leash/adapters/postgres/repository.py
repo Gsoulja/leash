@@ -19,7 +19,7 @@ from leash.domain.decide import Decision
 from leash.domain.money import fmt_chf
 from leash.domain.purchase import LineItem, Merchant, Purchase, Term
 from leash.domain.snapshot import FinalState, HistoryBaseline, PriorPurchase, Snapshot
-from leash.domain.states import Actor, PurchaseState, purchase_transition
+from leash.domain.states import Actor, PurchaseState, delivery_transition, purchase_transition
 from leash.ports.repository import SavedAuthorization
 
 log = logging.getLogger("leash.repository")
@@ -250,6 +250,37 @@ class PostgresRepository:
         await self._event(conn, authorization_id, "decided",
                           {"verdict": decision.verdict, "reason_codes": list(decision.reason_codes)})
 
+    @staticmethod
+    async def record_delivery(conn: asyncpg.Connection, authorization_id: str, *, accepted: bool,
+                              outcome: str, at: datetime) -> bool:
+        """What the platform did with our answer (LEASH-130). One writer, two callers.
+
+        Acceptance is recorded next to the decision, in the caller's transaction, so the projection
+        cannot say "sent" while the row still says pending. A terminal refusal does more than record
+        itself: the purchase leaves its decided state for `not_sent`, which is what stops it counting
+        toward spend, familiarity, duplicates and the purchase count — the reservation a local approval
+        held is released the moment the platform says it will never accept it.
+
+        Returns False when the delivery outcome was already recorded, so a redelivery or a second outbox
+        pass changes nothing. A *different* second answer is not applied either; it is a disagreement for
+        the reconciler to raise.
+        """
+        current = await conn.fetchrow(
+            "select state, delivery from authorizations where authorization_id = $1 for update", authorization_id)
+        if current is None or current["delivery"] != "pending":
+            return False
+        target = delivery_transition("pending", "accepted" if accepted else "refused", "platform")
+        state = current["state"]
+        if not accepted and state != "not_sent":
+            state = purchase_transition(state, "not_sent", "platform")
+        await conn.execute(
+            """update authorizations set delivery = $2, platform_outcome = $3, delivered_at = $4, state = $5
+               where authorization_id = $1""",
+            authorization_id, target, outcome, at, state)
+        await RepositoryEvents.write(conn, authorization_id, "delivered",
+                                     {"delivery": target, "platform_outcome": outcome, "state": state})
+        return True
+
     async def record_fallback(self, authorization_id: str, response: Mapping[str, Any], *, ask_expires_at: datetime,
                               conn: asyncpg.Connection) -> SavedAuthorization | None:
         """The watchdog's safe step_up, only if no decision committed. Waits for a stalled decision's row lock,
@@ -328,6 +359,14 @@ class PostgresRepository:
 
     @staticmethod
     async def _event(conn: asyncpg.Connection, authorization_id: str, kind: str, payload: Mapping[str, Any]) -> None:
+        await RepositoryEvents.write(conn, authorization_id, kind, payload)
+
+
+class RepositoryEvents:
+    """Appending to the audit log, in one place, with the ordering lock every writer must take."""
+
+    @staticmethod
+    async def write(conn: asyncpg.Connection, authorization_id: str, kind: str, payload: Mapping[str, Any]) -> None:
         # Writers hold this lock shared until they commit, so the event stream can wait out everyone who may
         # still commit a lower seq (LEASH-064). Shared holders never block each other.
         await conn.execute("select pg_advisory_xact_lock_shared($1)", EVENTS_LOCK_KEY)

@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { PaymentDetail } from "./PaymentDetail";
-import { statusOf, type Tone } from "./status";
+import { stageOf, statusOf, type Stage } from "./status";
 import { PATHS, api, type Payment, type Run, type Spending } from "../api/client";
 
 const zurichDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", year: "numeric" });
@@ -50,7 +50,13 @@ function useCockpitData(runId: string | null) {
 }
 
 function SpendingCard({ spending, state, payments }: { spending?: Spending; state: string; payments: Payment[] }) {
-  const count = (...tones: Tone[]) => payments.filter((p) => tones.includes(statusOf(p)[1])).length;
+  // Counted by verdict *and* delivery stage (LEASH-130), not by tone: a decision the bank has not
+  // acknowledged yet shares the "warn" tone with a genuine ask, and summing those would tell the
+  // customer they have orders to answer that they do not. A decline the bank accepted is not an
+  // approval either, so the stage alone is not enough.
+  const at = (stage: Stage, state?: Payment["final_state"]) =>
+    payments.filter((p) => stageOf(p) === stage && (state === undefined || p.final_state === state)).length;
+  const waiting = payments.filter((p) => p.final_state === "waiting").length;
   if (!spending) {  // never a made-up amount
     return (
       <section className="card" aria-label="Spending">
@@ -58,6 +64,7 @@ function SpendingCard({ spending, state, payments }: { spending?: Spending; stat
       </section>
     );
   }
+  const blocked = payments.filter((p) => statusOf(p)[1] === "bad").length;
   const period = spending?.period_days ?? null;
   const limit = spending?.limit_chf ? Number(spending.limit_chf) : null;
   const spent = spending ? Number(spending.approved_chf) : 0;
@@ -85,10 +92,12 @@ function SpendingCard({ spending, state, payments }: { spending?: Spending; stat
         </div>
       )}
       <div className="counts">
-        <span className="chip ok">{count("ok")} paid</span>
-        <span className="chip warn">{count("warn")} waiting</span>
-        <span className="chip bad">{count("bad")} blocked</span>
-        {count("dim", "off") > 0 && <span className="chip dim">{count("dim", "off")} other</span>}
+        {/* "approved", never "paid": the bank accepting a decision is not evidence of settlement. */}
+        <span className="chip ok">{at("accepted", "approved")} approved</span>
+        {at("submitted") > 0 && <span className="chip warn">{at("submitted")} sending</span>}
+        <span className="chip warn">{waiting} waiting for you</span>
+        <span className="chip bad">{blocked} blocked</span>
+        {at("not_sent") > 0 && <span className="chip dim">{at("not_sent")} not accepted</span>}
       </div>
     </section>
   );

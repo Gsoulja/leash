@@ -13,7 +13,8 @@ function detail(extra: Partial<Detail> = {}): Detail {
     authorization_id: "AZ-1", run_id: "RUN-01", merchant: { merchant_id: "ME0022", name: "PixelHarbor", category: "electronics", country: "CH", city: "Zurich" },
     sim_time: "2026-08-12T09:40:00Z", amount: "289.00", currency: "CHF", billing_amount_chf: "289.00",
     items: [{ item_id: "IT0017", name: "27-inch monitor", quantity: 1, unit_price: "289.00" }],
-    engine_verdict: "step_up", final_state: "approved", resolved_by: "customer", customer_message: "Please check: same order as at 11:40.",
+    engine_verdict: "step_up", final_state: "approved", delivery: "accepted", platform_outcome: "accepted",
+    resolved_by: "customer", customer_message: "Please check: same order as at 11:40.",
     checks: [
       { key: "price", label: "Price", status: "pass", agreed: "≤ CHF 400.00 per order", actual: "CHF 289.00", detail: "Within limit.", reason_code: null },
       { key: "dup", label: "Repeat order", status: "warn", agreed: "Each order once", actual: "Same as the 11:40 order (approved)", detail: "Same order.", reason_code: "possible_duplicate" },
@@ -60,7 +61,7 @@ describe("PaymentDetail", () => {
   it("engine verdict and customer outcome are shown separately", async () => {
     setup(detail());
     expect(await screen.findByText("Engine: asked you")).toBeInTheDocument();
-    expect(screen.getByText("Paid · you approved")).toBeInTheDocument();
+    expect(screen.getByText("Approved · you approved")).toBeInTheDocument();
   });
 
   it("is a dialog that closes with Escape or the Close button", async () => {

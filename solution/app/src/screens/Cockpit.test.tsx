@@ -31,12 +31,20 @@ function payment(id: string, final_state: Payment["final_state"], extra: Partial
     authorization_id: id, run_id: "RUN-01", merchant: { merchant_id: "ME0001", name: `Shop ${id}`, category: "groceries", country: "CH" },
     sim_time: "2026-08-12T09:40:00Z", amount: "20.00", currency: "CHF", billing_amount_chf: "20.00",
     items: [{ item_id: "IT1", name: "Fresh produce", quantity: 1, unit_price: "20.00" }],
-    engine_verdict: final_state === "waiting" ? "step_up" : "approve", final_state, resolved_by: final_state === "waiting" ? null : "engine",
+    // `not_sent` here is the platform refusing the purchase before it ever reached the engine: no
+    // verdict, and nothing was ever delivered. A decision the platform refused is a different shape
+    // (verdict + delivery "refused"), covered in status.test.ts.
+    engine_verdict: final_state === "not_sent" ? null : final_state === "waiting" ? "step_up" : "approve",
+    final_state,
+    delivery: final_state === "not_sent" ? "pending" : "accepted",
+    platform_outcome: final_state === "not_sent" ? null : "accepted",
+    resolved_by: final_state === "waiting" ? null : "engine",
     customer_message: "", ...extra,
   };
 }
 
-const SPENDING: Spending = { run_id: "RUN-01", period_days: 7, limit_chf: "300.00", approved_chf: "180.00", remaining_chf: "120.00",
+const SPENDING: Spending = { run_id: "RUN-01", period_days: 7, limit_chf: "300.00", approved_chf: "180.00",
+  accepted_chf: "180.00", awaiting_platform_chf: "0.00", remaining_chf: "120.00",
   platform_counter_chf: "180.00", mismatch: false };
 
 function run(id: string, status: Run["status"] = "running", scenario = "SCEN0001"): Run {
@@ -89,8 +97,8 @@ describe("Cockpit", () => {
       const chip = row.querySelector("[data-status]")!;
       return [chip.textContent, chip.getAttribute("data-status")];
     };
-    expect(await label("A")).toEqual(["Paid", "ok"]);
-    expect(await label("C")).toEqual(["Paid · you approved", "ok"]);
+    expect(await label("A")).toEqual(["Approved", "ok"]);
+    expect(await label("C")).toEqual(["Approved · you approved", "ok"]);
     expect(await label("B")).toEqual(["Waiting for you", "warn"]);
     expect(await label("D")).toEqual(["Blocked", "bad"]);
     expect(await label("E")).toEqual(["You declined", "bad"]);
@@ -200,7 +208,7 @@ describe("Cockpit per run (LEASH-133)", () => {
     expect(screen.queryByRole("button", { name: /Shop L/ })).toBeNull();
     expect(await screen.findByText("CHF 250.00", { selector: ".v" })).toBeInTheDocument();
     expect(screen.getByText("CHF 50.00")).toBeInTheDocument();
-    expect(screen.getByText("1 paid")).toBeInTheDocument();
+    expect(screen.getByText("1 approved")).toBeInTheDocument();  // never "paid" (LEASH-130 AC9)
     expect(screen.getByText("1 blocked")).toBeInTheDocument();
   });
 

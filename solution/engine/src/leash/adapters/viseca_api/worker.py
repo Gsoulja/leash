@@ -27,6 +27,9 @@ log = logging.getLogger("leash.worker")
 POLL_WAIT_SECONDS = 25
 BASE_BACKOFF_SECONDS = 1.0
 MAX_BACKOFF_SECONDS = 30.0
+#: How often our record is checked against the platform's. Slow on purpose (LEASH-130): it is an
+#: after-the-fact check and must never compete with answering a live purchase.
+RECONCILE_SECONDS = 30.0
 _RUN_OVER = frozenset({"completed", "stopped", "finished", "failed", "cancelled", "canceled", "expired"})
 
 Validate = Callable[[Mapping[str, Any]], None]
@@ -37,7 +40,8 @@ class WorkerApi(Protocol):
 
     async def get_run(self, run_id: str) -> Any: ...
 
-    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any]) -> Any: ...
+    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any],
+                            timeout: float | None = None) -> Any: ...
 
 
 class Handler(Protocol):
@@ -45,16 +49,24 @@ class Handler(Protocol):
 
 
 class ApiSender:
-    """DecidePurchase's Sender: POST /v1/authorizations/{id}/decision."""
+    """DecidePurchase's Sender: POST /v1/authorizations/{id}/decision.
 
-    def __init__(self, api: WorkerApi) -> None:
+    `send_seconds` is the deadline plan's own send budget, passed down as the HTTP timeout so the
+    socket is not held past it. DecidePurchase caps the whole call by the time actually left before
+    `deadline_at`, so the tighter of the two always wins.
+    """
+
+    def __init__(self, api: WorkerApi, *, send_seconds: float | None = None) -> None:
         self._api = api
+        self._send_seconds = send_seconds
 
     async def send(self, authorization_id: str, body: Mapping[str, Any]) -> None:
-        await self._api.post_decision(authorization_id, body)
+        await self._api.post_decision(authorization_id, body, self._send_seconds)
 
 
-def _run_over(body: Any) -> bool:
+def run_over(body: Any) -> bool:
+    """True when the platform reports the run over. Both shapes: the live API answers unwrapped with a top-level
+    status, the fake platform nests status and counters under `data`."""
     data = body.get("data", body) if isinstance(body, Mapping) else None
     if not isinstance(data, Mapping):
         return False
@@ -141,7 +153,7 @@ class Worker:
         except Exception as exc:
             await self._backoff("run progress check failed", exc)
             return False
-        return _run_over(progress)
+        return run_over(progress)
 
     async def _handle(self, envelope: Any) -> None:
         try:
@@ -197,19 +209,31 @@ def health_app(worker: Worker, *, stale_seconds: float = POLL_WAIT_SECONDS * 2 +
 # ----- process entry point -----------------------------------------------------------------------------
 
 async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exercised by the end-to-end test
+    from leash.adapters.viseca_api.client import PoolSettings, VisecaClient
+    from leash.config import Settings, install_redaction
+
+    settings = Settings.from_env(os.environ)
+    install_redaction(settings)
+    client = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url, settings.api_timeout_seconds,
+                          pool=PoolSettings.from_env())
+    # `async with` from here, not a later try/finally: bootstrap and the database pool are the two most
+    # likely startup failures, and both happen after the HTTP pool is already open. Its close also runs
+    # after the database close, so a database close that raises can't skip it.
+    async with client:
+        await _work(client, settings, run_id)
+
+
+async def _work(client: Any, settings: Any, run_id: str | None) -> None:  # pragma: no cover - wiring
     import asyncpg
 
     from leash.adapters.postgres.unit_of_work import DEFAULT_LEASE_SECONDS, DEFAULT_LOCK_TIMEOUT_MS, PostgresDecisionStore
     from leash.adapters.regex_reader import RegexReader
-    from leash.adapters.viseca_api.client import VisecaClient
     from leash.adapters.viseca_api.event_schema import load_event_validator
     from leash.adapters.viseca_api.outbox_sender import OutboxSender
     from leash.application.decide_purchase import DeadlinePlan, DecidePurchase
-    from leash.config import Settings, install_redaction, load_runtime
+    from leash.application.reconcile import Reconciler, summary
+    from leash.config import load_runtime
 
-    settings = Settings.from_env(os.environ)
-    install_redaction(settings)
-    client = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url, settings.api_timeout_seconds)
     runtime = await load_runtime(settings, client)
     schema = Path(os.environ.get("LEASH_EVENT_SCHEMA", "../../data/schemas/authorization_event.schema.json"))
     version = f"leash-{runtime.api_version}"
@@ -218,11 +242,14 @@ async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exer
         store = PostgresDecisionStore(pool, engine_version=version, lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS)
         plan = DeadlinePlan.for_lock_timeout(lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS,
                                              send_seconds=settings.watchdog_margin_seconds / 2)
-        use_case = DecidePurchase(store=store, reader=RegexReader(), sender=ApiSender(client), plan=plan,
+        use_case = DecidePurchase(store=store, reader=RegexReader(),
+                                  sender=ApiSender(client, send_seconds=plan.send_seconds), plan=plan,
                                   engine_version=version, human_window_seconds=runtime.human_window_seconds,
                                   claim_refresh_seconds=DEFAULT_LEASE_SECONDS / 3)
         worker = Worker(client, use_case, validate=load_event_validator(schema), engine_version=version)
         outbox = OutboxSender(pool, client)
+
+        reconciler = Reconciler(pool, client)
 
         async def recover() -> None:  # the outbox is for recovery only: rows the worker could not send
             while True:
@@ -231,6 +258,18 @@ async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exer
                 except Exception:
                     log.exception("outbox pass failed")
                 await asyncio.sleep(2)
+
+        async def reconcile_loop() -> None:
+            """Our record against the platform's (LEASH-130). Slower than the outbox on purpose: it is
+            an after-the-fact check, and it must never compete with answering a live purchase."""
+            while True:
+                await asyncio.sleep(RECONCILE_SECONDS)
+                try:
+                    found = await reconciler.run_once(run_id=run_id)
+                    if found.repaired or found.alerts:
+                        log.info("%s", summary(found))
+                except Exception:
+                    log.exception("reconciliation pass failed")
 
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
@@ -242,15 +281,21 @@ async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exer
         # uvicorn captures SIGINT/SIGTERM while serving and replays them to our handlers (worker.stop) on exit
         serving = asyncio.ensure_future(health.serve())
         recovery = asyncio.ensure_future(recover())
+        reconciling = asyncio.ensure_future(reconcile_loop())
         try:
             await worker.run(run_id=run_id)
         finally:
+            reconciling.cancel()
+            try:  # a last pass, so a run that just ended is reconciled before the worker exits
+                log.info("%s", summary(await reconciler.run_once(run_id=run_id)))
+            except Exception:
+                log.exception("final reconciliation failed")
             recovery.cancel()
             health.should_exit = True
             await outbox.send_pending()
             await serving
     finally:
-        await pool.close()
+        await pool.close()  # the HTTP pool is closed by `_serve`'s `async with`, after this
 
 
 def main() -> None:  # pragma: no cover - process entry point

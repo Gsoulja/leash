@@ -23,20 +23,64 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # transaction readers for the permission conversation's context bundle. The diff is additive only
 # (120 insertions, 0 deletions): no existing read path, seed row or decision input changed, so every
 # field moved for the same reason and no field's meaning did.
+# Re-pinned again 2026-09-24 (LEASH-101, after review): migration 0007 adds draft_revisions and
+# policy_drafts.revision, and stamps existing drafts as revision 1 so a stored view still matches its
+# own schema. migrations/versions/* is in SHARED_FILES and is hashed as a whole file, so any edit to
+# it moves every field. It adds only local draft bookkeeping (revisions, transcript, retained
+# context); it touches no table the decision path reads and changes no field's meaning.
+# Re-pinned again 2026-09-24 (LEASH-136): `application/decide_purchase.py` is in SHARED_ENFORCEMENT, and
+# its decision-send timeout changed from `max(send_seconds, left)` to `max(0.0, min(send_seconds, left))`
+# so a POST can no longer be held past `deadline_at`. That only shortens how long the engine waits to
+# hand over an already-decided answer; it reads no rule, no fact and no amount, so every field moved for
+# the same reason and no field's meaning did.
+# Re-pinned again 2026-09-24 (LEASH-135): `0002` now adds `purchase` nullable and the new `0008` backfills,
+# validates and requires it, `migrations/env.py` bounds every migration's lock and statement timeouts, and
+# `env.py` was added to SHARED_FILES so that file is hashed too. Those files are hashed with `code_hash`
+# (an AST dump, docstrings stripped), so a behaviour change there moves every field while a comment-only
+# edit deliberately does not. The stored shape is unchanged — `0008` writes exactly what
+# `purchase_to_json(translate(event).purchase)` produces, which is what the engine already wrote for every
+# row created after `0002` — so no field's meaning changed; what changed is that a populated database can
+# now reach head at all.
+# Re-pinned again 2026-09-24 (LEASH-135, after review): `env.py` now refuses a zero timeout (Postgres reads
+# `0` as *no* timeout, which would have silently removed the bound the file exists to guarantee), and `0008`
+# gained a `remaining_without_purchase` helper so its validation step can be tested directly. Docstring-only
+# edits to 0001 and 0004-0007 move nothing (code_hash strips docstrings). Neither change reads a rule, a fact
+# or an amount, and the stored `purchase` shape is untouched: no field's meaning changed.
+# Re-pinned again 2026-09-24 (LEASH-130): the engine's verdict and the platform's acceptance are now separate
+# facts. Migration 0009 adds authorizations.delivery / platform_outcome / delivered_at and the `delivered`
+# event kind; `domain/states.py` gains the delivery machine and the `→ not_sent` transitions a terminal refusal
+# implies; `repository.py` gains `record_delivery`; `unit_of_work.mark_sent` records acceptance in the same
+# transaction as closing the outbox row. Every field moved because all of these are shared code.
+#
+# This change is strictly *tightening*: a decision the platform refused now leaves `approved` for `not_sent`,
+# so it stops counting toward spend, familiarity, duplicates and the purchase count — it used to count. No rule
+# reads the new columns, no verdict depends on them, and nothing that counted before counts less safely now.
+# Re-pinned again 2026-09-24 (LEASH-130, after review): migration 0009's backfill now also releases the
+# spend a refused delivery was holding (it recorded the refusal but left `state = 'approved'`, which was the
+# very bug the revision exists to fix, reintroduced for every pre-0009 row), and `unit_of_work.mark_sent`
+# clears a stale `last_error` so an accepted decision reads as sent. Both are in shared code, so every field
+# moved.
+#
+# Correcting the previous note, which claimed this work "only ever tightens": that is true of **spend**, and
+# false of **verdicts**. Dropping a refused purchase from `snapshot.prior` also removes it as a *prior* for
+# the next purchase, so a duplicate, split or count check it used to trigger no longer fires — reproduced by
+# the reviewer: an identical second order went from `possible_duplicate` (step_up under DEC-029/030) to no
+# check at all. That is what AC4 asks for — a decision the platform never accepted is not a purchase that
+# happened — but it is a loosening for later purchases and must not be recorded as anything else.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "09ec68a5ac2d",
-    "authorization.fulfillment_method@v1": "ef49895b214c",
-    "merchant.merchant_category@v1": "7b11df2f1af0",
-    "items.item_category@v1": "8387b56ee3b8",
-    "items.item_id@v1": "2e1395c38e77",
-    "leash.items.size.v1@v1": "b755c830f6cc",
-    "leash.merchant.prior_purchases.v1@v1": "cb7b19e2a17c",
-    "leash.order.return_days.v1@v1": "b6da1e349333",
-    "leash.items.unrequested_count.v1@v1": "1a92272f2478",
-    "leash.purchase.max_count.v2@v2": "b49ffe16ad2c",
-    "leash.items.max_quantity.v1@v1": "63d79d074391",
-    "leash.session.risk_score.v1@v1": "e6bf9bb75b30",
-    "leash.orders.split_check.v1@v1": "46d453673f6a",
+    "authorization.billing_amount_chf@v1": "08944bcb129e",
+    "authorization.fulfillment_method@v1": "44e6c6972e69",
+    "merchant.merchant_category@v1": "44fac5c0764b",
+    "items.item_category@v1": "46a851c69129",
+    "items.item_id@v1": "24b4db15f80f",
+    "leash.items.size.v1@v1": "fd01a97c13b9",
+    "leash.merchant.prior_purchases.v1@v1": "08a751a72599",
+    "leash.order.return_days.v1@v1": "fd2a2852b500",
+    "leash.items.unrequested_count.v1@v1": "cbc403bc73e5",
+    "leash.purchase.max_count.v2@v2": "14b79ee411c5",
+    "leash.items.max_quantity.v1@v1": "5d94955206d9",
+    "leash.session.risk_score.v1@v1": "ec9760a65360",
+    "leash.orders.split_check.v1@v1": "6d90572a824f",
 }
 
 

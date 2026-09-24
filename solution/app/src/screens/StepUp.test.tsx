@@ -11,7 +11,8 @@ function payment(id: string, extra: Partial<Payment> = {}): Payment {
     authorization_id: id, run_id: "RUN-01", merchant: { merchant_id: "ME0022", name: `PixelHarbor ${id}`, category: "electronics", country: "CH" },
     sim_time: "2026-08-12T10:05:00Z", amount: "289.00", currency: "CHF", billing_amount_chf: "289.00",
     items: [{ item_id: "IT0017", name: "27-inch computer monitor", quantity: 1, unit_price: "289.00" }],
-    engine_verdict: "step_up", final_state: "waiting", resolved_by: null, customer_message: "", ...extra,
+    engine_verdict: "step_up", final_state: "waiting", delivery: "accepted", platform_outcome: "accepted",
+    resolved_by: null, customer_message: "", ...extra,
   };
 }
 

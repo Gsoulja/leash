@@ -24,7 +24,10 @@ function fromCreated(data: AskCreatedData, known?: Ask): Ask {
   const payment: Ask["payment"] = known?.payment ?? {
     authorization_id: data.authorization_id, run_id: "", merchant: { merchant_id: "", name: data.merchant_name, category: "", country: "" },
     sim_time: "", amount: data.billing_amount_chf, currency: "CHF", billing_amount_chf: data.billing_amount_chf, items: [],
-    engine_verdict: "step_up", final_state: "waiting", resolved_by: null, customer_message: data.reasons.join(" "),
+    // The event says nothing about delivery, and a placeholder must not claim one: the detail
+    // fetched from /api/payments/{id} carries the real value (LEASH-130).
+    engine_verdict: "step_up", final_state: "waiting", delivery: "pending", platform_outcome: null,
+    resolved_by: null, customer_message: data.reasons.join(" "),
   };
   return {
     authorization_id: data.authorization_id, payment, reasons: data.reasons, passed: known?.passed ?? [],
