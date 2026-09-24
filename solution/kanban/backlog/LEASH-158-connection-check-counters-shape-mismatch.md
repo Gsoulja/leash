@@ -37,7 +37,7 @@ The connection check is the one live/hosted smoke test the team is meant to run 
 ### Dependencies
 - Relates to LEASH-057 (created `connection_check.py`).
 - Relates to LEASH-127 (runbook step that calls this script).
-- Blocks LEASH-128 (release-readiness gate depends on the live connection check actually working).
+- Blocks LEASH-128 (the release-readiness gate cannot pass while the live connection check misreports).
 
 ## Testing Requirements
 Add a test in `solution/engine/tests/` (near existing `connection_check` coverage, or a new `tests/scripts/test_connection_check.py`) that stubs `VisecaClient.get_run` to return the real unwrapped shape with `status: "completed"` and asserts `check()` returns `0` and prints "passed", not "FAILED".

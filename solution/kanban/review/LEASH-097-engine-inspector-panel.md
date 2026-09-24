@@ -20,11 +20,31 @@ Side panel for judges: every purchase with engine and final verdict, the checks 
 Makes the reasoning visible during the demo.
 
 ## Acceptance Criteria
-- [x] Selecting a payment shows its checks and JSON.
-- [x] Hidden on phone width.
+- [x] The panel lists every payment of the selected run with both its engine verdict and its final outcome.
+- [x] Selecting a payment shows its checks (label, status, agreed, actual, detail, reason code).
+- [x] The selected payment shows the facts read: the reader's name, whether the model was unavailable, and the shop's text marked untrusted.
+- [x] The selected payment shows the JSON body sent to Viseca, and says so plainly when nothing was sent.
+- [x] `integrity.alert` events appear in the panel (operator-only; never on the phone screens).
+- [x] The panel is not mounted below the desktop breakpoint (phone width).
+- [x] The panel and the phone always describe the same run.
 
 ## Technical Approach
-`src/inspector/Inspector.tsx`.
+`src/inspector/Inspector.tsx`, mounted beside `PhoneFrame` by a two-column shell in `App.tsx`.
+
+Reference behaviour and look: `renderSide()` in `solution/prototype/index.html` and its `.side` / `.panel` / `.tbl` / `.chk` tokens.
+
+Data comes entirely from the existing contract — `GET /api/payments?run_id=` and `GET /api/payments/{id}`
+(`checks`, `shop_texts`, `sent_to_viseca`, `engine_version`, `reader`). No engine change.
+
+Live refresh reuses the house pattern: the panel listens to `payment.decided` on the event stream and
+invalidates the shared `["payments"]` query key, exactly as `Cockpit.tsx` already does. `integrity.alert`
+is read off the same stream.
+
+Width is gated with `matchMedia`, so the panel is absent rather than merely hidden below the breakpoint:
+it is assertable in jsdom, and it stops the panel fetching payment detail nobody can see.
+
+`useSelectedRun` moves out of `Cockpit.tsx` into `src/api/useSelectedRun.ts` and the selection is lifted
+to `App.tsx`, so a run switched on the phone also switches the panel.
 
 ### Dependencies
 - Needs LEASH-091.
@@ -32,63 +52,80 @@ Makes the reasoning visible during the demo.
 
 ## Testing Requirements
 Write first: `selecting a row shows its checks`.
+Also: `the panel is absent at phone width`; `shop text renders as text, never markup`;
+`an integrity alert appears in the panel`; `a payment.decided event refreshes the list`.
 
 ## Related Files
 - `solution/app/src/inspector/Inspector.tsx`
+- `solution/app/src/inspector/Inspector.test.tsx`
+- `solution/app/src/api/useSelectedRun.ts` (lifted out of `screens/Cockpit.tsx`)
+- `solution/app/src/App.tsx` (two-column shell, run selection lifted)
+- `solution/app/src/screens/Cockpit.tsx` (takes the run selection as a prop)
+- `solution/app/src/theme.css` (inspector tokens ported from the prototype)
+
+## Scope amendment (2026-09-24)
+The original two criteria covered less than the description, and `Related Files` named only
+`Inspector.tsx` — but a side panel cannot exist without a shell in `App.tsx` and its tokens in
+`theme.css`. Criteria expanded to the description's four content blocks, plus the `integrity.alert`
+surface that `solution/contracts/events.md` assigns to the inspector and no other ticket owns.
+Agreed with the product owner before work started.
 
 ## Out of scope
 - Editing data.
-
-## Implementation notes
-
-- `src/inspector/Inspector.tsx`: a read-only `<aside>`. It lists the run's payments with the engine's
-  own verdict beside the final outcome; selecting one shows the checks table, the facts read (with the
-  reader's name and whether the model was unavailable), and the exact body POSTed to Viseca. Everything
-  comes from `GET /api/payments` and `GET /api/payments/{id}` — the contract already carries `checks`,
-  `evidence`, `sent_to_viseca`, `engine_version` and `reader`, so no API change was needed.
-- Hidden on phone width in `theme.css`: `.inspector{display:none}`, shown only from `min-width:900px`.
-  A test parses the stylesheet for both halves of that rule, the way `theme.test.ts` does.
-- Mounted in `App.tsx` next to `PhoneFrame` inside a new `.stage` flex row (an unmounted panel is dead
-  code). `App.tsx` and `theme.css` are outside Related Files for that reason. `App.tsx` mounts it
-  without a run, so it lists every payment the engine has answered; the `runId` prop narrows it to one
-  run when a caller supplies one.
-- `Nothing was sent.` is shown when `sent_to_viseca` is null, so an empty box never reads as "sent
-  nothing meaningful".
-- Out of scope held: no input, textarea, select or form exists in the panel, and a test asserts it.
-
-### Not part of this ticket, but it blocked the check
-`src/api/schema.d.ts` had drifted from `contracts/policy-api.yaml` (the `revision`/`SubmitRequest`
-additions from LEASH-101), so `npm test` failed before any inspector code existed. Regenerated with
-`npm run gen:api`, and `Agent.test.tsx`'s draft factory gained the now-required `revision: 1`.
-
-Verification: `npm test` → 11 files, 96 tests passed; `npm run typecheck` → clean.
+- The adversarial checkout form (LEASH-103 owns it).
+- Changing any engine or contract behaviour.
 
 ## Review log
 
 ### 2026-09-24 — independent agent review
-Both criteria `met`. The reviewer probed the paths the tests do not: select A then B (the detail
-follows B — the query is keyed by the selection, so nothing from A survives), empty `checks`, a 404
-detail, an empty and a failing payments list. Untrusted text confirmed inert: `evidence` entries with
-`<script>`/`<img onerror>`, a `reader.name` of `<em>regex</em>` and markup nested inside
-`sent_to_viseca` all rendered as escaped text, `querySelectorAll("script, img, iframe, b, em")` → 0.
-Out of scope held: GETs only, no mutation, no form control. Six mutations of the component killed six
-tests.
+- [x] met — criterion 1: both verdicts rendered per row (`data-engine` / `data-final`), `null` engine verdict shown as `—`; `GET /api/payments` has no pagination, so "every payment" holds.
+- [x] met — criterion 2: all six check fields rendered; `CHECK_TONE` is typed `Record<Check["status"], string>`, so tsc enforces every contract status.
+- [x] met — criterion 3: reader name, an `model_unavailable` branch, and each shop text under an "untrusted" heading; empty case handled.
+- [x] met — criterion 4: both branches covered by tests.
+- [x] met — criterion 5: the panel is the only listener for `integrity.alert` in `src/` (verified by grep); malformed payloads are swallowed by `read()`.
+- [x] met — criterion 6 (logic): `Inspector` returns null before `InspectorPanel`'s hooks run; the test asserts zero fetches at phone width. The matchMedia query matches the `.shell` breakpoint in `theme.css`.
+- [ ] not met — criterion 7: `selected` outlived a `runId` change, so the open decision block kept showing a payment from the run the phone had left; the detail query key carried no run.
+- Checked and clean: no assertion in `Cockpit.test.tsx` was weakened, deleted or made vacuous by the `useSelectedRun` extraction (five hunks, all swapping `<Cockpit />` for a harness that calls the real hook); no `dangerouslySetInnerHTML` or `innerHTML` anywhere in `src/`.
+Verdict: returned to in-progress.
 
-It found the AC2 assertion **not load-bearing** and three defects. All four are now fixed:
+Fix: a failing test was written first (`switching the run clears a payment selected in the run left behind`), then `InspectorPanel` was given a `shownRun` guard that clears `selected` during render when `runId` changes. Integrity alerts are deliberately *not* cleared — they are filtered by run instead, so switching back re-shows an earlier run's alerts rather than discarding them.
 
-- **The CSS test only caught deletion.** It string-matched the stripped stylesheet, so the panel stayed
-  visible at every width and the test still passed when the rule was wrapped in `@media print`, and
-  again when a later `.inspector{display:block}` overrode it. Replaced with a small walker that
-  collects every `.inspector` display declaration together with the at-rule enclosing it, then asserts
-  the last unconditional rule hides it and exactly one rule shows it, inside a `min-width` query of at
-  least 768px. Both of the reviewer's bypasses now fail it, and so does deleting the rule.
-  (`display:none` is the right mechanism: below 900px the panel is out of the accessibility tree too.)
-- **The list never refreshed.** It used its own query key, and nothing invalidates it — during a live
-  run the judges' list would have gone stale until a remount. It now shares the cockpit's
-  `["payments", runId]` key, which the event stream already invalidates.
-- **The notes claimed a run scope the caller never supplies.** `App.tsx` mounts `<Inspector />` bare.
-  The note is corrected rather than the mount: listing every answered payment is what a judge wants.
-- **Duplicate React keys** when two evidence lines are identical; keyed by index and text now.
-- Empty `checks` rendered a header row with no body; it now says no checks were recorded.
+### 2026-09-24 — independent agent review (round 2)
+- [x] met — criterion 7: the reviewer traced that the new test fails against the pre-fix component (the assertions are synchronous right after the rerender, so it cannot pass by racing a refetch) and could no longer construct a sequence where the panel shows anything from a run the phone has left.
+- [x] met — criteria 1–6 re-checked against the fix: no render loop (state is adjusted on the rendering component itself and the guard is false on the next pass), no lost selection in the same-run case, alerts still behave as criterion 5 requires.
+- 99 tests pass; `tsc --noEmit` clean; `npm run build` clean.
 
-Verification: `npm test` → 11 files / 96 tests passed; `npm run typecheck` → clean.
+Recorded as unverified, for the human gate:
+- The panel's actual appearance and resize behaviour in a real browser — not judgeable from tests.
+- Integrity alerts are live-stream-only: alerts raised before the panel mounts are not shown, because the contract has no backfill endpoint. Inherent to the contract, not a defect in this ticket.
+- The Playwright journey (`e2e/journey.spec.ts`) was not run here — it needs the Docker stack. Its locators were read and do not collide with the panel's row names, but that is inspection, not a run.
+
+Verdict: moved to review.
+
+### 2026-09-24 — a second implementation, dropped in the merge
+
+This ticket was built twice in parallel: once on `feature/LEASH-097` (the version above, which shipped)
+and once in a session that did not see it. On merge the shipped one was kept, because it is better on
+both points that second implementation's own reviewer had found against it:
+
+- the panel took a `runId` prop that `App.tsx` never passed, so it listed payments across every run
+  rather than the selected one — the version above lifts `useSelectedRun` out of `Cockpit` so the phone
+  and the panel provably describe the same run;
+- it hid the panel with CSS `display:none`, so on a phone the panel was still mounted and still fetched
+  `/api/payments` — the version above does not mount it below the breakpoint at all.
+
+Two findings from that review are worth keeping, because they apply to this implementation too and are
+not covered by its own tests:
+
+1. **Asserting CSS from a test is easy to get wrong.** A `toContain(".inspector{display:none}")` check
+   passed while the panel was visible at every width — once with the rule wrapped in `@media print`, once
+   with a later `display:block` overriding it. It only ever caught deletion. This implementation uses
+   `matchMedia` instead, so it is not exposed to that, but any future CSS-level assertion should read the
+   cascade rather than string-match it.
+2. **A settlement-wording sweep must cover the inspector too.** `status.test.ts` (LEASH-130) sweeps the
+   customer screens for "paid / settled / shipped / delivered"; `src/inspector/` is not in that list. The
+   panel is operator-facing, so the customer-wording rule does not strictly bind it — but if it ever
+   renders one of those words next to an accepted delivery, DEC-037 and LEASH-130's AC9 are the reason
+   that would be wrong.
+
+The dropped implementation's code is not retained; nothing from it is referenced anywhere.

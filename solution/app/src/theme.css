@@ -28,6 +28,13 @@ button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+/* shell: the phone alone, or the phone plus the engine inspector on a wide screen (LEASH-097).
+   The breakpoint matches the matchMedia query in Inspector.tsx, which is what actually mounts the panel. */
+.shell{display:flex;justify-content:center}
+@media (min-width:900px){
+  .shell{display:grid;grid-template-columns:390px minmax(0,1fr);gap:28px;align-items:start;max-width:1280px;margin:0 auto}
+}
+
 /* phone frame */
 .phone{width:100%;max-width:390px;height:812px;margin:0 auto;background:#0B0C0E;border-radius:54px;padding:10px;box-shadow:0 30px 60px -30px rgba(10,20,40,.45)}
 .screen{position:relative;height:100%;border-radius:44px;overflow:hidden;background:var(--a-bg);color:var(--a-ink);display:flex;flex-direction:column;font-family:var(--sans)}
@@ -134,17 +141,39 @@ button{cursor:pointer}
 .review-banner{position:absolute;left:12px;right:12px;bottom:84px;z-index:15;border:0;border-radius:14px;background:var(--a-ink);color:#fff;font-weight:700;font-size:14px;padding:12px 14px;text-align:left}
 .review-banner:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
 
-/* Engine inspector (LEASH-097): judges only, and never on a phone — below tablet width the phone is
-   the whole screen, so the panel is display:none and shows from 900px up. */
-.inspector{display:none}
-.stage{display:flex;gap:20px;align-items:flex-start;justify-content:center}
-@media (min-width:900px){
-  .inspector{display:block;width:420px;max-height:760px;overflow:auto;background:var(--a-card);color:var(--a-ink);border-radius:16px;padding:16px;font-size:13px}
-  .inspector h2{margin:0 0 8px;font-size:16px}
-  .inspector h3{margin:14px 0 4px;font-size:13px}
-  .ins-list{width:100%;border-collapse:collapse;text-align:left}
-  .ins-list th,.ins-list td{padding:4px 6px;border-bottom:1px solid #8A8F99;vertical-align:top}
-  .ins-list tr[aria-selected="true"]{background:var(--a-bg)}
-  .ins-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-  .ins-json{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--a-bg);border-radius:10px;padding:10px}
-}
+/* Engine inspector (LEASH-097): the judges' panel beside the phone. It sits outside the phone screen, so it
+   uses the page palette (--panel/--ink/--line), not the in-app --a-* one. Tokens follow prototype/index.html. */
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0;color:var(--ink)}
+.panel h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.panel h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.inote{font-size:12.5px;color:var(--muted);margin:0}
+
+.ilist{display:flex;flex-direction:column}
+.irow{display:grid;grid-template-columns:minmax(0,90px) minmax(0,1fr) auto auto auto;gap:10px;align-items:center;text-align:left;
+      background:none;border:0;border-top:1px solid var(--line);padding:9px 6px;border-radius:8px;color:inherit}
+.irow:first-child{border-top:0}
+.irow:hover{background:var(--code)}
+.irow.sel{background:var(--accent-soft)}
+.irow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.imono{font-family:var(--mono);font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.iname{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iamt{font-size:13px;font-variant-numeric:tabular-nums}
+
+.v-chip{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.v-approve,.v-ok{background:var(--ok-soft);color:var(--ok)}
+.v-decline,.v-bad{background:var(--bad-soft);color:var(--bad)}
+.v-step_up,.v-warn{background:var(--warn-soft);color:var(--warn)}
+.v-dim{background:var(--code);color:var(--muted)}
+
+.ichecks{display:flex;flex-direction:column}
+.ichk{display:grid;grid-template-columns:auto 118px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;align-items:start}
+.ichk:first-child{border-top:0}
+.ilabel{font-weight:600;overflow-wrap:anywhere}
+.idetail{color:var(--muted);display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+.iagreed{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+.icode{font-family:var(--mono);font-size:11.5px;background:var(--code);border-radius:6px;padding:1px 6px;align-self:flex-start}
+.ifacts{display:flex;flex-direction:column;gap:8px}
+pre.json{margin:0;background:var(--code);border-radius:12px;padding:14px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.55}

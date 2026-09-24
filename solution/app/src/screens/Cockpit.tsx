@@ -8,22 +8,10 @@ import { useEffect, useState } from "react";
 import { PaymentDetail } from "./PaymentDetail";
 import { stageOf, statusOf, type Stage } from "./status";
 import { PATHS, api, type Payment, type Run, type Spending } from "../api/client";
+import type { RunSelection } from "../api/useSelectedRun";
 
 const zurichDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", year: "numeric" });
 const zurichTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" });
-
-function useSelectedRun() {
-  const runs = useQuery({ queryKey: ["runs"], queryFn: () => api().runs() });
-  const [chosen, setChosen] = useState<string | null>(null);
-  const list = runs.data?.runs ?? [];
-  const first = runs.data?.current_run_id ?? list[0]?.run_id ?? null;
-  useEffect(() => {  // pin the run shown first, so a newer run starting later doesn't take over the screen
-    if (chosen === null && first !== null) setChosen(first);
-  }, [chosen, first]);
-  const runId = chosen ?? first;
-  return { runs: list, run: list.find((r) => r.run_id === runId), runId, select: setChosen,
-           loading: runs.isLoading, error: runs.isError };
-}
 
 function useCockpitData(runId: string | null) {
   const client = useQueryClient();
@@ -143,8 +131,8 @@ function RunPicker({ runs, run, onSelect }: { runs: Run[]; run?: Run; onSelect: 
   );
 }
 
-export function Cockpit() {
-  const selection = useSelectedRun();
+// The run selection is owned by App.tsx, so the inspector panel beside the phone follows the same run.
+export function Cockpit({ selection }: { selection: RunSelection }) {
   const { payments, spending, spendingState, loading, failed } = useCockpitData(selection.runId);
   const [open, setOpen] = useState<string | null>(null);
   const byDay = new Map<string, Payment[]>();
