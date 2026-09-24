@@ -13,3 +13,6 @@ solution/app/playwright-report/
 .env
 .env.*
 !.env.example
+
+# Claude Code: personal settings stay local
+.claude/settings.local.json

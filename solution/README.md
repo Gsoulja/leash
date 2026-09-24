@@ -44,13 +44,37 @@ For each purchase the engine:
 | [`prototype/`](prototype/index.html) | Clickable phone prototype in the style of Viseca's "one" app, with a working rules engine running over all 45 challenge purchases | Done |
 | [`docs/system-design.html`](docs/system-design.html) | Architecture, per-purchase pipeline, state the engine remembers, end-to-end flow, failure handling | Done |
 | [`docs/laya-training-pipeline.html`](docs/laya-training-pipeline.html) | How we fine-tune the Laya model to read shop text: data, training, calibration, release gate | Done |
-| `engine/` | Python backend: decision engine, API worker, Postgres storage | Starting, test-first |
-| `app/` | React customer app | Planned |
+| `engine/` | Python backend: decision engine, API worker, Postgres storage, local fake Viseca platform | MVP built, test-first |
+| `app/` | React customer app: permission, asks, cockpit per run, start a run | MVP built |
 | [`docs/decisions.md`](docs/decisions.md) | Decision log: which rules come from Viseca, which are ours, which are assumptions | Done |
 | [`docs/product-notes.md`](docs/product-notes.md) | Product hypotheses and differentiating ideas, including the purpose-bound TaskCard vision | Notes |
-| [`kanban/`](kanban/README.md) | Backlog board: 9 epics, 89 tickets, milestones M0–M6 | Done |
+| [`kanban/`](kanban/README.md) | Backlog board, worked with `/graphloop` (the skill is in `.claude/skills/graphloop/` at the repo root) | Live |
+| [`RUNBOOK.md`](RUNBOOK.md) | Starting, stopping and recovering the stack; event-day steps | Live |
 
 Open the prototype and the design pages directly in a browser; they need no server.
+
+## Set up on a new machine
+
+Needed: `git`, Docker with Compose, [`uv`](https://docs.astral.sh/uv/) (it installs Python 3.12 by itself), and Node.js 22 or later.
+
+```bash
+git clone -b leash-mvp git@github.com:Gsoulja/leash.git viseca-2026 && cd viseca-2026
+cp solution/.env.example solution/.env            # local defaults; the real key only on event day
+
+# Whole stack (database, API + app, worker, fake Viseca platform) → http://localhost:8080
+docker compose -f solution/docker-compose.yml --profile fake up -d --build --wait
+
+# Engine: dependencies and tests (the Postgres tests use the stack's db on port 55432)
+cd solution/engine && uv sync && uv run pytest -q && cd -
+
+# App: dependencies, tests, and the browser journey (it builds its own isolated stack)
+cd solution/app && npm ci && npx vitest run && npx playwright install chromium && npx playwright test && cd -
+```
+
+- If a port is taken (for example 9000), set `LEASH_FAKE_PORT` (or another `LEASH_*_PORT`) in `solution/.env`.
+- App development with hot reload: `cd solution/app && LEASH_API=http://localhost:8080 npx vite`, then open http://localhost:5173.
+- Working with Claude Code: `CLAUDE.md` (repo root) holds the project rules; the board is worked with `/graphloop`, which is in the repo and needs no install.
+- Challenge files (`README.md`, `challenge.md`, `technical_details.md`, `data/` at the repo root) are Viseca's and read-only.
 
 ## Try the prototype
 
