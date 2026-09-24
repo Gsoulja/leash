@@ -231,6 +231,15 @@ def test_many_confirmations_squeeze_history_out_rather_than_growing_the_bundle(p
     assert not [e for e in bundle.entries if e.kind == "history"]
 
 
+def test_a_bundle_says_when_the_cap_dropped_entries(pack):
+    """A reader that cannot see everything is told, rather than taking a partial view for the whole."""
+    scope = resolve_scope(pack, "CA0024")
+    plenty = [_permission(f"Settled rule {n}", scope) for n in range(20)]
+    assert build_context(pack, scope, "Buy me a jacket", cutoff=CUTOFF, confirmed=plenty).truncated
+    assert not build_context(pack, scope, "Buy me a jacket", cutoff=CUTOFF).truncated
+    assert build_context(pack, scope, "Buy me a jacket", cutoff=CUTOFF).as_evidence()["truncated"] is False
+
+
 def test_budget_style_is_shown_only_when_the_customer_raises_a_budget(pack):
     plain = context(pack, "CA0024", "Buy me a jacket for the autumn")
     asked = context(pack, "CA0024", "Buy me a jacket, stay in my usual budget")

@@ -54,6 +54,24 @@ class PlatformMandates(Protocol):
     async def confirm_mandate(self, draft_id: str) -> Any: ...
 
 
+_STALE = ("This draft moved on since you reviewed it (you reviewed revision {reviewed}, it is now "
+          "revision {current}). Review the current one before submitting or confirming.")
+
+
+class _BadRevision(ValueError):
+    """A revision was stated but is not a whole number: refuse rather than skip the staleness check."""
+
+
+def _reviewed_revision(body: Any) -> int | None:
+    """The revision the customer reviewed, when the caller states one. Absent means "whatever is current"."""
+    if not isinstance(body, Mapping) or "revision" not in body:
+        return None
+    value = body["revision"]
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise _BadRevision(f"revision must be a whole number from 1, not {value!r}")
+    return value
+
+
 def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
@@ -89,13 +107,19 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
     @router.post("/api/policies/drafts", status_code=201)
     async def create_draft(body: dict[str, Any] = Body(...)) -> Any:
         instruction = body.get("instruction")
-        if not isinstance(instruction, str) or not instruction.strip() or set(body) != {"instruction"}:
+        if not isinstance(instruction, str) or not instruction.strip() or set(body) - {"context"} != {"instruction"}:
             return _error(422, "invalid_request", "Send exactly one non-empty instruction.")
+        if "context" in body and not isinstance(body["context"], dict):
+            return _error(422, "invalid_request", "context must be an object.")
         draft_id = f"LD-{uuid.uuid4().hex[:12]}"
-        view = {"draft_id": draft_id, **clarify(instruction, [], items)}
-        async with pool().acquire() as conn:
-            await conn.execute("insert into policy_drafts (draft_id, instruction, draft) values ($1, $2, $3::jsonb)",
-                               draft_id, instruction, json.dumps(view))
+        view = {"draft_id": draft_id, "revision": 1, **clarify(instruction, [], items)}
+        context = body.get("context") if isinstance(body.get("context"), dict) else {}
+        async with pool().acquire() as conn, conn.transaction():
+            await conn.execute("insert into policy_drafts (draft_id, instruction, draft, revision) "
+                               "values ($1, $2, $3::jsonb, 1)", draft_id, instruction, json.dumps(view))
+            await conn.execute("insert into draft_revisions (draft_id, revision, draft, answers, context) "
+                               "values ($1, 1, $2::jsonb, '[]'::jsonb, $3::jsonb)",
+                               draft_id, json.dumps(view), json.dumps(context))
         return view
 
     @router.get("/api/policies/drafts/{draft_id}")
@@ -112,7 +136,7 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 and all(isinstance(v, str) for v in a.values()) for a in given):
             return _error(422, "invalid_request", 'Send {"answers": [{"question_id": …, "answer": …}]}.')
         async with pool().acquire() as conn, conn.transaction():
-            row = await conn.fetchrow("select instruction, answers, platform_draft_id from policy_drafts "
+            row = await conn.fetchrow("select instruction, answers, platform_draft_id, revision from policy_drafts "
                                       "where draft_id = $1 for update", draft_id)
             if row is None:
                 return _error(404, "draft_not_found", "No draft with this ID.")
@@ -120,21 +144,36 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 return _error(409, "already_submitted",
                               "This draft is already at Viseca; start a new one to change it.")
             answers = list(json.loads(row["answers"])) + given
+            revision = int(row["revision"]) + 1
             try:
-                view = {"draft_id": draft_id, **clarify(row["instruction"], answers, items)}
+                view = {"draft_id": draft_id, "revision": revision, **clarify(row["instruction"], answers, items)}
             except AnswerError as exc:
                 return _error(422, "invalid_answer", str(exc))
-            await conn.execute("update policy_drafts set answers = $2::jsonb, draft = $3::jsonb where draft_id = $1",
-                               draft_id, json.dumps(answers), json.dumps(view))
+            await conn.execute("update policy_drafts set answers = $2::jsonb, draft = $3::jsonb, revision = $4 "
+                               "where draft_id = $1", draft_id, json.dumps(answers), json.dumps(view), revision)
+            # the earlier proposal is marked, never deleted: the transcript stays reviewable
+            await conn.execute("update draft_revisions set superseded = true where draft_id = $1 and revision < $2",
+                               draft_id, revision)
+            await conn.execute(
+                "insert into draft_revisions (draft_id, revision, draft, answers, context) "
+                "values ($1, $2, $3::jsonb, $4::jsonb, coalesce((select context from draft_revisions "
+                "where draft_id = $1 and revision = $2 - 1), '{}'::jsonb))",
+                draft_id, revision, json.dumps(view), json.dumps(answers))
             return view
 
     @router.post("/api/policies/drafts/{draft_id}/submit")
-    async def submit(draft_id: str) -> Any:
+    async def submit(draft_id: str, body: dict[str, Any] | None = Body(default=None)) -> Any:
+        try:
+            reviewed = _reviewed_revision(body)
+        except _BadRevision as exc:
+            return _error(422, "invalid_request", str(exc))
         async with pool().acquire() as conn, conn.transaction():
-            row = await conn.fetchrow("select draft, platform_body from policy_drafts where draft_id = $1 for update",
-                                      draft_id)
+            row = await conn.fetchrow("select draft, platform_body, revision from policy_drafts "
+                                      "where draft_id = $1 for update", draft_id)
             if row is None:
                 return _error(404, "draft_not_found", "No draft with this ID.")
+            if reviewed is not None and reviewed != int(row["revision"]):
+                return _error(409, "stale_revision", _STALE.format(reviewed=reviewed, current=row["revision"]))
             if row["platform_body"]:  # submitted already: the same platform draft, never a second one
                 return json.loads(row["platform_body"])
             draft = json.loads(row["draft"])
@@ -155,15 +194,15 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
     async def confirm_state(draft_id: str) -> asyncpg.Record | None:
         async with pool().acquire() as conn:
             row: asyncpg.Record | None = await conn.fetchrow(
-                "select draft, platform_draft_id, platform_body, mandate_id, confirmed_mandate_id, confirm_started_at "
-                "from policy_drafts where draft_id = $1", draft_id)
+                "select draft, platform_draft_id, platform_body, mandate_id, confirmed_mandate_id, confirm_started_at, "
+                "revision from policy_drafts where draft_id = $1", draft_id)
             return row
 
     async def finish(draft_id: str, mandate_id: str) -> Any:
         """Store the mandate Viseca confirmed as version 1 and link the draft (idempotent)."""
         try:
             async with pool().acquire() as conn, conn.transaction():
-                row = await conn.fetchrow("select draft, platform_body, mandate_id from policy_drafts "
+                row = await conn.fetchrow("select draft, platform_body, mandate_id, revision from policy_drafts "
                                           "where draft_id = $1 for update", draft_id)
                 if row["mandate_id"] is None:
                     posted, draft = json.loads(row["platform_body"]), json.loads(row["draft"])
@@ -173,7 +212,8 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                         "insert into mandate_versions (mandate_id, version, hard_rules, uncertainty_policy, compiled) "
                         "values ($1, 1, $2::jsonb, $3, $4::jsonb)", mandate_id, json.dumps(posted["hard_rules"]),
                         posted["uncertainty_policy"], json.dumps({"rules": draft["rules"], "notes": draft["notes"],
-                                                                  "draft_id": draft_id}))
+                                                                  "draft_id": draft_id,
+                                                                  "revision": int(row["revision"])}))
                     await conn.execute("update policy_drafts set mandate_id = $2, confirm_started_at = null "
                                        "where draft_id = $1", draft_id, mandate_id)
                 view = await _mandate_view(conn, mandate_id)
@@ -188,8 +228,12 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
 
     @router.post("/api/policies/drafts/{draft_id}/confirm")
     async def confirm(draft_id: str, body: dict[str, Any] = Body(...)) -> Any:
-        if set(body) != {"confirmed"} or body["confirmed"] is not True:  # 1 == True, so compare identity
+        if set(body) - {"revision"} != {"confirmed"} or body["confirmed"] is not True:  # 1 == True: compare identity
             return _error(422, "not_confirmed", "The customer must confirm with confirmed: true.")
+        try:
+            reviewed = _reviewed_revision(body)
+        except _BadRevision as exc:
+            return _error(422, "invalid_request", str(exc))
         deadline = time.monotonic() + CONFIRM_WAIT_SECONDS
         waited = False  # a click that waited on another request's call reports its outcome, never calls again
         while True:
@@ -198,6 +242,8 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 return _error(404, "draft_not_found", "No draft with this ID.")
             if row["platform_draft_id"] is None:
                 return _error(409, "not_submitted", "Submit the draft to Viseca before confirming.")
+            if reviewed is not None and reviewed != int(row["revision"]):
+                return _error(409, "stale_revision", _STALE.format(reviewed=reviewed, current=row["revision"]))
             known = row["mandate_id"] or row["confirmed_mandate_id"]
             if known is not None:  # confirmed already (a double click), or only our write is left
                 return await finish(draft_id, str(known))
@@ -377,6 +423,16 @@ class RunApi(Protocol):
     async def get_run(self, run_id: str) -> Any: ...
 
 
+def _run_counters(body: Mapping[str, Any]) -> dict[str, int]:
+    """Run progress, whichever shape the platform used: the live API sends top-level `*_event_count` fields, the
+    fake platform a nested `counters` object (LEASH-159). Names are passed through as the platform spells them."""
+    def counts(items: Any) -> dict[str, int]:  # the platform is untrusted input: bools and junk are not counts
+        pairs = items.items() if isinstance(items, Mapping) else ()
+        return {k: v for k, v in pairs if isinstance(v, int) and not isinstance(v, bool)}
+
+    return counts(body.get("counters")) or {k: v for k, v in counts(body).items() if k.endswith("_count")}
+
+
 def _data(body: Any) -> Mapping[str, Any]:
     if isinstance(body, Mapping):
         inner = body.get("data")
@@ -398,7 +454,7 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
             log.warning("run %s: status unavailable (%s)", run_id, exc)
             return "running", {}
         status = str(body.get("status", "running")).lower()
-        counters = {k: v for k, v in dict(body.get("counters") or {}).items() if isinstance(v, int)}
+        counters = _run_counters(body)
         return ("finished" if status in _FINISHED else "failed" if status in _FAILED else "running"), counters
 
     async def view(row: asyncpg.Record) -> dict[str, Any]:
@@ -458,7 +514,7 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
         async with pool().acquire() as conn:
             row = await conn.fetchrow("select run_id, scenario_id, mandate_id, mandate_version from runs "
                                       "where run_id = $1", run_id)
-        counters = {k: v for k, v in dict(started.get("counters") or {}).items() if isinstance(v, int)}
+        counters = _run_counters(started)
         return {"run_id": row["run_id"], "scenario_id": row["scenario_id"], "mandate_id": row["mandate_id"],
                 "mandate_version": row["mandate_version"], "status": "running", "counters": counters}
 

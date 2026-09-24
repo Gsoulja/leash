@@ -1,6 +1,7 @@
 """Mandate lifecycle endpoints (LEASH-061) against the fake platform and a throw-away Postgres, validated
 against contracts/policy-api.yaml."""
 
+import json
 import asyncio
 import csv
 from concurrent.futures import ThreadPoolExecutor
@@ -366,3 +367,143 @@ def test_bad_answers(api):
                  {"answers": [{"question_id": draft["open_questions"][0]["question_id"]}]}, []):
         response = http.post(path, json=body)
         assert response.status_code == 422 and valid(response.json(), "Error"), body
+
+
+# --- LEASH-101: durable draft revisions -------------------------------------------------------
+
+def _answer_once(http, draft):
+    """Answer the uncertainty question with a fixed option, producing a new revision."""
+    question = next(q for q in draft["open_questions"] if "unsure" in q["text"])
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+                         json={"answers": [{"question_id": question["question_id"], "answer": "Decline"}]})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_a_new_draft_starts_at_revision_one(api):
+    http, _, _, _ = api
+    assert ready_draft(http)["revision"] == 1
+
+
+def test_a_correction_creates_a_new_revision_and_supersedes_the_old_one(api):
+    http, _, _, url = api
+    draft = http.post("/api/policies/drafts", json={"instruction": GROCERIES}).json()
+    assert draft["revision"] == 1
+    corrected = _answer_once(http, draft)
+    assert corrected["revision"] == 2
+
+    async def rows():
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetch("select revision, superseded, answers from draft_revisions "
+                                    "where draft_id = $1 order by revision", draft["draft_id"])
+        finally:
+            await conn.close()
+
+    with ThreadPoolExecutor(1) as pool:
+        kept = pool.submit(asyncio.run, rows()).result()
+    assert [r["revision"] for r in kept] == [1, 2]
+    assert [r["superseded"] for r in kept] == [True, False]  # the earlier proposal is marked, not deleted
+    assert json.loads(kept[0]["answers"]) == []  # the transcript of each revision is preserved
+    assert len(json.loads(kept[1]["answers"])) == 1
+
+
+def test_submitting_a_stale_revision_is_rejected(api):
+    http, viseca, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": GROCERIES}).json()
+    _answer_once(http, draft)  # the draft is now at revision 2
+    stale = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
+    assert stale.status_code == 409 and stale.json()["error"]["code"] == "stale_revision"
+    assert viseca.creates == 0  # nothing reached Viseca
+
+
+def test_confirming_a_stale_revision_is_rejected(api):
+    http, viseca, _, _ = api
+    draft = ready_draft(http)
+    submitted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
+    assert submitted.status_code == 200, submitted.text
+    stale = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
+                      json={"confirmed": True, "revision": 99})
+    assert stale.status_code == 409 and stale.json()["error"]["code"] == "stale_revision"
+    assert viseca.confirms == 0
+
+
+def test_submit_without_a_revision_still_works(api):
+    http, _, _, _ = api
+    draft = ready_draft(http)
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 200
+
+
+def test_confirmation_records_the_reviewed_local_revision(api):
+    http, _, _, url = api
+    draft = ready_draft(http)
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
+                        json={"confirmed": True, "revision": 1}).json()
+
+    async def compiled():
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetchval("select compiled from mandate_versions where mandate_id = $1",
+                                       mandate["mandate_id"])
+        finally:
+            await conn.close()
+
+    with ThreadPoolExecutor(1) as pool:
+        stored = json.loads(pool.submit(asyncio.run, compiled()).result())
+    assert stored["draft_id"] == draft["draft_id"] and stored["revision"] == 1
+
+
+def test_a_revision_retains_its_context_bundle_for_evidence(api):
+    """LEASH-154's bundle, moved here: each revision keeps the background it was drafted against."""
+    http, _, _, url = api
+    draft = ready_draft(http)
+
+    async def context():
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetchval("select context from draft_revisions where draft_id = $1 and revision = 1",
+                                       draft["draft_id"])
+        finally:
+            await conn.close()
+
+    with ThreadPoolExecutor(1) as pool:
+        stored = pool.submit(asyncio.run, context()).result()
+    assert stored is not None  # a column exists and is written, even when there is no background yet
+
+
+def test_a_draft_created_with_a_context_bundle_retains_it(api):
+    """LEASH-154's bundle reaches the revision it was drafted against (found unreachable in review)."""
+    http, _, _, url = api
+    bundle = {"scope": {"customer_id": "CU0012", "card_id": "CA0024"}, "entries": [], "truncated": False}
+    draft = http.post("/api/policies/drafts", json={"instruction": GROCERIES, "context": bundle})
+    assert draft.status_code == 201, draft.text
+    draft_id = valid(draft.json(), "PolicyDraft")["draft_id"]
+
+    async def stored(revision):
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetchval("select context from draft_revisions where draft_id = $1 "
+                                       "and revision = $2", draft_id, revision)
+        finally:
+            await conn.close()
+
+    with ThreadPoolExecutor(1) as pool:
+        first = json.loads(pool.submit(asyncio.run, stored(1)).result())
+    assert first == bundle  # the bundle and its source references, kept for evidence
+    _answer_once(http, http.get(f"/api/policies/drafts/{draft_id}").json())
+    with ThreadPoolExecutor(1) as pool:
+        second = json.loads(pool.submit(asyncio.run, stored(2)).result())
+    assert second == bundle  # a correction keeps the background it was drafted against
+
+
+def test_a_malformed_revision_is_refused_rather_than_skipping_the_check(api):
+    http, viseca, _, _ = api
+    draft = ready_draft(http)
+    bad = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": "1"})
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "invalid_request"
+    assert viseca.creates == 0
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    bad = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
+                    json={"confirmed": True, "revision": 0})
+    assert bad.status_code == 422 and viseca.confirms == 0

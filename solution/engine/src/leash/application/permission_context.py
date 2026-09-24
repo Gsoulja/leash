@@ -185,6 +185,9 @@ class ContextBundle:
     summary: HistorySummary
     entries: tuple[ContextEntry, ...] = ()
     suggested_questions: tuple[SuggestedQuestion, ...] = ()
+    #: True when the cap dropped entries. A reader that cannot see everything must be told, or it
+    #: would treat a partial view as the whole background.
+    truncated: bool = False
     #: History rows have no basket lines, so no past *item* can ever be identified from them.
     item_history: Literal["unavailable"] = "unavailable"
 
@@ -203,6 +206,7 @@ class ContextBundle:
             "instruction": self.instruction,
             "summary": self.summary.as_dict(),
             "item_history": self.item_history,
+            "truncated": self.truncated,
             "entries": [{"kind": e.kind, "text": e.text, "scope": e.scope.as_dict(),
                          "source": e.source.as_dict(), "freshness": e.freshness,
                          "observed_at": e.observed_at.at.isoformat() if e.observed_at else None,
@@ -439,6 +443,8 @@ def build_context(pack: Pack, scope: Scope, instruction: str, *, cutoff: SimTime
     settled = _confirmed_entries(scope, confirmed, cutoff)
     room = ContextBundle.MAX_ENTRIES - len(preferences) - len(settled)
     history = _history_entries(pack, scope, rows, cutoff, max(room, 0))
-    entries = tuple((preferences + settled + history)[:ContextBundle.MAX_ENTRIES])
+    found = preferences + settled + history
+    entries = tuple(found[:ContextBundle.MAX_ENTRIES])
     return ContextBundle(scope=scope, instruction=instruction, summary=_summarise(scope, rows, cutoff),
-                         entries=entries, suggested_questions=tuple(_questions(instruction, entries)))
+                         entries=entries, suggested_questions=tuple(_questions(instruction, entries)),
+                         truncated=len(found) > len(entries))
