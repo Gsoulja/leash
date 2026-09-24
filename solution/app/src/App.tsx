@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAsks } from "./api/useAsks";
+import { Inspector } from "./inspector/Inspector";
 import { PhoneFrame } from "./components/PhoneFrame";
 import { TABS, TabBar, type Tab } from "./components/TabBar";
 import { Agent } from "./screens/Agent";
@@ -19,14 +20,17 @@ export default function App() {
   const label = TABS.find((t) => t.id === tab)!.label;
   return (
     <QueryClientProvider client={client}>
-      <PhoneFrame>
-        <main className="view">
-          <h1>{label}</h1>
-          {tab === "home" ? <Cockpit /> : tab === "rules" ? <Permission /> : <Agent />}
-        </main>
-        <TabBar current={tab} onSelect={setTab} />
-        <Asks />
-      </PhoneFrame>
+      <div className="stage">
+        <PhoneFrame>
+          <main className="view">
+            <h1>{label}</h1>
+            {tab === "home" ? <Cockpit /> : tab === "rules" ? <Permission /> : <Agent />}
+          </main>
+          <TabBar current={tab} onSelect={setTab} />
+          <Asks />
+        </PhoneFrame>
+        <Inspector />
+      </div>
     </QueryClientProvider>
   );
 }

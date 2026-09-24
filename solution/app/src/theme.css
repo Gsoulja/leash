@@ -133,3 +133,18 @@ button{cursor:pointer}
 .pill.danger{background:var(--a-bad-text)}
 .review-banner{position:absolute;left:12px;right:12px;bottom:84px;z-index:15;border:0;border-radius:14px;background:var(--a-ink);color:#fff;font-weight:700;font-size:14px;padding:12px 14px;text-align:left}
 .review-banner:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
+
+/* Engine inspector (LEASH-097): judges only, and never on a phone — below tablet width the phone is
+   the whole screen, so the panel is display:none and shows from 900px up. */
+.inspector{display:none}
+.stage{display:flex;gap:20px;align-items:flex-start;justify-content:center}
+@media (min-width:900px){
+  .inspector{display:block;width:420px;max-height:760px;overflow:auto;background:var(--a-card);color:var(--a-ink);border-radius:16px;padding:16px;font-size:13px}
+  .inspector h2{margin:0 0 8px;font-size:16px}
+  .inspector h3{margin:14px 0 4px;font-size:13px}
+  .ins-list{width:100%;border-collapse:collapse;text-align:left}
+  .ins-list th,.ins-list td{padding:4px 6px;border-bottom:1px solid #8A8F99;vertical-align:top}
+  .ins-list tr[aria-selected="true"]{background:var(--a-bg)}
+  .ins-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .ins-json{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--a-bg);border-radius:10px;padding:10px}
+}
