@@ -439,3 +439,20 @@ def test_a_failing_refresh_never_stops_the_decision():
     store.refresh_fails = True
     result = run(use_case(store=store, claim_refresh_seconds=0.05).handle(request()))
     assert result.path == "decided" and result.sent
+
+
+# --- LEASH-136: the send never outlives the deadline ------------------------------------------
+
+def test_a_hanging_send_is_abandoned_before_the_deadline():
+    """The POST timeout is capped by the time left, so a stalled platform cannot run past it."""
+
+    class Hangs(FakeSender):
+        async def send(self, authorization_id, body):
+            await asyncio.sleep(30)
+
+    plan = DeadlinePlan(send_seconds=5.0, lock_seconds=0.2, decide_seconds=0.2, fallback_seconds=0.2)
+    start = time.monotonic()
+    result = run(use_case(sender=Hangs(), plan=plan).handle(request(deadline_in=0.6)))
+    elapsed = time.monotonic() - start
+    # send_seconds (5 s) is longer than the deadline: the deadline wins, not the plan
+    assert result.sent is False and elapsed < 1.0, elapsed

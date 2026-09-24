@@ -295,8 +295,11 @@ class DecidePurchase:
                     timer: "_StageTimer") -> None:
         aid = request.purchase.authorization_id
         left = (request.deadline_at.at - datetime.now(timezone.utc)).total_seconds()
+        # Capped by the time left, never extended past it: `deadline_at` is authoritative, and an
+        # answer that misses it is the outbox's job, not something to hold a socket open for.
         try:
-            await asyncio.wait_for(self._sender.send(aid, body), timeout=max(self._plan.send_seconds, left))
+            await asyncio.wait_for(self._sender.send(aid, body),
+                                   timeout=max(0.0, min(self._plan.send_seconds, left)))
         except Exception:  # left unmarked: the outbox resends it (LEASH-054)
             timer.done("send")
             log.exception("sending the decision failed; the outbox will retry", extra={"authorization_id": aid})
