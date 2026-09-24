@@ -8,6 +8,7 @@ import csv
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from functools import cached_property
 from pathlib import Path
 
@@ -40,6 +41,62 @@ class CardHistoryRecord:
     record: HistoryRecord
 
 
+@dataclass(frozen=True)
+class Customer:
+    """The persona profile. Every text field is the customer's background, never an instruction."""
+
+    customer_id: str
+    persona_name: str
+    home_region: str
+    background: str
+    shopping_preferences: str
+    typical_spending: str
+    budget_style: str
+    travel_pattern: str
+
+
+@dataclass(frozen=True)
+class Account:
+    account_id: str
+    customer_id: str
+    account_type: str
+    account_purpose: str
+    base_currency: str
+    status: str
+
+
+@dataclass(frozen=True)
+class Card:
+    card_id: str
+    account_id: str
+    card_type: str
+    card_purpose: str
+    status: str
+
+
+@dataclass(frozen=True)
+class Transaction:
+    """One authorization_history row, with the fields a history summary needs (LEASH-154).
+
+    HistoryRecord keeps only what familiarity reads; this keeps time, money and identity too.
+    """
+
+    authorization_id: str
+    customer_id: str
+    account_id: str
+    card_id: str
+    sim_time: SimTime
+    transaction_type: str
+    status: str
+    amount: Decimal
+    currency: str
+    billing_amount_chf: Decimal
+    merchant_id: str | None
+    merchant_name: str | None
+    merchant_category: str | None
+    description: str
+
+
 class Pack:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
@@ -57,6 +114,69 @@ class Pack:
 
     def merchants(self) -> dict[str, Merchant]:
         return dict(self._merchants)
+
+    @property
+    def dataset(self) -> str:
+        """Which customer population this pack is. Rows never cross between datasets."""
+        return self.data_dir.name
+
+    @cached_property
+    def _customers(self) -> dict[str, Customer]:
+        return {
+            r["customer_id"]: Customer(
+                customer_id=r["customer_id"], persona_name=r["persona_name"], home_region=r["home_region"],
+                background=r["background"], shopping_preferences=r["shopping_preferences"],
+                typical_spending=r["typical_spending"], budget_style=r["budget_style"],
+                travel_pattern=r["travel_pattern"])
+            for r in _rows(self.data_dir / "customers.csv")
+        }
+
+    def customers(self) -> dict[str, Customer]:
+        return dict(self._customers)
+
+    @cached_property
+    def _accounts(self) -> dict[str, Account]:
+        return {
+            r["account_id"]: Account(
+                account_id=r["account_id"], customer_id=r["customer_id"], account_type=r["account_type"],
+                account_purpose=r["account_purpose"], base_currency=r["base_currency"], status=r["status"])
+            for r in _rows(self.data_dir / "accounts.csv")
+        }
+
+    def accounts(self) -> dict[str, Account]:
+        return dict(self._accounts)
+
+    @cached_property
+    def _cards(self) -> dict[str, Card]:
+        return {
+            r["card_id"]: Card(card_id=r["card_id"], account_id=r["account_id"], card_type=r["card_type"],
+                               card_purpose=r["card_purpose"], status=r["status"])
+            for r in _rows(self.data_dir / "cards.csv")
+        }
+
+    def cards(self) -> dict[str, Card]:
+        return dict(self._cards)
+
+    @cached_property
+    def _transactions(self) -> list[Transaction]:
+        return [
+            Transaction(
+                authorization_id=r["authorization_id"], customer_id=r["customer_id"], account_id=r["account_id"],
+                card_id=r["card_id"], sim_time=SimTime.parse(r["timestamp"]),
+                transaction_type=r["transaction_type"], status=r["status"], amount=money(r["amount"]),
+                currency=r["currency"], billing_amount_chf=money(r["billing_amount_chf"]),
+                merchant_id=_opt(r["merchant_id"]), merchant_name=_opt(r["merchant_name"]),
+                merchant_category=_opt(r["merchant_category"]), description=r["description"])
+            for r in _rows(self.data_dir / "authorization_history.csv")
+        ]
+
+    def transactions(self, card_id: str | None = None, account_id: str | None = None,
+                     customer_id: str | None = None) -> list[Transaction]:
+        """History rows, filtered by ID only. A None filter is "any", never "someone else's"."""
+        return [t for t in self._transactions
+                if (card_id is None or t.card_id == card_id)
+                and (account_id is None or t.account_id == account_id)
+                and (customer_id is None or t.customer_id == customer_id)]
 
     @cached_property
     def _history(self) -> list[CardHistoryRecord]:

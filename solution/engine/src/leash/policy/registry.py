@@ -213,6 +213,9 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
     "leash.adapters.viseca_api.event_schema": "structural validation only: rejects, never changes a value",
     "leash.adapters.viseca_api.outbox_sender": "resends stored bodies unchanged",
     "leash.application.replay": "offline replay only",
+    "leash.application.permission_context": "background for the permission conversation: bounded profile and "
+                                            "history context that suggests questions, never rules; not read at "
+                                            "decision time",
     "leash.adapters.pack.catalogue": "reference lookup for the permission conversation: names candidate items "
                                      "and their price context, never read at decision time",
     "leash.policy.compiler": "drafts rules for the customer to confirm; only confirmed hard_rules are enforced",

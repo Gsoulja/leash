@@ -19,20 +19,24 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # policy still declines them (only tightens compared with the previous pin).
 # Re-pinned again 2026-09-24 (LEASH-131): durable claims touch shared code (migration 0006, the repository's
 # receive, the unit of work, decide_purchase); no field's meaning changed.
+# Re-pinned again 2026-09-24 (LEASH-154): adapters.pack.loader gained customer, account, card and
+# transaction readers for the permission conversation's context bundle. The diff is additive only
+# (120 insertions, 0 deletions): no existing read path, seed row or decision input changed, so every
+# field moved for the same reason and no field's meaning did.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "0d0d399d8dbc",
-    "authorization.fulfillment_method@v1": "2e3dab20c5b2",
-    "merchant.merchant_category@v1": "b5e4a675a37e",
-    "items.item_category@v1": "2fbab2641cb2",
-    "items.item_id@v1": "23f2a6941061",
-    "leash.items.size.v1@v1": "359c265be602",
-    "leash.merchant.prior_purchases.v1@v1": "13503e74c970",
-    "leash.order.return_days.v1@v1": "7c9b3c5798a0",
-    "leash.items.unrequested_count.v1@v1": "3c3e2d0766a7",
-    "leash.purchase.max_count.v2@v2": "6ced5c16ade5",
-    "leash.items.max_quantity.v1@v1": "379c371bf2d0",
-    "leash.session.risk_score.v1@v1": "a006eff50d1d",
-    "leash.orders.split_check.v1@v1": "9a81f659edbc",
+    "authorization.billing_amount_chf@v1": "09ec68a5ac2d",
+    "authorization.fulfillment_method@v1": "ef49895b214c",
+    "merchant.merchant_category@v1": "7b11df2f1af0",
+    "items.item_category@v1": "8387b56ee3b8",
+    "items.item_id@v1": "2e1395c38e77",
+    "leash.items.size.v1@v1": "b755c830f6cc",
+    "leash.merchant.prior_purchases.v1@v1": "cb7b19e2a17c",
+    "leash.order.return_days.v1@v1": "b6da1e349333",
+    "leash.items.unrequested_count.v1@v1": "1a92272f2478",
+    "leash.purchase.max_count.v2@v2": "b49ffe16ad2c",
+    "leash.items.max_quantity.v1@v1": "63d79d074391",
+    "leash.session.risk_score.v1@v1": "e6bf9bb75b30",
+    "leash.orders.split_check.v1@v1": "46d453673f6a",
 }
 
 
