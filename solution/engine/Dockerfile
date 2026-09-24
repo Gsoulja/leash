@@ -10,7 +10,7 @@
 # bundle being served can be checked against the image that was deployed. dist/ is never copied in from
 # the build context and never mounted at run time; readiness refuses a bundle whose stamp disagrees.
 ARG APP_REVISION=dev
-FROM node:22-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS app
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS app
 ARG APP_REVISION
 ENV APP_REVISION=$APP_REVISION
 WORKDIR /repo/solution/app
