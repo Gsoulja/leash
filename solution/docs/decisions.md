@@ -88,6 +88,21 @@ Accepted product direction from the customer discussion; these are implementatio
 
 Open implementation choices: LLM, permission-verifier quality thresholds and training need, production customer authentication, external-agent identity and credential format. DEC-019 excludes login only from the prototype. Historical defaults such as DEC-013/014 must be visible interpretations in review, not falsely attributed to literal customer words; an unresolved chosen-product reference still requires clarification.
 
+## Delivery truth, migration safety and release controls — 2026-09-24
+
+Judgement calls made while building LEASH-130, LEASH-135, LEASH-141 and LEASH-151. Each shapes behaviour
+and each could reasonably have gone the other way, so each is recorded with the alternative it was chosen
+over. **Proposed**: the code builds on them now, and the product owner has not yet confirmed them.
+
+| ID | Decision | Source | Status |
+| --- | --- | --- | --- |
+| DEC-038 | A terminal platform refusal is final. Once the platform refuses a decision, the purchase stays `not_sent` and counts toward nothing, even if a later redelivery of the same decision is accepted. Chosen over allowing `refused → accepted`: staying refused under-counts spend and never over-counts, and re-entering the ledger would be the loosening "mandates only tighten" forbids. The reconciler raises the disagreement once for a person rather than resolving it silently. | Team, 2026-09-24 | Proposed |
+| DEC-039 | Spending limits are enforced against what the **engine** approved, not against what the platform has acknowledged. A local approval reserves its amount the moment it is decided; a terminal refusal releases it. Chosen over enforcing against accepted spend only: that matches the platform exactly but lets two concurrent purchases both pass while their acknowledgements are outstanding. `accepted_chf` and `awaiting_platform_chf` report the narrower facts beside it. | Team, 2026-09-24 | Proposed |
+| DEC-040 | The append-only audit log outranks reversibility. `0006` and `0009` cannot be downgraded on a database that recorded a reclaimed claim or a delivery, because the blocking rows cannot be deleted. Chosen over relaxing the append-only trigger to make the chain reversible. Such a downgrade requires verified backup evidence — dump taken, restored elsewhere, row counts of every touched table checked, location and checker recorded. **This procedure has no named owner yet.** | Team, 2026-09-24 | Proposed |
+| DEC-041 | A demo reset verifies the baseline **per card**, against `data/authorization_history.csv`. A reset leaves no runs, so per-card (the scope a run is bound to, `runs.card_id`) is the only scoped total the database can check. Per-scenario totals live in `purchase_attempts.csv`, which is not seeded. | Team, 2026-09-24 | Proposed |
+| DEC-042 | The Compose service name `db` counts as a local database for the demo reset's host guard, so the containerised reset works. On a machine where DNS resolves `db` to something real, the `--yes` / `LEASH_ALLOW_DEMO_RESET` guard is the only remaining protection. Chosen over dropping `db` and requiring `--live` in Compose. Locality is otherwise resolved the way libpq resolves it: URL host, then `?host=`, then `PGHOST`, then a unix socket. | Team, 2026-09-24 | Proposed |
+| DEC-043 | CI checks run on GitHub Actions. The repository has a GitHub remote and no other CI configuration, so this is the only non-speculative choice for the **checks**. It is explicitly *not* a deployment decision: LEASH-141's out-of-scope rule stands, and staged rollout, rollback and a deployment target remain open behind deployment ownership. | Team, 2026-09-24 | Proposed |
+
 ## Questions for the Viseca experts (LEASH-110)
 
 1. No answer within the human window: what does the platform record? (DEC-016)
@@ -97,3 +112,5 @@ Open implementation choices: LLM, permission-verifier quality thresholds and tra
 5. How should "customer wanted to approve, but a limit now blocks it" be recorded? (DEC-012)
 6. Is a pitch deck part of the submission? (DEC-018)
 7. Should duplicates, split orders and "already bought" go to step_up even when the customer's policy is approve? We never approve them automatically, and decline them under a decline policy. (DEC-030)
+8. If the platform dequeues a decision request and the delivery of that response fails, is the request redelivered? `technical_details.md` does not say, and it decides whether a client may safely retry `GET /v1/decision-requests/next`. Ours retries once on a transport error. (DEC-038)
+9. When the platform terminally refuses a decision (for example `deadline_passed`), does it ever accept a later redelivery of the same decision? We treat a refusal as final either way. (DEC-038)
