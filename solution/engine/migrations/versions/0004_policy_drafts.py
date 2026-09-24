@@ -6,6 +6,10 @@ stores the returned mandate_id; the mandate itself lives in mandates / mandate_v
 
 Revision ID: 0004
 Revises: 0003
+
+**Downgrade loses data.** It drops `policy_drafts` whole, including every submitted `platform_body` —
+the exact payload posted to Viseca, which is the evidence for what was submitted. Backup evidence
+required (`migrations/README.md`).
 """
 
 from alembic import op

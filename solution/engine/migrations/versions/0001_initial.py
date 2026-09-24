@@ -5,6 +5,10 @@ times (received_at, deadline_at, ask_expires_at) are separate columns (CLAUDE.md
 
 Revision ID: 0001
 Revises:
+
+**Downgrade destroys everything.** It drops every table, `decision_events` included — the append-only
+audit log. Nothing in the application can rebuild it. Reversing this revision on a database that holds
+real data requires the verified backup evidence described in `migrations/README.md`.
 """
 
 from alembic import op

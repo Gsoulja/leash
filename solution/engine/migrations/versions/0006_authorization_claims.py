@@ -3,6 +3,13 @@ until when. A redelivery takes over an expired claim, recorded as a 'reclaimed' 
 
 Revision ID: 0006
 Revises: 0005
+
+**Downgrade can be impossible.** It narrows `decision_events_kind_check` back to the kinds before
+`'reclaimed'`, so on a database where any worker ever reclaimed an expired claim the constraint is
+violated by an existing row and the downgrade fails. The offending row cannot be deleted either: the
+table is append-only by trigger. In that state the only ways back are a restore from backup or a new
+forward revision. `tests/adapters/test_migrations.py::test_a_reclaimed_event_blocks_the_downgrade_past_0006`
+pins this, so it is a documented property rather than a surprise.
 """
 
 from alembic import op

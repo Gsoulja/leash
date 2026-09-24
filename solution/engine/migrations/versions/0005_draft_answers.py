@@ -2,6 +2,10 @@
 
 Revision ID: 0005
 Revises: 0004
+
+**Downgrade loses data.** It drops `policy_drafts.answers`, and the customer's answers to a draft's
+questions exist nowhere else — re-upgrading leaves them `[]`. Backup evidence required
+(`migrations/README.md`).
 """
 
 from alembic import op
