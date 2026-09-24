@@ -1,0 +1,318 @@
+"""The clarification loop (LEASH-123): a local draft, its open questions, the customer's answers, until nothing
+blocking remains. Only then may the draft go to Viseca, which has no draft-update endpoint.
+
+The draft is never recompiled as one text (earlier rounds showed that one answer could then change how the
+instruction or another answer is read). It is the union of:
+- the instruction's own reading;
+- each accepted free-text answer, read on its own;
+- the effects of chosen options, fixed at the moment they were chosen.
+So answers only add, and every accepted answer takes effect.
+
+A free-text answer is accepted only if it answers its question: it must be fully readable, with no unclear
+part of its own, and must give that question's field. Anything else is refused with the reason, never half
+applied. Before it counts, an answer is checked against everything so far (the instruction, earlier answers,
+the settled uncertainty choice). An answer that adds nothing for a field already limited, that leaves no
+purchase possible, or that states a different uncertainty choice becomes a blocking conflict question instead.
+
+Question IDs are derived from the question itself. Fixed options with a deterministic effect exist for the
+uncertainty choice, the split check, the shop kind, the amount as read ("Yes") and the chosen item ("Only the
+item I chose"). The stored instruction stays the customer's original words.
+"""
+
+import hashlib
+import re
+from decimal import Decimal
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from typing import Any
+
+from leash.domain import mandate as m
+from leash.domain.mandate import CompiledMandate, Rule, Uncertainty
+from leash.policy.compiler import CatalogueItem, Draft, Question, compile_instruction
+from leash.policy.hard_rules import mandate_to_api
+
+def optional(q: Question) -> bool:
+    """Only the two offers of an extra restriction are optional; a question about the customer's own words
+    (e.g. "Please confirm … only from sports shops") always blocks."""
+    return q.field == m.F_SPLIT_CHECK or (q.field == m.F_MERCHANT_CATEGORY and "any kind of shop" in q.text)
+_DEC = re.compile(r"\bDEC-\d{3}\b")
+_POLICY_NOTES = {"ask": "When unsure, I ask you.", "decline": "When unsure, I decline.",
+                 "approve": "When unsure, I approve."}
+_UNCERTAINTY: dict[str, Uncertainty] = {"Ask me": "ask", "Decline": "decline", "Approve": "approve"}
+_ANY_SHOP = "Any kind of shop"
+_SPLIT = {"Yes, ask me": True, "No": False}
+
+
+class AnswerError(ValueError):
+    """An answer to a question the draft doesn't ask, or not one of its options."""
+
+
+def question_id(q: Question) -> str:
+    return "Q-" + hashlib.sha256(f"{q.field}|{q.text}".encode()).hexdigest()[:10]
+
+
+def _shop_kind(draft: Draft) -> str | None:
+    kinds = draft.mandate.item_categories
+    return next(iter(kinds)) if kinds and len(kinds) == 1 else None
+
+
+def _options(q: Question, draft: Draft) -> list[str] | None:
+    if q.field == "uncertainty_policy":
+        return list(_UNCERTAINTY)
+    if q.field == m.F_SPLIT_CHECK:
+        return list(_SPLIT)
+    if q.field == m.F_ITEM_CATEGORY and _ONLY_CHOSEN_Q in q.text:
+        return [_ONLY_CHOSEN]  # item mode already allows only that item: nothing to add
+    if q.field == m.F_BILLING_CHF and q.text.startswith("Is CHF") and "the most I may spend" in q.text:
+        return ["Yes"]  # the amount as read: nothing to add
+    if q.field == m.F_MERCHANT_CATEGORY and "any kind of shop" in q.text:
+        kind = _shop_kind(draft)
+        return ([f"Only {kind.replace('_', ' ')} shops"] if kind else []) + [_ANY_SHOP]
+    return None
+
+
+def _suggested(q: Question) -> bool:  # options offered next to the customer's own words
+    return q.field != "uncertainty_policy" and (q.field in (m.F_BILLING_CHF, m.F_ITEM_CATEGORY)
+                                                or "conflicts with" in q.text)
+
+
+def _rule_views(notes: Sequence[str]) -> list[dict[str, Any]]:
+    views = []
+    for note in notes:
+        if note in _POLICY_NOTES.values():
+            continue
+        decision = _DEC.search(note)
+        views.append({"text": note.rstrip("."), "source": "team" if decision else "customer",
+                      "decision": decision.group(0) if decision else None, "tightened": False})
+    return views
+
+
+_ONLY_CHOSEN = "Only the item I chose"
+_KEEP = "Keep what I had"  # withdraws a conflicting answer, which was never used
+_ONLY_CHOSEN_Q = "only the item you chose"  # the compiler's question when a chosen item comes with other kinds
+
+
+@dataclass
+class _State:
+    accepted: list[Draft] = field(default_factory=list)  # each accepted free-text answer, read on its own
+    option_rules: list[tuple[Rule, str]] = field(default_factory=list)  # effects of chosen options, as chosen
+    policy: Uncertainty | None = None  # an uncertainty choice made through answers
+    closed: set[str] = field(default_factory=set)  # questions answered
+    conflicts: dict[str, Question] = field(default_factory=dict)  # open conflict questions
+
+
+@dataclass
+class _Built:
+    rules: list[Rule]
+    notes: list[str]
+    policy: Uncertainty
+    decided: bool
+    open: list[tuple[str, Question, list[str] | None]]
+
+
+def _answer_fields(state: _State) -> set[str]:
+    fields = {r.field for d in state.accepted for r in d.mandate.rules} | {r.field for r, _ in state.option_rules}
+    if m.F_ITEM_ID in fields:
+        fields.add(m.F_ITEM_CATEGORY)  # a named item answers "what kind of items"
+    return fields
+
+
+_STRICT: dict[Uncertainty, int] = {"approve": 0, "ask": 1, "decline": 2}
+
+
+def _as_strict(policy: Uncertainty) -> list[str]:
+    """Uncertainty options no looser than the choice already settled: a draft only adds to what was said."""
+    return [k for k, v in _UNCERTAINTY.items() if _STRICT[v] >= _STRICT[policy]]
+
+
+def _build(base: Draft, stated_policy: Uncertainty | None, state: _State) -> _Built:
+    rules = list(dict.fromkeys([*base.mandate.rules, *(r for d in state.accepted for r in d.mandate.rules),
+                                *(r for r, _ in state.option_rules)]))
+    notes = [n for n in dict.fromkeys([*base.notes, *(n for d in state.accepted for n in d.notes),
+                                       *(n for _, n in state.option_rules)]) if n not in _POLICY_NOTES.values()]
+    policy: Uncertainty = state.policy or stated_policy or base.mandate.uncertainty
+    decided = stated_policy is not None or state.policy is not None
+    notes.append(_POLICY_NOTES[policy])
+    answered_fields = _answer_fields(state)
+    open_: list[tuple[str, Question, list[str] | None]] = [
+        (qid, q, _as_strict(policy) if q.field == "uncertainty_policy" else [_KEEP]) for qid, q in state.conflicts.items()]
+    for q in base.questions:
+        qid = question_id(q)
+        if qid in state.closed or (q.field == "uncertainty_policy" and decided):
+            continue
+        if q.field in (m.F_ITEM_CATEGORY, m.F_MERCHANT_CATEGORY) and '"' not in q.text and not optional(q) \
+                and q.field in answered_fields:
+            continue  # asked for missing items or shops, and an answer elsewhere already gave them
+        open_.append((qid, q, _options(q, base)))
+    return _Built(rules, list(dict.fromkeys(notes)), policy, decided, open_)
+
+
+_CENT = Decimal("0.01")
+_SETS = ("merchant_categories", "item_categories", "target_item_ids", "sizes", "fulfillment")
+
+
+def _unsatisfiable(mandate: CompiledMandate, catalogue: Sequence[CatalogueItem]) -> str | None:
+    """Rules no purchase can meet together: an empty allowed set, or chosen items all excluded by the other
+    item rules (a chosen item outside the allowed categories), or a spending limit not even CHF 0.01 can meet."""
+    for name in _SETS:
+        if getattr(mandate, name) == frozenset():
+            return name
+    for r in mandate.rules:  # a spending limit no purchase can stay within
+        if r.field != m.F_BILLING_CHF:
+            continue
+        cap = Decimal(str(r.value))  # the smallest purchase is CHF 0.01
+        if cap < _CENT if r.operator == "<=" else cap <= _CENT:
+            return "billing_amount_chf"
+    targets = mandate.target_item_ids
+    if targets is not None and catalogue:
+        kinds, excluded = mandate.item_categories, mandate.excluded_item_categories
+        fits = [i for i in catalogue if i.item_id in targets and i.item_id not in mandate.excluded_item_ids
+                and i.category not in excluded and (kinds is None or i.category in kinds)]
+        if not fits:
+            return "items"
+    return None
+
+
+_SENTENCE = re.compile(r"(?<=[.!?;])\s+")
+_UNSURE = re.compile(r"\b(?:uncertain|unsure|in doubt|not sure)\b", re.I)
+
+
+def _conflict(alone: Draft, answer: str, so_far: _Built, base: Draft,
+              catalogue: Sequence[CatalogueItem]) -> str | None:
+    """What of an answer can't be honoured next to everything so far: a rule that adds nothing for a field
+    already limited, rules no purchase can then meet, or an uncertainty choice other than the settled one."""
+    clash = _clashing_rule(alone.mandate.rules, so_far, base, catalogue)
+    if clash is not None:
+        return clash
+    if _states_policy(alone, answer) and so_far.decided and alone.mandate.uncertainty != so_far.policy:
+        return "uncertainty_policy"
+    return None
+
+
+def _clashing_rule(rules: Sequence[Rule], so_far: _Built, base: Draft,
+                   catalogue: Sequence[CatalogueItem]) -> str | None:
+    """The field of the first rule that can't be honoured next to everything so far, if any."""
+    current = replace(base.mandate, rules=tuple(so_far.rules), uncertainty=so_far.policy)
+    for rule in rules:
+        if rule in current.rules:
+            without = replace(current, rules=tuple(r for r in current.rules if r != rule))
+            if without._snapshot() == current._snapshot():  # a stricter rule overrides it: the answer can't apply
+                return rule.field
+            continue
+        if rule.field == m.F_ITEM_CATEGORY and current.target_item_ids is not None:
+            return rule.field  # next to a chosen item a kind never widens: it adds nothing or excludes the item
+        after = replace(current, rules=current.rules + (rule,))
+        limited = any(r.field == rule.field for r in current.rules)
+        if (limited and after._snapshot() == current._snapshot()) or _unsatisfiable(after, catalogue):
+            return rule.field
+    return None
+
+
+def _states_policy(alone: Draft, answer: str) -> bool:
+    return bool(_UNSURE.search(answer)) and not any(q.field == "uncertainty_policy" for q in alone.questions)
+
+
+def _default_questions(catalogue: Sequence[CatalogueItem]) -> frozenset[str]:
+    return frozenset(q.text for q in compile_instruction("At most CHF 1 per order.", catalogue=catalogue).questions)
+
+
+def _why_not(alone: Draft, answer: str, q: Question, catalogue: Sequence[CatalogueItem]) -> str | None:
+    """None when a free-text answer answers its question; otherwise why it doesn't."""
+    defaults = _default_questions(catalogue)  # what any short answer raises because it doesn't mention it
+    unclear = [x.text for x in alone.questions if not optional(x) and (x.text not in defaults
+               or (x.field == "uncertainty_policy" and _UNSURE.search(answer)))]  # its own wording isn't clear
+    if unclear:
+        return "part of your answer is unclear: " + " ".join(unclear)
+    fields = {r.field for r in alone.mandate.rules}
+    dropped = [p for p in _SENTENCE.split(answer) if p.strip() and not
+               {r.field for r in compile_instruction(p, catalogue=catalogue).mandate.rules} <= fields]
+    if dropped:  # a sentence gives a rule on its own that the whole answer loses: the sentences disagree
+        return "part of your answer is unclear: these parts don't fit together: " + " ".join(dropped)
+    if m.F_ITEM_ID in fields:
+        fields.add(m.F_ITEM_CATEGORY)
+    if q.field in ("instruction",) and (fields or not alone.questions):
+        return None
+    if q.field in fields:
+        return None
+    return "it doesn't say anything I can use for this question"
+
+
+def _raise_conflict(state: _State, answer: str, clash: str) -> None:
+    conflict = Question(clash, f'Your answer "{answer}" conflicts with your instruction or an earlier '
+                               f"answer ({clash}): a draft can only add to what you wrote. Answer with a "
+                               "rule that fits, or start a new draft to change it.")
+    state.conflicts[question_id(conflict)] = conflict
+
+
+def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
+            catalogue: Sequence[CatalogueItem]) -> dict[str, Any]:
+    """The draft view (the contract's PolicyDraft without draft_id) for an instruction and its answers so far.
+
+    Answers are replayed in order; each must answer a question that is open at that point."""
+    base = compile_instruction(instruction, catalogue=catalogue)
+    stated_policy = None if any(q.field == "uncertainty_policy" for q in base.questions) else base.mandate.uncertainty
+    state = _State()
+    for a in answers:
+        built = _build(base, stated_policy, state)
+        qid, answer = a["question_id"], a["answer"].strip()
+        found = next(((q, options) for i, q, options in built.open if i == qid), None)
+        if found is None:
+            raise AnswerError(f"{qid} is not an open question")
+        q, options = found
+        if options is not None and (answer in options or not _suggested(q)):
+            if answer not in options:
+                raise AnswerError(f"answer one of: {', '.join(options)}")
+            if q.field == "uncertainty_policy":
+                state.policy = _UNCERTAINTY[answer]
+            elif q.field == m.F_SPLIT_CHECK and _SPLIT[answer]:
+                state.option_rules.append((Rule(m.F_SPLIT_CHECK, "=", "on"), "Two orders at the same shop within an "
+                                           "hour that together go over the limit: I ask you (it may be one order "
+                                           "split in two)."))
+            elif q.field == m.F_MERCHANT_CATEGORY and answer.startswith("Only "):
+                kinds = replace(base.mandate, rules=tuple(built.rules)).item_categories
+                kind = next(iter(kinds)) if kinds and len(kinds) == 1 else None
+                if kind:
+                    rule = Rule(m.F_MERCHANT_CATEGORY, "in", (kind,))
+                    clash = _clashing_rule([rule], built, base, catalogue)
+                    if clash is not None:  # an option is checked like any answer before it counts
+                        _raise_conflict(state, answer, clash)
+                        continue
+                    state.option_rules.append((rule, f"Only shops in the category {kind.replace('_', ' ')}, "
+                                                     "as you answered."))
+            state.closed.add(qid)
+            state.conflicts.pop(qid, None)
+            continue
+        if not answer:
+            raise AnswerError("the answer is empty")
+        alone = compile_instruction(answer, catalogue=catalogue)
+        reason = _why_not(alone, answer, q, catalogue)
+        if reason is not None:
+            raise AnswerError(f"\"{answer}\" doesn't answer this question: {reason}")
+        clash = _conflict(alone, answer, built, base, catalogue)
+        if clash is not None:  # never used and never dropped silently: the customer is told, the question stays
+            _raise_conflict(state, answer, clash)
+            continue
+        state.accepted.append(alone)
+        if _states_policy(alone, answer) and not built.decided:
+            state.policy = alone.mandate.uncertainty
+        state.closed.add(qid)
+        state.conflicts.pop(qid, None)
+    built = _build(base, stated_policy, state)
+    mandate = replace(base.mandate, rules=tuple(built.rules), uncertainty=built.policy,
+                      instruction=instruction, notes=tuple(built.notes))
+    open_questions = []
+    impossible = _unsatisfiable(mandate, catalogue)
+    if impossible is not None:  # only an instruction that contradicts itself gets here: answers are checked first
+        open_questions.append({"question_id": question_id(Question("impossible", impossible)),
+                               "text": f"Your rules can't all be met together ({impossible}): no purchase could pass "
+                                       "them. A draft can only add to what you wrote, so start a new draft.",
+                               "blocking": True})
+    for qid, q, options in built.open:
+        view: dict[str, Any] = {"question_id": qid, "text": q.text, "blocking": not optional(q)}
+        if options:
+            view["options"] = options
+        open_questions.append(view)
+    return {"instruction": instruction,
+            "status": "needs_answers" if any(q["blocking"] for q in open_questions) else "ready",
+            "rules": _rule_views(mandate.notes), "hard_rules": mandate_to_api(mandate)["hard_rules"],
+            "uncertainty_policy": mandate.uncertainty, "notes": list(mandate.notes), "open_questions": open_questions}

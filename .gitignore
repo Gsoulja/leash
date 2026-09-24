@@ -1,0 +1,15 @@
+# Leash (solution/): dependencies, build output, caches and secrets never go into git
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+solution/app/dist/
+solution/app/test-results/
+solution/app/playwright-report/
+.env
+.env.*
+!.env.example

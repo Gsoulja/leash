@@ -1,0 +1,84 @@
+# Leash: one command starts everything (LEASH-127). See solution/RUNBOOK.md.
+#   docker compose -f solution/docker-compose.yml --profile fake up -d --build   # local, against the fake platform
+#   docker compose -f solution/docker-compose.yml up -d --build                  # event day (set .env first)
+# Order: db healthy → migrate (migrations + pack seed, idempotent) → api and worker. Readiness (/readyz) fails
+# until migrations and the seed are done. The worker talks to LEASH_BASE_URL; the default is the local fake,
+# so nothing reaches the live platform unless it is set explicitly.
+x-engine: &engine
+  image: leash-engine:local
+  build:
+    context: ..
+    dockerfile: solution/engine/Dockerfile
+  environment: &engine-env
+    DATABASE_URL: postgresql://leash:${LEASH_DB_PASSWORD:-leash}@db:5432/leash
+    TEAM_API_KEY: ${TEAM_API_KEY:-fake-team-key}
+    LEASH_BASE_URL: ${LEASH_BASE_URL:-http://fake:9000}
+    LEASH_CORS_ORIGINS: ${LEASH_CORS_ORIGINS:-http://localhost:5173}
+    LEASH_LOG_LEVEL: ${LEASH_LOG_LEVEL:-INFO}
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: leash
+      POSTGRES_PASSWORD: ${LEASH_DB_PASSWORD:-leash}  # applies when the volume is first created
+      POSTGRES_DB: leash
+    ports:
+      - "${LEASH_DB_PORT:-55432}:5432"
+    volumes:
+      - leash-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leash -d leash"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *engine
+    command: ["leash-migrate"]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    <<: *engine
+    command: ["leash-api"]
+    ports:
+      - "${LEASH_API_PORT:-8080}:8080"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/readyz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  worker:
+    <<: *engine
+    command: ["leash-worker"]
+    ports:
+      - "${LEASH_WORKER_HEALTH_PORT:-8081}:8081"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  fake:
+    <<: *engine
+    profiles: ["fake"]
+    command: ["uvicorn", "--factory", "fake_api.serve:create_app", "--host", "0.0.0.0", "--port", "9000"]
+    environment:
+      <<: *engine-env
+      PYTHONPATH: tests
+      FAKE_API_KEY: ${TEAM_API_KEY:-fake-team-key}
+    ports:
+      - "${LEASH_FAKE_PORT:-9000}:9000"
+
+volumes:
+  leash-db-data:

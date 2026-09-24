@@ -1,0 +1,135 @@
+/* Design tokens ported from solution/prototype/index.html (DEC-021); src/theme.test.ts keeps them equal. */
+:root{
+  --page:#E7E9EE; --panel:#FFFFFF; --ink:#15171C; --muted:#5F6573; --line:#D6DAE2; --accent:#1463F3; --accent-soft:#E6EEFE; --code:#EEF0F4;
+  --ok:#1C7F4C; --ok-soft:#E2F3E9; --warn:#A35E00; --warn-soft:#FCEFD9; --bad:#BD3328; --bad-soft:#FBE6E3; --dim:#8A909C;
+  /* the phone always renders the light app */
+  --a-bg:#F2F2F6; --a-card:#FFFFFF; --a-ink:#111216; --a-muted:#767B86; --a-line:#E4E5EA; --a-blue:#1463F3;
+  --a-ok:#1E8E55; --a-ok-soft:#E3F5EA; --a-warn:#B06A00; --a-warn-soft:#FDF1DC; --a-bad:#C8372D; --a-bad-soft:#FCE8E6;
+  --sans:"Figtree",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* additions: text variants that meet WCAG AA (4.5:1) where the prototype colours are used as text */
+  --a-muted-text:#696D77; --a-ok-text:#1A7B49; --a-warn-text:#9C5E00; --a-bad-text:#C2352B;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0E1014; --panel:#171A20; --ink:#E9EBF0; --muted:#9CA2AF; --line:#2B303A; --accent:#7EA6FF; --accent-soft:#18243D; --code:#1E222A;
+    --ok:#55C68F; --ok-soft:#15271E; --warn:#F1AB47; --warn-soft:#2C2314; --bad:#F37A70; --bad-soft:#2F1917; --dim:#6F7684;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0E1014; --panel:#171A20; --ink:#E9EBF0; --muted:#9CA2AF; --line:#2B303A; --accent:#7EA6FF; --accent-soft:#18243D; --code:#1E222A;
+  --ok:#55C68F; --ok-soft:#15271E; --warn:#F1AB47; --warn-soft:#2C2314; --bad:#F37A70; --bad-soft:#2F1917; --dim:#6F7684;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:24px 48px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* phone frame */
+.phone{width:100%;max-width:390px;height:812px;margin:0 auto;background:#0B0C0E;border-radius:54px;padding:10px;box-shadow:0 30px 60px -30px rgba(10,20,40,.45)}
+.screen{position:relative;height:100%;border-radius:44px;overflow:hidden;background:var(--a-bg);color:var(--a-ink);display:flex;flex-direction:column;font-family:var(--sans)}
+@media (max-width:480px){.phone{height:760px;border-radius:40px;padding:6px}.screen{border-radius:34px}}
+.sbar{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:14px;font-weight:700}
+.sbar .island{width:110px;height:30px;border-radius:20px;background:#0B0C0E}
+.view{flex:1;overflow-y:auto;padding:6px 18px 24px;display:flex;flex-direction:column;gap:14px}
+.view h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:8px 0 0}
+.view .empty{color:var(--a-muted-text)}
+
+/* tab bar: inactive labels use the accessible muted text (the prototype's #9A9EA8 is 2.7:1 on white) */
+.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--a-line);background:rgba(255,255,255,.92);padding:8px 10px 22px}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--a-muted-text);position:relative;padding:4px 0;border-radius:10px}
+.tabs button[aria-current="page"]{color:var(--a-ink)}
+.tabs button:focus-visible{outline:2px solid var(--a-blue);outline-offset:0}
+.tabs svg{width:24px;height:24px}
+
+/* cockpit (ported from the prototype; text colours use the accessible -text variants) */
+.card{background:var(--a-card);border-radius:18px;padding:16px}
+.sum-row{display:flex;justify-content:space-between;gap:12px}
+.sum-row .k{font-size:12.5px;color:var(--a-muted-text)}
+.sum-row .k.right{text-align:right}
+.sum-row .v{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.sum-row .v2{font-size:17px;font-weight:700;text-align:right}
+.bar{height:10px;border-radius:5px;background:#E6E7EC;overflow:hidden;margin-top:12px}
+.bar span{display:block;height:100%;background:var(--a-blue);border-radius:5px;transition:width .4s}
+.bar.full span{background:var(--a-bad)}
+.counts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--a-ok-soft);color:var(--a-ok-text)}
+.chip.warn{background:var(--a-warn-soft);color:var(--a-warn-text)}
+.chip.bad{background:var(--a-bad-soft);color:var(--a-bad-text)}
+.chip.dim{background:#ECEDF1;color:#5B606B}
+.chip.off{background:transparent;color:#5B606B;box-shadow:inset 0 0 0 1px #9A9EA8}
+.glabel{font-size:13px;font-weight:700;color:var(--a-muted-text);margin:6px 4px 0}
+.list{background:var(--a-card);border-radius:18px;padding:4px 0}
+.row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;border:0;background:none;text-align:left;padding:10px 14px}
+.row + .row{border-top:1px solid var(--a-line)}
+.row:focus-visible{outline:2px solid var(--a-blue);outline-offset:-2px;border-radius:12px}
+.ico{width:40px;height:40px;border-radius:50%;background:#ECEDF1}
+.rmain{min-width:0}
+.rname{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:12.5px;color:var(--a-muted-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ramt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:700;font-size:14px}
+.ramt small{font-size:11px;font-weight:500;color:var(--a-muted-text)}
+
+/* payment detail sheet */
+.scrim{position:absolute;inset:0;background:rgba(10,12,16,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--a-card);width:100%;max-height:85%;overflow-y:auto;border-radius:22px 22px 0 0;padding:18px;display:flex;flex-direction:column;gap:12px}
+.sheet:focus-visible{outline:2px solid var(--a-blue);outline-offset:-2px}
+.sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.sheet-head > div:first-child{min-width:0;overflow-wrap:anywhere}
+.sheet-head .rname{white-space:normal}
+.message{margin:0;font-size:14px}
+.cmp{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+.cmp th:last-child,.cmp td:last-child{width:64px}
+.cmp th{text-align:left;font-weight:600;color:var(--a-muted-text);padding:4px 6px}
+.cmp td{padding:6px;border-top:1px solid var(--a-line);vertical-align:top;overflow-wrap:anywhere}
+.st{font-weight:700;white-space:nowrap}
+.st-pass{color:var(--a-ok-text)}
+.st-fail{color:var(--a-bad-text)}
+.st-warn,.st-integrity{color:var(--a-warn-text)}
+.st-info{color:var(--a-muted-text)}
+.untrusted{background:#F6F6F9;border:1px dashed #9A9EA8;border-radius:12px;padding:10px;font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.untrusted b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-muted-text);margin-bottom:4px}
+.link{border:0;background:none;color:var(--a-blue);font-weight:600;padding:8px;align-self:center}
+
+/* Step-up prompt (LEASH-094): full screen over the app, in the 3-D Secure style of the prototype */
+.prompt{position:absolute;inset:0;background:var(--a-card);z-index:20;display:flex;flex-direction:column;padding:56px 24px 30px;gap:12px;overflow-y:auto}
+.prompt:focus-visible{outline:2px solid var(--a-blue);outline-offset:-4px}
+.p-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600}
+.agentbadge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;background:#F0F1F5;border-radius:999px;padding:4px 9px}
+.p-mid{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;margin-top:10px}
+.p-amt{font-size:36px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.p-shop{font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.p-card{font-size:13.5px;color:var(--a-muted-text)}
+.why{background:#F6F6F9;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.why-title{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-muted-text)}
+.why .st-warn{color:var(--a-warn-text)}
+.why .st-pass{color:var(--a-ok-text)}
+.p-foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:4px}
+.p-blocked{margin:0;padding:10px 12px;border-radius:12px;background:var(--a-bad-soft);color:var(--a-bad-text);font-size:13.5px;text-align:center}
+.p-outcome{margin:auto 0 0;font-size:16px;font-weight:600;text-align:center}
+.timer{font-size:12.5px;color:var(--a-muted-text);font-variant-numeric:tabular-nums;text-align:center;margin:0}
+.pill{border:0;border-radius:999px;background:var(--a-ink);color:#fff;font-weight:700;padding:13px 18px;font-size:15px;width:100%}
+.pill:disabled,.link:disabled{opacity:.4;cursor:not-allowed}
+.pill:focus-visible,.link:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
+.link.later{font-size:13px;color:var(--a-muted-text)}
+
+/* Permission screen (LEASH-096) */
+.perm{display:flex;flex-direction:column;gap:12px}
+.perm .card{display:flex;flex-direction:column;gap:10px}
+.options{display:flex;flex-wrap:wrap;gap:8px}
+.options .pill{width:auto;flex:1 1 auto}
+.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.rules.exact code{font-size:12.5px;overflow-wrap:anywhere}
+.rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.rules li{display:flex;justify-content:space-between;gap:8px;align-items:center;overflow-wrap:anywhere}
+.small{margin:0;font-size:12.5px;color:var(--a-muted-text)}
+.field{border:1px solid #8A8F99;border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit}
+.field:focus-visible{outline:2px solid var(--a-blue);outline-offset:1px}
+.pill.light{background:var(--a-card);color:var(--a-ink);border:1px solid #8A8F99}  /* 3.3:1, WCAG 1.4.11 */
+.pill.danger{background:var(--a-bad-text)}
+.review-banner{position:absolute;left:12px;right:12px;bottom:84px;z-index:15;border:0;border-radius:14px;background:var(--a-ink);color:#fff;font-weight:700;font-size:14px;padding:12px 14px;text-align:left}
+.review-banner:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}

@@ -1,0 +1,2464 @@
+# Leash policy service API (contract-first, LEASH-118). Examples are validated by
+# solution/engine/tests/contracts/test_examples_validate.py and served by mock_server.py.
+openapi: 3.1.0
+info:
+  title: Leash policy service
+  version: 0.1.0
+  description: 'Contract between the customer app and the Leash backend (LEASH-118). Money is a decimal string. Errors use
+    the Viseca shape {"error": {"code", "message"}}. Decisions referenced as DEC- are in solution/docs/decisions.md.'
+servers:
+- url: http://localhost:8787
+  description: mock server (solution/contracts/mock_server.py)
+paths:
+  /api/policies/drafts:
+    post:
+      operationId: createDraft
+      summary: Compile the customer's instruction into a local draft
+      tags:
+      - policy
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDraft'
+              examples:
+                with_question:
+                  value:
+                    draft_id: LD-01
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    status: needs_answers
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    notes:
+                    - '"The monitor I chose" = the 27-inch computer monitor (catalogue item IT0017).'
+                    open_questions:
+                    - question_id: Q1
+                      text: Should a shop you paid earlier in this same run count as "bought from before"?
+                      options:
+                      - 'yes'
+                      - 'no'
+                      blocking: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftRequest'
+            examples:
+              monitor:
+                value:
+                  instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less.
+                    Do not add anything I did not ask for. Ask me when uncertain.
+  /api/policies/drafts/{draft_id}/answers:
+    post:
+      operationId: answerDraftQuestions
+      summary: Answer clarifying questions; accepted answers add to the draft
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDraft'
+              examples:
+                ready:
+                  value:
+                    draft_id: LD-01
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    status: ready
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    notes:
+                    - '"The monitor I chose" = the 27-inch computer monitor (catalogue item IT0017).'
+                    open_questions: []
+        '409':
+          description: Already posted to Viseca (no draft updates there); start a new draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: already_submitted
+                      message: This draft is already at Viseca; start a new one to change it.
+        '422':
+          description: Bad body, not an open question, not one of its options, an empty answer, or an answer that
+            doesn't answer its question (unclear, or gives nothing for that question); the reason is in the message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: invalid_answer
+                      message: 'answer one of: Ask me, Decline, Approve'
+        '404':
+          description: Unknown draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: draft_not_found
+                      message: No draft with this ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswersRequest'
+            examples:
+              'yes':
+                value:
+                  answers:
+                  - question_id: Q1
+                    answer: 'Yes'
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/policies/drafts/{draft_id}/submit:
+    post:
+      operationId: submitDraft
+      summary: Post the finished policy to Viseca as a platform draft
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformDraft'
+              examples:
+                posted:
+                  value:
+                    draft_id: LD-01
+                    platform_draft_id: DR-9921
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    guidance:
+                    - Rules use the leash. field registry v1.
+                    open_questions: []
+        '409':
+          description: Blocking questions remain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: questions_open
+                      message: Answer the open questions before submitting.
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/policies/drafts/{draft_id}/confirm:
+    post:
+      operationId: confirmDraft
+      summary: Customer confirms; the mandate becomes active (idempotent)
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              examples:
+                active:
+                  value:
+                    mandate_id: TM-5521
+                    version: 1
+                    status: active
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    applies_from: next run
+                    revocation: null
+        '409':
+          description: Not submitted yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: not_submitted
+                      message: Submit the draft to Viseca before confirming.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+            examples:
+              confirm:
+                value:
+                  confirmed: true
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/policies/drafts/{draft_id}:
+    get:
+      operationId: getDraft
+      summary: Reload a local draft (e.g. after reconnecting mid-clarification)
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDraft'
+              examples:
+                with_question:
+                  value:
+                    draft_id: LD-01
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    status: needs_answers
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    notes:
+                    - '"The monitor I chose" = the 27-inch computer monitor (catalogue item IT0017).'
+                    open_questions:
+                    - question_id: Q1
+                      text: Should a shop you paid earlier in this same run count as "bought from before"?
+                      options:
+                      - 'yes'
+                      - 'no'
+                      blocking: true
+        '404':
+          description: Unknown draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: draft_not_found
+                      message: No draft with this ID.
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/mandates:
+    get:
+      operationId: listMandates
+      summary: All mandates and which one is current
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MandateList'
+              examples:
+                one_active:
+                  value:
+                    mandates:
+                    - mandate_id: TM-5521
+                      version: 1
+                      status: active
+                      instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                        less. Do not add anything I did not ask for. Ask me when uncertain.
+                      rules:
+                      - text: At most CHF 400.00 per order, delivery included
+                        source: customer
+                        decision: null
+                        tightened: false
+                      - text: Only the 27-inch computer monitor
+                        source: customer
+                        decision: null
+                        tightened: false
+                      - text: Only shops you have paid before
+                        source: customer
+                        decision: DEC-015
+                        tightened: false
+                      - text: 'Nothing extra: no add-ons, plans or vouchers'
+                        source: customer
+                        decision: null
+                        tightened: false
+                      - text: One purchase; ask me before a second
+                        source: team
+                        decision: DEC-013
+                        tightened: false
+                      hard_rules:
+                      - field: authorization.billing_amount_chf
+                        operator: <=
+                        value: 400
+                        currency: CHF
+                        scope: purchase
+                      - field: items.item_id
+                        operator: in
+                        value:
+                        - IT0017
+                      - field: leash.merchant.prior_purchases.v1
+                        operator: '>='
+                        value: 1
+                      - field: leash.items.unrequested_count.v1
+                        operator: '='
+                        value: 0
+                      - field: leash.purchase.max_count.v2
+                        operator: <=
+                        value: 1
+                      uncertainty_policy: ask
+                      applies_from: next run
+                      revocation: null
+                    current_mandate_id: TM-5521
+  /api/mandates/{mandate_id}/versions:
+    get:
+      operationId: listMandateVersions
+      summary: 'Version history: confirmations, tightenings, revocation'
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MandateVersionList'
+              examples:
+                tightened_once:
+                  value:
+                    mandate_id: TM-5521
+                    versions:
+                    - version: 1
+                      change: confirmed
+                      hard_rules:
+                      - field: authorization.billing_amount_chf
+                        operator: <=
+                        value: 400
+                        currency: CHF
+                        scope: purchase
+                      - field: items.item_id
+                        operator: in
+                        value:
+                        - IT0017
+                      - field: leash.merchant.prior_purchases.v1
+                        operator: '>='
+                        value: 1
+                      - field: leash.items.unrequested_count.v1
+                        operator: '='
+                        value: 0
+                      - field: leash.purchase.max_count.v2
+                        operator: <=
+                        value: 1
+                      uncertainty_policy: ask
+                      created_at: '2026-09-23T13:50:00Z'
+                    - version: 2
+                      change: tightened
+                      hard_rules:
+                      - field: authorization.billing_amount_chf
+                        operator: <=
+                        value: 400
+                        currency: CHF
+                        scope: purchase
+                      - field: items.item_id
+                        operator: in
+                        value:
+                        - IT0017
+                      - field: leash.merchant.prior_purchases.v1
+                        operator: '>='
+                        value: 1
+                      - field: leash.items.unrequested_count.v1
+                        operator: '='
+                        value: 0
+                      - field: leash.purchase.max_count.v2
+                        operator: <=
+                        value: 1
+                      - field: authorization.billing_amount_chf
+                        operator: <=
+                        value: 350
+                        currency: CHF
+                        scope: purchase
+                      uncertainty_policy: ask
+                      created_at: '2026-09-23T14:05:00Z'
+        '404':
+          description: Unknown mandate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_found
+                      message: No mandate with this ID.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/mandates/{mandate_id}:
+    get:
+      operationId: getMandate
+      summary: Current permission
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              examples:
+                active:
+                  value:
+                    mandate_id: TM-5521
+                    version: 1
+                    status: active
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    applies_from: next run
+                    revocation: null
+        '404':
+          description: Unknown mandate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_found
+                      message: No mandate with this ID.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: revokeMandate
+      summary: Revoke the agent's permission
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              examples:
+                revoked:
+                  value:
+                    mandate_id: TM-5521
+                    version: 1
+                    status: revoked
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    uncertainty_policy: ask
+                    applies_from: next run
+                    revocation:
+                      platform_confirmed: true
+                      note: null
+        '404':
+          description: No such mandate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_found
+                      message: No mandate with this ID.
+        '502':
+          description: Viseca did not answer; the mandate is still active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: platform_error
+                      message: Viseca did not revoke it; it is still active.
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/mandates/{mandate_id}/tighten:
+    post:
+      operationId: tightenMandate
+      summary: Append stricter rules or switch uncertainty to decline
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              examples:
+                lower_limit:
+                  value:
+                    mandate_id: TM-5521
+                    version: 2
+                    status: active
+                    instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or
+                      less. Do not add anything I did not ask for. Ask me when uncertain.
+                    rules:
+                    - text: At most CHF 400.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only the 27-inch computer monitor
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: Only shops you have paid before
+                      source: customer
+                      decision: DEC-015
+                      tightened: false
+                    - text: 'Nothing extra: no add-ons, plans or vouchers'
+                      source: customer
+                      decision: null
+                      tightened: false
+                    - text: One purchase; ask me before a second
+                      source: team
+                      decision: DEC-013
+                      tightened: false
+                    - text: At most CHF 350.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: true
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 400
+                      currency: CHF
+                      scope: purchase
+                    - field: items.item_id
+                      operator: in
+                      value:
+                      - IT0017
+                    - field: leash.merchant.prior_purchases.v1
+                      operator: '>='
+                      value: 1
+                    - field: leash.items.unrequested_count.v1
+                      operator: '='
+                      value: 0
+                    - field: leash.purchase.max_count.v2
+                      operator: <=
+                      value: 1
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 350
+                      currency: CHF
+                      scope: purchase
+                    uncertainty_policy: ask
+                    applies_from: next run
+                    revocation: null
+        '422':
+          description: Would loosen the permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: would_loosen
+                      message: A limit can only go down. Create a new permission to loosen it.
+        '404':
+          description: No such mandate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_found
+                      message: No mandate with this ID.
+        '409':
+          description: Not active, or Viseca refused the change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_active
+                      message: Only an active mandate can be tightened.
+        '502':
+          description: Viseca did not answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: platform_error
+                      message: Viseca did not accept the change; nothing was stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TightenRequest'
+            examples:
+              lower_limit:
+                value:
+                  add_hard_rules:
+                  - field: authorization.billing_amount_chf
+                    operator: <=
+                    value: 350
+                    currency: CHF
+                    scope: purchase
+              decline_when_unsure:
+                value:
+                  uncertainty_policy: decline
+      parameters:
+      - name: mandate_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/runs:
+    post:
+      operationId: startRun
+      summary: Start a scenario run with the active mandate
+      tags:
+      - runs
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+              examples:
+                started:
+                  value:
+                    run_id: RUN-01
+                    scenario_id: SCEN0004
+                    mandate_id: TM-5521
+                    mandate_version: 1
+                    status: running
+                    counters:
+                      delivered: 3
+                      decided: 3
+                      waiting: 1
+        '404':
+          description: No such mandate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_found
+                      message: No mandate with this ID.
+        '409':
+          description: The mandate is not active, or Viseca refused the run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: mandate_not_active
+                      message: Only an active mandate can start a run.
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: invalid_request
+                      message: Send scenario_id and mandate_id.
+        '502':
+          description: Viseca did not answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: platform_error
+                      message: Viseca did not start the run.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRunRequest'
+            examples:
+              monitor:
+                value:
+                  scenario_id: SCEN0004
+                  mandate_id: TM-5521
+    get:
+      operationId: listRuns
+      summary: Runs, newest first, and which one is in progress
+      tags:
+      - runs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunList'
+              examples:
+                one_running:
+                  value:
+                    runs:
+                    - run_id: RUN-01
+                      scenario_id: SCEN0004
+                      mandate_id: TM-5521
+                      mandate_version: 1
+                      status: running
+                      counters:
+                        delivered: 3
+                        decided: 3
+                        waiting: 1
+                    current_run_id: RUN-01
+  /api/runs/{run_id}:
+    get:
+      operationId: getRun
+      summary: Run progress
+      tags:
+      - runs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+              examples:
+                running:
+                  value:
+                    run_id: RUN-01
+                    scenario_id: SCEN0004
+                    mandate_id: TM-5521
+                    mandate_version: 1
+                    status: running
+                    counters:
+                      delivered: 3
+                      decided: 3
+                      waiting: 1
+        '404':
+          description: No such run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: run_not_found
+                      message: No run with this ID.
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/payments:
+    get:
+      operationId: listPayments
+      summary: Agent payments with engine verdict and final outcome
+      tags:
+      - read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentList'
+              examples:
+                three:
+                  value:
+                    payments:
+                    - authorization_id: AZ-7f3a
+                      source_authorization_id: AU0035
+                      run_id: RUN-01
+                      merchant:
+                        merchant_id: ME0022
+                        name: PixelHarbor
+                        category: electronics
+                        country: CH
+                        city: Zurich
+                      sim_time: '2026-08-12T09:40:00Z'
+                      amount: '289.00'
+                      currency: CHF
+                      billing_amount_chf: '289.00'
+                      items:
+                      - item_id: IT0017
+                        name: 27-inch computer monitor
+                        quantity: 1
+                        unit_price: '289.00'
+                      engine_verdict: approve
+                      final_state: approved
+                      resolved_by: engine
+                      customer_message: Paid CHF 289.00 to PixelHarbor for 27-inch computer monitor. All your rules passed.
+                    - authorization_id: AZ-81c2
+                      source_authorization_id: AU0036
+                      run_id: RUN-01
+                      merchant:
+                        merchant_id: ME0022
+                        name: PixelHarbor
+                        category: electronics
+                        country: CH
+                        city: Zurich
+                      sim_time: '2026-08-12T10:05:00Z'
+                      amount: '289.00'
+                      currency: CHF
+                      billing_amount_chf: '289.00'
+                      items:
+                      - item_id: IT0017
+                        name: 27-inch computer monitor
+                        quantity: 1
+                        unit_price: '289.00'
+                      engine_verdict: step_up
+                      final_state: waiting
+                      resolved_by: null
+                      customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+                    - authorization_id: AZ-9d10
+                      source_authorization_id: AU0037
+                      run_id: RUN-01
+                      merchant:
+                        merchant_id: ME0022
+                        name: PixelHarbor
+                        category: electronics
+                        country: CH
+                        city: Zurich
+                      sim_time: '2026-08-12T14:05:00Z'
+                      amount: '520.00'
+                      currency: CHF
+                      billing_amount_chf: '520.00'
+                      items:
+                      - item_id: IT0017
+                        name: 27-inch computer monitor
+                        quantity: 1
+                        unit_price: '520.00'
+                      engine_verdict: decline
+                      final_state: declined
+                      resolved_by: engine
+                      customer_message: CHF 520.00 is over your CHF 400.00 per-order limit.
+      parameters:
+      - name: run_id
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/payments/{authorization_id}:
+    get:
+      operationId: getPayment
+      summary: 'One payment: checks, evidence, shop text and what was sent'
+      tags:
+      - read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentDetail'
+              examples:
+                duplicate:
+                  value:
+                    authorization_id: AZ-81c2
+                    source_authorization_id: AU0036
+                    run_id: RUN-01
+                    merchant:
+                      merchant_id: ME0022
+                      name: PixelHarbor
+                      category: electronics
+                      country: CH
+                      city: Zurich
+                    sim_time: '2026-08-12T10:05:00Z'
+                    amount: '289.00'
+                    currency: CHF
+                    billing_amount_chf: '289.00'
+                    items:
+                    - item_id: IT0017
+                      name: 27-inch computer monitor
+                      quantity: 1
+                      unit_price: '289.00'
+                    engine_verdict: step_up
+                    final_state: waiting
+                    resolved_by: null
+                    customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+                    checks:
+                    - key: price
+                      label: Price
+                      status: pass
+                      agreed: ≤ CHF 400.00
+                      actual: CHF 289.00
+                      detail: CHF 289.00 is within CHF 400.00.
+                      reason_code: null
+                    - key: known
+                      label: Known shop
+                      status: pass
+                      agreed: Paid there before
+                      actual: 7 earlier payments
+                      detail: 'PixelHarbor: 7 earlier payments on this card.'
+                      reason_code: null
+                    - key: dup
+                      label: Duplicate
+                      status: warn
+                      agreed: One order at a time
+                      actual: Same as 11:40 order
+                      detail: Same shop, items and price as the order at 11:40 (already paid).
+                      reason_code: possible_duplicate
+                    evidence:
+                    - 'Price: CHF 289.00'
+                    - 'Known shop: 7 earlier payments'
+                    - 'Duplicate: Same as 11:40 order'
+                    shop_texts:
+                    - item_id: IT0017
+                      text: 27-inch IPS panel, 2-year seller warranty; returns accepted within 14 days
+                    sent_to_viseca:
+                      authorization_id: AZ-81c2
+                      decision: step_up
+                      reason_codes:
+                      - possible_duplicate
+                      customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+                      evidence:
+                      - 'Duplicate: Same as 11:40 order'
+                      engine_version: leash-0.1.0
+                    engine_version: leash-0.1.0
+                    reader:
+                      name: regex
+                      model_unavailable: false
+                revoked_not_sent:
+                  value:
+                    authorization_id: AZ-a410
+                    source_authorization_id: AU0040
+                    run_id: RUN-01
+                    merchant:
+                      merchant_id: ME0022
+                      name: PixelHarbor
+                      category: electronics
+                      country: CH
+                      city: Zurich
+                    sim_time: '2026-08-15T10:10:00Z'
+                    amount: '299.00'
+                    currency: CHF
+                    billing_amount_chf: '299.00'
+                    items:
+                    - item_id: IT0017
+                      name: 27-inch computer monitor
+                      quantity: 1
+                      unit_price: '299.00'
+                    engine_verdict: null
+                    final_state: not_sent
+                    resolved_by: platform
+                    customer_message: 'Not sent: you revoked the agent''s permission, so the platform rejected it before it
+                      reached the engine.'
+                    checks: []
+                    evidence: []
+                    shop_texts: []
+                    sent_to_viseca: null
+                    engine_version: leash-0.1.0
+                    reader:
+                      name: none
+                      model_unavailable: false
+        '404':
+          description: Unknown payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: payment_not_found
+                      message: No payment with this ID.
+      parameters:
+      - name: authorization_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/asks:
+    get:
+      operationId: listAsks
+      summary: Payments waiting for the customer
+      tags:
+      - asks
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskList'
+              examples:
+                one_open:
+                  value:
+                    asks:
+                    - authorization_id: AZ-81c2
+                      payment:
+                        authorization_id: AZ-81c2
+                        source_authorization_id: AU0036
+                        run_id: RUN-01
+                        merchant:
+                          merchant_id: ME0022
+                          name: PixelHarbor
+                          category: electronics
+                          country: CH
+                          city: Zurich
+                        sim_time: '2026-08-12T10:05:00Z'
+                        amount: '289.00'
+                        currency: CHF
+                        billing_amount_chf: '289.00'
+                        items:
+                        - item_id: IT0017
+                          name: 27-inch computer monitor
+                          quantity: 1
+                          unit_price: '289.00'
+                        engine_verdict: step_up
+                        final_state: waiting
+                        resolved_by: null
+                        customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+                      reasons:
+                      - Same shop, items and price as the order at 11:40 (already paid).
+                      passed:
+                      - Price
+                      - Known shop
+                      - Items
+                      - Shop text
+                      expires_at: '2026-09-23T14:02:00Z'
+                      can_approve: true
+                      cannot_approve_reason: null
+                limit_reached_while_waiting:
+                  value:
+                    asks:
+                    - authorization_id: AZ-81c2
+                      payment:
+                        authorization_id: AZ-81c2
+                        source_authorization_id: AU0036
+                        run_id: RUN-01
+                        merchant:
+                          merchant_id: ME0022
+                          name: PixelHarbor
+                          category: electronics
+                          country: CH
+                          city: Zurich
+                        sim_time: '2026-08-12T10:05:00Z'
+                        amount: '289.00'
+                        currency: CHF
+                        billing_amount_chf: '289.00'
+                        items:
+                        - item_id: IT0017
+                          name: 27-inch computer monitor
+                          quantity: 1
+                          unit_price: '289.00'
+                        engine_verdict: step_up
+                        final_state: waiting
+                        resolved_by: null
+                        customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+                      reasons:
+                      - Same shop, items and price as the order at 11:40 (already paid).
+                      passed:
+                      - Price
+                      - Known shop
+                      - Items
+                      - Shop text
+                      expires_at: '2026-09-23T14:02:00Z'
+                      can_approve: false
+                      cannot_approve_reason: Your 7-day limit was reached while this payment waited, so it can no longer be
+                        approved.
+  /api/asks/{authorization_id}/answer:
+    post:
+      operationId: answerAsk
+      summary: Customer approves or rejects a waiting payment
+      tags:
+      - asks
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              examples:
+                approved:
+                  value:
+                    authorization_id: AZ-81c2
+                    source_authorization_id: AU0036
+                    run_id: RUN-01
+                    merchant:
+                      merchant_id: ME0022
+                      name: PixelHarbor
+                      category: electronics
+                      country: CH
+                      city: Zurich
+                    sim_time: '2026-08-12T10:05:00Z'
+                    amount: '289.00'
+                    currency: CHF
+                    billing_amount_chf: '289.00'
+                    items:
+                    - item_id: IT0017
+                      name: 27-inch computer monitor
+                      quantity: 1
+                      unit_price: '289.00'
+                    engine_verdict: step_up
+                    final_state: approved
+                    resolved_by: customer
+                    customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
+        '409':
+          description: No longer waiting (answered or expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: not_waiting
+                      message: This payment is no longer waiting for an answer.
+        '422':
+          description: A hard rule now fails
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: cannot_approve
+                      message: Your 7-day limit was reached while this payment waited.
+        '404':
+          description: No such payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: not_found
+                      message: No such payment.
+        '503':
+          description: The card is busy (its lock stayed taken); try again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: busy
+                      message: This card is busy right now; please try again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+            examples:
+              approve:
+                value:
+                  decision: approve
+              reject:
+                value:
+                  decision: decline
+      parameters:
+      - name: authorization_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/spending:
+    get:
+      operationId: getSpending
+      summary: Spending against the period limit, cross-checked with the platform counter
+      tags:
+      - read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spending'
+              examples:
+                household:
+                  value:
+                    run_id: RUN-01
+                    period_days: 7
+                    limit_chf: '300.00'
+                    approved_chf: '234.50'
+                    remaining_chf: '65.50'
+                    platform_counter_chf: '234.50'
+                    mismatch: false
+                no_period_limit:
+                  value:
+                    run_id: RUN-02
+                    period_days: null
+                    limit_chf: null
+                    approved_chf: '289.00'
+                    remaining_chf: null
+                    platform_counter_chf: null
+                    mismatch: false
+      parameters:
+      - name: run_id
+        in: query
+        required: false
+        schema:
+          type: string
+  /api/events:
+    get:
+      operationId: streamEvents
+      summary: Server-sent events; payloads are StreamEvent (see events.md)
+      tags:
+      - read
+      parameters:
+      - name: Last-Event-ID
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Resume after this event. Initial state comes from the read endpoints.
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                ask:
+                  value: 'id: 41
+
+                    event: ask.created
+
+                    data: {"id": "41", "type": "ask.created", "at": "2026-09-23T14:00:00Z", "data": {"authorization_id": "AZ-81c2",
+                    "merchant_name": "PixelHarbor", "billing_amount_chf": "289.00", "reasons": ["Same shop, items and price
+                    as the order at 11:40 (already paid)."], "expires_at": "2026-09-23T14:02:00Z", "can_approve": true}}
+
+
+                    '
+components:
+  schemas:
+    Money:
+      type: string
+      pattern: ^-?\d+\.\d{2}$
+      description: Decimal amount as a string, two decimals (never a JSON number).
+    Error:
+      type: object
+      required:
+      - error
+      additionalProperties: false
+      description: Same shape as the Viseca API's errors.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    HardRule:
+      type: object
+      required:
+      - field
+      - operator
+      - value
+      additionalProperties: false
+      description: Exactly the Viseca rule format. Our own fields use the versioned `leash.` registry (DEC-004).
+      properties:
+        field:
+          type: string
+          minLength: 1
+        operator:
+          type: string
+          enum:
+          - <
+          - <=
+          - '='
+          - '!='
+          - '>'
+          - '>='
+          - in
+          - not_in
+        value:
+          anyOf:
+          - type: number
+          - type: string
+          - type: array
+            items:
+              type: string
+        currency:
+          type:
+          - string
+          - 'null'
+          enum:
+          - CHF
+          - EUR
+          - GBP
+          - USD
+          - null
+        scope:
+          type:
+          - string
+          - 'null'
+          enum:
+          - purchase
+          - period
+          - null
+        period_days:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+    RuleView:
+      type: object
+      required:
+      - text
+      - source
+      - tightened
+      additionalProperties: false
+      description: One rule in plain language, as shown to the customer.
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+          enum:
+          - viseca
+          - team
+          - assumption
+          - customer
+        decision:
+          type:
+          - string
+          - 'null'
+          description: DEC- id when the reading comes from the decision log
+        tightened:
+          type: boolean
+    Question:
+      type: object
+      required:
+      - question_id
+      - text
+      - blocking
+      additionalProperties: false
+      properties:
+        question_id:
+          type: string
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        blocking:
+          type: boolean
+    CreateDraftRequest:
+      type: object
+      required:
+      - instruction
+      additionalProperties: false
+      properties:
+        instruction:
+          type: string
+          minLength: 1
+    PolicyDraft:
+      type: object
+      additionalProperties: false
+      required:
+      - draft_id
+      - instruction
+      - status
+      - rules
+      - hard_rules
+      - uncertainty_policy
+      - notes
+      - open_questions
+      description: 'Local draft: not yet sent to Viseca (DEC-003, LEASH-123).'
+      properties:
+        draft_id:
+          type: string
+        instruction:
+          type: string
+        status:
+          type: string
+          enum:
+          - needs_answers
+          - ready
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleView'
+        hard_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/HardRule'
+        uncertainty_policy:
+          type: string
+          enum:
+          - ask
+          - decline
+          - approve
+        notes:
+          type: array
+          items:
+            type: string
+        open_questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+    AnswersRequest:
+      type: object
+      required:
+      - answers
+      additionalProperties: false
+      properties:
+        answers:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+            - question_id
+            - answer
+            additionalProperties: false
+            properties:
+              question_id:
+                type: string
+              answer:
+                type: string
+    PlatformDraft:
+      type: object
+      additionalProperties: false
+      required:
+      - draft_id
+      - platform_draft_id
+      - instruction
+      - hard_rules
+      - uncertainty_policy
+      - guidance
+      description: Exactly what was posted to Viseca; shown to the customer before confirming.
+      properties:
+        draft_id:
+          type: string
+        platform_draft_id:
+          type: string
+        instruction:
+          type: string
+        hard_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/HardRule'
+        uncertainty_policy:
+          type: string
+          enum:
+          - ask
+          - decline
+          - approve
+        guidance:
+          type: array
+          items:
+            type: string
+        open_questions:
+          type: array
+          items:
+            type: string
+    ConfirmRequest:
+      type: object
+      required:
+      - confirmed
+      additionalProperties: false
+      properties:
+        confirmed:
+          const: true
+    Mandate:
+      type: object
+      additionalProperties: false
+      required:
+      - mandate_id
+      - version
+      - status
+      - instruction
+      - rules
+      - hard_rules
+      - uncertainty_policy
+      properties:
+        mandate_id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+          - expired
+        instruction:
+          type: string
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleView'
+        hard_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/HardRule'
+        uncertainty_policy:
+          type: string
+          enum:
+          - ask
+          - decline
+          - approve
+        applies_from:
+          type: string
+          description: Changes apply to runs started after this version (DEC-006).
+        revocation:
+          type:
+          - object
+          - 'null'
+          additionalProperties: false
+          properties:
+            platform_confirmed:
+              type: boolean
+            note:
+              type:
+              - string
+              - 'null'
+    TightenRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: 'Only stricter changes: rules are appended, uncertainty can only move to decline (DEC-006).'
+      properties:
+        add_hard_rules:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/HardRule'
+        uncertainty_policy:
+          const: decline
+    StartRunRequest:
+      type: object
+      required:
+      - scenario_id
+      - mandate_id
+      additionalProperties: false
+      properties:
+        scenario_id:
+          type: string
+        mandate_id:
+          type: string
+    Run:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - scenario_id
+      - mandate_id
+      - mandate_version
+      - status
+      properties:
+        run_id:
+          type: string
+        scenario_id:
+          type: string
+        mandate_id:
+          type: string
+        mandate_version:
+          type: integer
+        status:
+          type: string
+          enum:
+          - running
+          - finished
+          - failed
+        counters:
+          type: object
+          additionalProperties:
+            type: integer
+    Payment:
+      type: object
+      required:
+      - authorization_id
+      - run_id
+      - merchant
+      - sim_time
+      - amount
+      - currency
+      - billing_amount_chf
+      - items
+      - engine_verdict
+      - final_state
+      - resolved_by
+      - customer_message
+      properties:
+        authorization_id:
+          type: string
+        source_authorization_id:
+          type:
+          - string
+          - 'null'
+        run_id:
+          type: string
+        merchant:
+          type: object
+          required:
+          - merchant_id
+          - name
+          - category
+          - country
+          properties:
+            merchant_id:
+              type: string
+            name:
+              type: string
+            category:
+              type: string
+            country:
+              type: string
+            city:
+              type: string
+        sim_time:
+          type: string
+          format: date-time
+          description: Simulated purchase time
+        amount:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          enum:
+          - CHF
+          - EUR
+          - GBP
+          - USD
+        billing_amount_chf:
+          $ref: '#/components/schemas/Money'
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+            - item_id
+            - name
+            - quantity
+            properties:
+              item_id:
+                type: string
+              name:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+              unit_price:
+                $ref: '#/components/schemas/Money'
+        engine_verdict:
+          type:
+          - string
+          - 'null'
+          enum:
+          - approve
+          - decline
+          - step_up
+          - null
+        final_state:
+          type: string
+          enum:
+          - approved
+          - declined
+          - waiting
+          - timed_out
+          - not_sent
+          description: 'Cockpit: approved=Paid, waiting=Waiting for you, declined=Blocked, timed_out=No answer, not_sent=Not
+            sent (platform rejected it before it reached the engine, e.g. permission revoked).'
+        resolved_by:
+          type:
+          - string
+          - 'null'
+          enum:
+          - engine
+          - customer
+          - platform
+          - null
+        customer_message:
+          type: string
+    PaymentList:
+      type: object
+      required:
+      - payments
+      additionalProperties: false
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    Check:
+      type: object
+      required:
+      - key
+      - label
+      - status
+      - agreed
+      - actual
+      - detail
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - fail
+          - warn
+          - info
+          - integrity
+        agreed:
+          type: string
+        actual:
+          type: string
+        detail:
+          type: string
+        reason_code:
+          type:
+          - string
+          - 'null'
+    PaymentDetail:
+      allOf:
+      - $ref: '#/components/schemas/Payment'
+      - type: object
+        required:
+        - checks
+        - evidence
+        - shop_texts
+        - sent_to_viseca
+        - engine_version
+        - reader
+        properties:
+          checks:
+            type: array
+            items:
+              $ref: '#/components/schemas/Check'
+          evidence:
+            type: array
+            items:
+              type: string
+          shop_texts:
+            type: array
+            description: 'Merchant text: untrusted, render as plain text.'
+            items:
+              type: object
+              required:
+              - item_id
+              - text
+              properties:
+                item_id:
+                  type: string
+                text:
+                  type: string
+          sent_to_viseca:
+            type:
+            - object
+            - 'null'
+            description: The body POSTed to /v1/authorizations/{id}/decision; null when nothing was sent.
+          engine_version:
+            type: string
+          reader:
+            type: object
+            required:
+            - name
+            - model_unavailable
+            properties:
+              name:
+                type: string
+              model_unavailable:
+                type: boolean
+    Ask:
+      type: object
+      additionalProperties: false
+      required:
+      - authorization_id
+      - payment
+      - reasons
+      - passed
+      - expires_at
+      - can_approve
+      - cannot_approve_reason
+      properties:
+        authorization_id:
+          type: string
+        payment:
+          $ref: '#/components/schemas/Payment'
+        reasons:
+          type: array
+          items:
+            type: string
+        passed:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+          description: Real clock; the app counts down from this (DEC-008).
+        can_approve:
+          type: boolean
+          description: False when a hard rule now fails (DEC-012).
+        cannot_approve_reason:
+          type:
+          - string
+          - 'null'
+    AskList:
+      type: object
+      required:
+      - asks
+      additionalProperties: false
+      properties:
+        asks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ask'
+    AnswerRequest:
+      type: object
+      required:
+      - decision
+      additionalProperties: false
+      properties:
+        decision:
+          type: string
+          enum:
+          - approve
+          - decline
+    Spending:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - period_days
+      - limit_chf
+      - approved_chf
+      - remaining_chf
+      - platform_counter_chf
+      - mismatch
+      properties:
+        run_id:
+          type: string
+        period_days:
+          type:
+          - integer
+          - 'null'
+        limit_chf:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        approved_chf:
+          $ref: '#/components/schemas/Money'
+        remaining_chf:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        platform_counter_chf:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        mismatch:
+          type: boolean
+          description: Our ledger and the platform counter disagree (DEC-010).
+    MandateList:
+      type: object
+      required:
+      - mandates
+      - current_mandate_id
+      additionalProperties: false
+      properties:
+        mandates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mandate'
+        current_mandate_id:
+          type:
+          - string
+          - 'null'
+          description: The active mandate, if any.
+    MandateVersion:
+      type: object
+      required:
+      - version
+      - change
+      - hard_rules
+      - uncertainty_policy
+      - created_at
+      additionalProperties: false
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        change:
+          type: string
+          enum:
+          - confirmed
+          - tightened
+          - revoked
+          - expired
+        hard_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/HardRule'
+        uncertainty_policy:
+          type: string
+          enum:
+          - ask
+          - decline
+          - approve
+        created_at:
+          type: string
+          format: date-time
+    MandateVersionList:
+      type: object
+      required:
+      - mandate_id
+      - versions
+      additionalProperties: false
+      properties:
+        mandate_id:
+          type: string
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MandateVersion'
+    RunList:
+      type: object
+      required:
+      - runs
+      - current_run_id
+      additionalProperties: false
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        current_run_id:
+          type:
+          - string
+          - 'null'
+          description: The run still in progress, if any.
+    AskCreatedData:
+      type: object
+      additionalProperties: false
+      required:
+      - authorization_id
+      - merchant_name
+      - billing_amount_chf
+      - reasons
+      - expires_at
+      - can_approve
+      properties:
+        authorization_id:
+          type: string
+        merchant_name:
+          type: string
+        billing_amount_chf:
+          $ref: '#/components/schemas/Money'
+        reasons:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+        can_approve:
+          type: boolean
+    AskResolvedData:
+      type: object
+      additionalProperties: false
+      required:
+      - authorization_id
+      - outcome
+      - resolved_by
+      properties:
+        authorization_id:
+          type: string
+        outcome:
+          type: string
+          enum:
+          - approved
+          - declined
+          - timed_out
+        resolved_by:
+          type: string
+          enum:
+          - customer
+          - platform
+    PaymentDecidedData:
+      type: object
+      additionalProperties: false
+      required:
+      - authorization_id
+      - engine_verdict
+      - final_state
+      - billing_amount_chf
+      - customer_message
+      properties:
+        authorization_id:
+          type: string
+        engine_verdict:
+          type: string
+          enum:
+          - approve
+          - decline
+          - step_up
+        final_state:
+          type: string
+          enum:
+          - approved
+          - declined
+          - waiting
+        billing_amount_chf:
+          $ref: '#/components/schemas/Money'
+        customer_message:
+          type: string
+    MandateChangedData:
+      type: object
+      additionalProperties: false
+      required:
+      - mandate_id
+      - version
+      - status
+      - change
+      properties:
+        mandate_id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+          - expired
+        change:
+          type: string
+          enum:
+          - confirmed
+          - tightened
+          - revoked
+          - expired
+    IntegrityAlertData:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - run_id
+      - detail
+      properties:
+        kind:
+          type: string
+          enum:
+          - spend_counter_mismatch
+          - unsupported_mandate_rule
+          - mandate_snapshot_mismatch
+          - amount_mismatch
+        run_id:
+          type:
+          - string
+          - 'null'
+        detail:
+          type: string
+    StreamEvent:
+      type: object
+      required:
+      - id
+      - type
+      - at
+      - data
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+          - ask.created
+          - ask.resolved
+          - payment.decided
+          - mandate.changed
+          - integrity.alert
+        at:
+          type: string
+          format: date-time
+        data:
+          type: object
+      allOf:
+      - if:
+          properties:
+            type:
+              const: ask.created
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/AskCreatedData'
+      - if:
+          properties:
+            type:
+              const: ask.resolved
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/AskResolvedData'
+      - if:
+          properties:
+            type:
+              const: payment.decided
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/PaymentDecidedData'
+      - if:
+          properties:
+            type:
+              const: mandate.changed
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/MandateChangedData'
+      - if:
+          properties:
+            type:
+              const: integrity.alert
+        then:
+          properties:
+            data:
+              $ref: '#/components/schemas/IntegrityAlertData'
