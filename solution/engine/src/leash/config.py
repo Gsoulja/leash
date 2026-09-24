@@ -18,7 +18,11 @@ from urllib.parse import quote, quote_plus, unquote, unquote_plus, urlsplit
 
 from pydantic import BaseModel, Field, SecretStr, ValidationError, field_validator
 
-from leash.adapters.viseca_api.client import DEFAULT_BASE_URL, BootstrapSettings, VisecaClient
+from leash.adapters.viseca_api.client import (DEFAULT_BASE_URL, DEFAULT_CONNECT_RETRIES,
+                                              DEFAULT_CONNECT_TIMEOUT_SECONDS,
+                                              DEFAULT_KEEPALIVE_EXPIRY_SECONDS, DEFAULT_MAX_CONNECTIONS,
+                                              DEFAULT_MAX_KEEPALIVE_CONNECTIONS, BootstrapSettings,
+                                              VisecaClient)
 from leash.domain.clock import WallTime
 
 EXPECTED_API_MAJOR = "0"
@@ -29,6 +33,14 @@ _ENV = {
     "base_url": "LEASH_BASE_URL",
     "api_timeout_seconds": "LEASH_API_TIMEOUT_SECONDS",
     "watchdog_margin_seconds": "LEASH_WATCHDOG_MARGIN_SECONDS",
+    # HTTP connection pool to the platform (LEASH-136). Both processes build their client from these, so
+    # the variables configure what is deployed rather than only what `VisecaClient.from_env` would make.
+    "http_max_connections": "LEASH_HTTP_MAX_CONNECTIONS",
+    "http_max_keepalive_connections": "LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS",
+    "http_keepalive_expiry_seconds": "LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS",
+    "http_connect_timeout_seconds": "LEASH_HTTP_CONNECT_TIMEOUT_SECONDS",
+    "http_pool_timeout_seconds": "LEASH_HTTP_POOL_TIMEOUT_SECONDS",
+    "http_connect_retries": "LEASH_HTTP_CONNECT_RETRIES",
 }
 
 
@@ -48,6 +60,14 @@ class Settings(BaseModel):
     base_url: str = DEFAULT_BASE_URL
     api_timeout_seconds: float = Field(default=10.0, gt=0)
     watchdog_margin_seconds: float = Field(default=2.0, gt=0)
+    # Constrained on purpose: a misconfigured pool is a loud startup error naming the variable, not a
+    # value silently rewritten to something that happens to work.
+    http_max_connections: int = Field(default=DEFAULT_MAX_CONNECTIONS, gt=0)
+    http_max_keepalive_connections: int = Field(default=DEFAULT_MAX_KEEPALIVE_CONNECTIONS, ge=0)
+    http_keepalive_expiry_seconds: float = Field(default=DEFAULT_KEEPALIVE_EXPIRY_SECONDS, gt=0)
+    http_connect_timeout_seconds: float = Field(default=DEFAULT_CONNECT_TIMEOUT_SECONDS, gt=0)
+    http_pool_timeout_seconds: float | None = Field(default=None, gt=0)
+    http_connect_retries: int = Field(default=DEFAULT_CONNECT_RETRIES, ge=0)
 
     @field_validator("database_url")
     @classmethod
@@ -114,6 +134,24 @@ def _scrub(record: logging.LogRecord) -> logging.LogRecord:
         if isinstance(value, str):
             setattr(record, key, _redact(value))
     return record
+
+
+def platform_client(settings: Settings) -> VisecaClient:
+    """The one pooled client a process uses to talk to the platform (LEASH-136).
+
+    Both entry points build it here, so the pool variables configure the deployed processes rather than
+    only `VisecaClient.from_env`, and there is a single place to look for how the client is made.
+    Whoever calls this owns the client and closes it — the API app never closes a client it was handed,
+    because a worker in the same process may share it.
+    """
+    return VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
+                        settings.api_timeout_seconds,
+                        max_connections=settings.http_max_connections,
+                        max_keepalive_connections=settings.http_max_keepalive_connections,
+                        keepalive_expiry_seconds=settings.http_keepalive_expiry_seconds,
+                        connect_timeout_seconds=settings.http_connect_timeout_seconds,
+                        pool_timeout_seconds=settings.http_pool_timeout_seconds,
+                        connect_retries=settings.http_connect_retries)
 
 
 def install_redaction(settings: Settings) -> Callable[[], None]:

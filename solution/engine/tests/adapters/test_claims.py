@@ -121,7 +121,7 @@ def test_crash_after_receive_then_a_redelivery_after_restart_completes_the_decis
         def __init__(self):
             self.sent = []
 
-        async def send(self, aid, body):
+        async def send(self, aid, body, budget_seconds=None):
             self.sent.append((aid, body["decision"]))
 
     async def body(pool):

@@ -155,7 +155,7 @@ def test_a_restart_mid_run_resends_unsent_answers_and_resumes_polling(test_datab
     class LosesSome(ApiSender):
         lost: list[str] = []
 
-        async def send(self, authorization_id, body):
+        async def send(self, authorization_id, body, budget_seconds=None):
             source = fake.live[authorization_id][1].attempt.purchase.authorization_id
             if source in lost_sources:
                 self.lost.append(authorization_id)

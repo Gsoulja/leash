@@ -300,18 +300,45 @@ def test_worker_health_is_ready_only_while_polls_succeed():
     assert http.get("/readyz").status_code == 503
 
 
-# --- LEASH-136: the send budget reaches the platform call --------------------------------------
+# --- LEASH-136: the live budget reaches the platform call ---------------------------------------
 
-def test_the_api_sender_passes_the_send_budget_as_the_http_timeout():
+def test_the_api_sender_passes_the_live_budget_through_to_the_platform():
+    """Per call, not per adapter: the number that bounds the POST is the time actually left before
+    `deadline_at`, so the transport is told it rather than a planned figure fixed at construction."""
+
     class Records:
         def __init__(self):
             self.calls = []
 
-        async def post_decision(self, authorization_id, decision, timeout=None):
-            self.calls.append((authorization_id, timeout))
+        async def post_decision(self, authorization_id, decision, budget_seconds=None):
+            self.calls.append((authorization_id, budget_seconds))
             return {"data": {}}
 
     api = Records()
-    asyncio.run(ApiSender(api, send_seconds=0.75).send("AZ-1", {"decision": "approve"}))
+    asyncio.run(ApiSender(api).send("AZ-1", {"decision": "approve"}, 0.75))
     asyncio.run(ApiSender(api).send("AZ-2", {"decision": "approve"}))
     assert api.calls == [("AZ-1", 0.75), ("AZ-2", None)]
+
+
+def test_the_worker_opens_the_pool_before_anything_that_can_fail():
+    """Structural, because `_serve` is process wiring with no seam to inject into.
+
+    Both implementations of LEASH-136 got this wrong at some point: the client is created, then the
+    bootstrap call opens its pool, then the database pool is created — and only *then* did the
+    try/finally that closes the client begin. A version mismatch or a down database leaked the pool.
+    `async with client:` has to come before both, and this fails if anyone reorders it.
+    """
+    import inspect
+
+    from leash.adapters.viseca_api import worker as module
+
+    body = inspect.getsource(module._serve)
+    guard = body.index("async with client:")
+    for risky in ("platform_client(settings)",):
+        assert body.index(risky) < guard, f"{risky} must be inside the guard, not before it"
+    for after in ("_work(", ):
+        assert body.index(after) > guard, f"{after} must run inside the guard"
+    # and the things that open sockets or connections live in `_work`, under the guard
+    work = inspect.getsource(module._work)
+    assert "load_runtime" in work and "create_pool" in work, \
+        "bootstrap and the database pool must sit inside the guarded call, not beside it"

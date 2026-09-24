@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from leash.adapters.viseca_api.client import VisecaClient
-from leash.config import ConfigError, IncompatibleApi, Settings, check_compatibility, install_redaction, load_runtime
+from leash.config import ConfigError, IncompatibleApi, Settings, check_compatibility, install_redaction, load_runtime, platform_client
 from leash.domain.clock import WallTime
 
 KEY = "team-secret-key-123"
@@ -266,3 +266,48 @@ def test_structured_log_lines_are_redacted_too(redaction):
         log.removeHandler(handler)
     text = stream.getvalue()
     assert KEY not in text and "db-pass-456" not in text and json.loads(text.splitlines()[0])
+
+
+# --- LEASH-136: the pool is configured once, in Settings, and a bad value is loud ----------------
+
+def env(**extra):
+    base = {"TEAM_API_KEY": "k", "DATABASE_URL": "postgresql://u:p@localhost/leash"}
+    return {**base, **extra}
+
+
+def test_the_pool_variables_reach_the_client():
+    settings = Settings.from_env(env(LEASH_HTTP_MAX_CONNECTIONS="7",
+                                     LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS="3",
+                                     LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS="2.5",
+                                     LEASH_HTTP_CONNECT_TIMEOUT_SECONDS="1.25",
+                                     LEASH_HTTP_CONNECT_RETRIES="0"))
+    client = platform_client(settings)
+    limits = client.limits
+    assert (limits.max_connections, limits.max_keepalive_connections, limits.keepalive_expiry) == (7, 3, 2.5)
+    assert client.connect_timeout_seconds == 1.25 and client.connect_retries == 0
+    inner = client.http._transport._pool  # the real pool, not just what we asked for
+    assert (inner._max_connections, inner._max_keepalive_connections) == (7, 3)
+
+
+@pytest.mark.parametrize("bad,why", [
+    ({"LEASH_HTTP_MAX_CONNECTIONS": "0"}, "greater than 0"),
+    ({"LEASH_HTTP_MAX_CONNECTIONS": "abc"}, "LEASH_HTTP_MAX_CONNECTIONS"),
+    ({"LEASH_HTTP_MAX_CONNECTIONS": "inf"}, "LEASH_HTTP_MAX_CONNECTIONS"),
+    ({"LEASH_HTTP_MAX_CONNECTIONS": "nan"}, "LEASH_HTTP_MAX_CONNECTIONS"),
+    ({"LEASH_HTTP_MAX_CONNECTIONS": "1e400"}, "LEASH_HTTP_MAX_CONNECTIONS"),
+    ({"LEASH_HTTP_CONNECT_RETRIES": "-1"}, "greater than or equal to 0"),
+    ({"LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS": "0"}, "greater than 0"),
+    ({"LEASH_HTTP_POOL_TIMEOUT_SECONDS": "-3"}, "greater than 0"),
+])
+def test_a_misconfigured_pool_is_a_loud_startup_error_naming_the_variable(bad, why):
+    """Never silently rewritten. A value someone deliberately set and got wrong is worth a failure that
+    names it, not a default quietly substituted behind their back."""
+    with pytest.raises(ConfigError) as raised:
+        Settings.from_env(env(**bad))
+    assert why in str(raised.value)
+
+
+def test_the_defaults_are_the_documented_ones():
+    settings = Settings.from_env(env())
+    assert (settings.http_max_connections, settings.http_max_keepalive_connections) == (20, 10)
+    assert settings.http_connect_retries == 1 and settings.http_pool_timeout_seconds is None

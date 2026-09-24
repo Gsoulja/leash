@@ -77,8 +77,16 @@ back and `test_a_hanging_send_is_abandoned_before_the_deadline` failed at the 5 
 of the 0.6 s deadline; adding `"POST"` to `SAFE_METHODS` killed the never-retried test; removing the
 long-poll timeout killed two. The reviewer also re-added the lifespan close I had removed and
 reproduced the e2e failure it caused (61 s, 0 of 11 authorizations decided), confirming the ownership
-change is load-bearing, and checked `asyncio.run(viseca.aclose())` is safe across event loops against a
-real socket server with live keep-alive connections. All 13 LOCK pins recomputed independently: 0
+change is load-bearing, and reported that `asyncio.run(viseca.aclose())` is safe across event loops against
+a real socket server with live keep-alive connections.
+
+**That last claim is false, and is retracted (2026-09-24).** A later impartial assessment reproduced the
+opposite: with a live keep-alive connection, closing the pool from a second `asyncio.run` after uvicorn
+has returned raises `RuntimeError: Event loop is closed`. So `service.main()` ends every clean API
+shutdown on a traceback with the socket not cleanly closed, and **AC2 is not met for the API process** —
+only for the worker, whose `async with client:` is correct. `origin/feature/LEASH-136` fixes this
+properly with a `serve_until_stopped` helper that serves and closes inside one loop, and pins it with a
+real-socket test. See the reconciliation note below. All 13 LOCK pins recomputed independently: 0
 mismatches, and the re-pin justification holds (`decide_purchase.py` is in `SHARED_ENFORCEMENT`; the
 only change is the timeout expression and two comments, which read no rule, fact or amount).
 
@@ -114,3 +122,68 @@ Two findings deliberately left alone, both outside this ticket:
 Also noted, not acted on: a `TransportError` retry of `GET /v1/decision-requests/next` could in
 principle lose a dequeued item if the platform dequeues before delivery completes and does not
 redeliver. `technical_details.md` does not say either way — one for the Viseca experts.
+
+## Reconciliation with feature/LEASH-136 — 2026-09-24
+
+This ticket was implemented twice in parallel. An impartial assessment of both scored
+`origin/feature/LEASH-136` better on five of six criteria and on design fit, and found a **production
+defect in this branch's version that this log had wrongly certified as checked** (see the retraction
+above). The result below is not a merge: the two were reconciled by hand, because a merge-tool
+resolution of `worker.py` or `service.py` would have deleted LEASH-130's reconciler loop or LEASH-151's
+bundle-revision gate — the other branch predates both.
+
+**Taken from feature/LEASH-136**
+- `serve_until_stopped(server, viseca)`: the API serves and closes the pool inside one event loop.
+  This is the fix for the defect above.
+- Pool settings in the pydantic `Settings` with constraints, plus `config.platform_client(settings)` as
+  the single construction site, and `.env.example` documenting every variable. `PoolSettings` is deleted:
+  one env reader, validated once, instead of a second one inside the adapter with two call sites.
+- `retries=connect_retries` on `httpx.AsyncHTTPTransport`, replacing ~20 lines of hand-rolled retry.
+  Verified in httpcore's source: `retries_left` is consumed only inside `_connect()` and only for
+  `ConnectError`/`ConnectTimeout`, before a byte of the request is written — so a decision POST the
+  platform already received can never be replayed, whatever the method. The previous method-allowlist
+  loop was *wider*: it caught `ReadTimeout`, which on the long poll could re-poll after the platform had
+  already dequeued an envelope.
+- The pool built in `__init__` rather than lazily, which makes "exactly once" structural instead of
+  something a check-then-set has to get right.
+- `pool_timeout_seconds`, the budget reaching httpx per phase, and the client's own refusal to start when
+  `budget_seconds <= 0`.
+- `tests/keepalive_server.py` and `tests/adapters/test_api_client_pool.py`: 16 real-socket tests,
+  including the **only** genuine pool-exhaustion test either version had, the cross-loop-close hazard, and
+  a no-replay proof that reads a whole POST body then hangs up.
+
+**Kept from this branch**
+- `_serve`/`_work` split with `async with client:` wrapping bootstrap *and* the database pool — the other
+  version leaked the pool on a worker startup failure, the mirror image of the defect it found here.
+  Now pinned structurally by `test_the_worker_opens_the_pool_before_anything_that_can_fail`, verified to
+  fail when the guard is reordered.
+- `min(plan.send_seconds, left)` as the outer send bound (the other used the looser `left`).
+- `ClientClosed` as a named exception rather than a bare `RuntimeError`.
+- A separate connect-timeout cap: without it a 25-second long poll waits 35 seconds to reach a dead host.
+- Everything from LEASH-130, LEASH-135 and LEASH-151, untouched.
+
+**Written fresh, because neither version did it**
+- The `Sender` port now takes `budget_seconds`. This branch had moved the budget into
+  `ApiSender.__init__`, so the transport only ever saw the *planned* window, not the time actually left —
+  which is not what the Description asks for. The other branch threaded the live number but left the
+  Protocol declaring two arguments and reached it by sniffing the signature at runtime behind a
+  `type: ignore`, so mypy could not catch a sender that silently dropped the budget. The port now states
+  the contract and all nine test doubles were updated to match.
+
+**Dropped from this branch as tautological**, on the assessment's evidence: a "pool exhaustion" test that
+injected a transport which unconditionally raised `PoolTimeout` and then asserted `PoolTimeout`; a
+"startup failure" test that exercised Python's `async with` rather than `_serve`; and two tests that read
+back their own constructor arguments.
+
+**Also corrected:** the claim that an unreadable pool setting falls back to its default was false for
+`inf`, `nan` and `1e400`, which raised uncaught from `int(float(...))`. Those are now startup errors
+naming the variable, along with `0`, `-1` and unparseable values, which used to be silently rewritten.
+
+**Still open, in both versions and not fixed here:** `Worker._answer_invalid` POSTs a real `step_up` with
+the default timeout and no `wait_for`. It cannot be bounded as written — `InvalidEvent` carries only
+`authorization_id`, so there is no deadline to measure against. Filed rather than smuggled in; AC4 has
+that one hole.
+
+Registry LOCK re-pinned from a run, not hand-edited: the `Sender` signature change alone moves all 13
+fingerprints, since `application/decide_purchase.py` is in `SHARED_ENFORCEMENT` and `code_hash` reads the
+AST. Neither branch's pins or justification would have been truthful for this result.

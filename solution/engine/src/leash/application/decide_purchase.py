@@ -127,7 +127,14 @@ class DecisionStore(Protocol):
 
 
 class Sender(Protocol):
-    async def send(self, authorization_id: str, body: Mapping[str, Any]) -> None: ...
+    async def send(self, authorization_id: str, body: Mapping[str, Any],
+                   budget_seconds: float | None = None) -> None: ...
+    """`budget_seconds` is the time actually left before `deadline_at`.
+
+    It is part of the port rather than something the adapter is configured with once, so a sender that
+    ignores it is a type error rather than a silent wait past the deadline. `None` means "no deadline to
+    measure against" — the outbox's post-deadline recovery path (DEC-007/LEASH-054).
+    """
 
 
 class _Budget:
@@ -295,11 +302,19 @@ class DecidePurchase:
                     timer: "_StageTimer") -> None:
         aid = request.purchase.authorization_id
         left = (request.deadline_at.at - datetime.now(timezone.utc)).total_seconds()
-        # Capped by the time left, never extended past it: `deadline_at` is authoritative, and an
-        # answer that misses it is the outbox's job, not something to hold a socket open for.
+        if left <= 0:
+            # Nothing to gain by starting: the platform refuses an answer after `deadline_at`, and
+            # holding the connection open cannot change that. The outbox delivers it (LEASH-054).
+            timer.done("send")
+            log.warning("no time left to send before the deadline; leaving it to the outbox",
+                        extra={"authorization_id": aid})
+            return
+        # Capped by the time left, never extended past it: `deadline_at` is authoritative. The same
+        # number goes to the sender, so connect, read, write and the pool wait are bounded inside httpx
+        # too — the `wait_for` is the outer guard, not the only one.
+        budget = max(0.0, min(self._plan.send_seconds, left))
         try:
-            await asyncio.wait_for(self._sender.send(aid, body),
-                                   timeout=max(0.0, min(self._plan.send_seconds, left)))
+            await asyncio.wait_for(self._sender.send(aid, body, budget), timeout=budget)
         except Exception:  # left unmarked: the outbox resends it (LEASH-054)
             timer.done("send")
             log.exception("sending the decision failed; the outbox will retry", extra={"authorization_id": aid})

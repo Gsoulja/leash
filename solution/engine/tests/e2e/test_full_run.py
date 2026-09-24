@@ -42,7 +42,7 @@ class LosesFirstPost(ApiSender):
         super().__init__(api)
         self.fake, self.source_id, self.lost = fake, source_id, []
 
-    async def send(self, authorization_id, body):
+    async def send(self, authorization_id, body, budget_seconds=None):
         _, live = self.fake.live[authorization_id]
         if live.attempt.purchase.authorization_id == self.source_id and not self.lost:
             self.lost.append(authorization_id)

@@ -7,7 +7,6 @@ in logs, reprs or error messages.
 """
 
 import os
-import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -25,10 +24,13 @@ DEFAULT_MAX_KEEPALIVE_CONNECTIONS = 10
 DEFAULT_KEEPALIVE_EXPIRY_SECONDS = 30.0
 DEFAULT_CONNECT_TIMEOUT_SECONDS = 5.0
 
-#: Methods that may be repeated without changing anything at the platform. A decision POST is not
-#: here: the platform documents no idempotency guarantee for it, and the outbox is what resends it.
-SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
-DEFAULT_RETRIES = 1
+#: Retries handed to the transport. httpcore consumes these **only** inside `_connect()`, and only for
+#: `ConnectError` / `ConnectTimeout` — TCP connect and the TLS handshake, before a single byte of the
+#: request is written. A request the platform has already received is therefore never replayed, whatever
+#: the method, which is what makes this safe for a decision POST where the platform documents no
+#: idempotency guarantee. Retrying anything later (a read timeout, a half-closed connection) would risk
+#: exactly that, so we do not.
+DEFAULT_CONNECT_RETRIES = 1
 
 # Documented in technical_details.md; used only when bootstrap doesn't state them.
 DOCUMENTED_DECISION_TIMEOUT_SECONDS = 8.0
@@ -122,75 +124,61 @@ def _as_str(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
-@dataclass(frozen=True)
-class PoolSettings:
-    """How the connection pool behaves. Every value is an environment variable (LEASH-136)."""
-
-    max_connections: int = DEFAULT_MAX_CONNECTIONS
-    max_keepalive_connections: int = DEFAULT_MAX_KEEPALIVE_CONNECTIONS
-    keepalive_expiry_seconds: float = DEFAULT_KEEPALIVE_EXPIRY_SECONDS
-    connect_timeout_seconds: float = DEFAULT_CONNECT_TIMEOUT_SECONDS
-    #: Extra attempts for a safe method only, and never past the call's remaining budget.
-    retries: int = DEFAULT_RETRIES
-
-    @classmethod
-    def from_env(cls, env: Mapping[str, str] | None = None) -> "PoolSettings":
-        e = os.environ if env is None else env
-
-        def number(var: str, default: float) -> float:
-            try:
-                return float(e[var])
-            except (KeyError, ValueError):
-                return default
-
-        return cls(max_connections=max(1, int(number("LEASH_HTTP_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS))),
-                   max_keepalive_connections=max(0, int(number("LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS",
-                                                              DEFAULT_MAX_KEEPALIVE_CONNECTIONS))),
-                   keepalive_expiry_seconds=max(0.0, number("LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS",
-                                                            DEFAULT_KEEPALIVE_EXPIRY_SECONDS)),
-                   connect_timeout_seconds=max(0.0, number("LEASH_HTTP_CONNECT_TIMEOUT_SECONDS",
-                                                           DEFAULT_CONNECT_TIMEOUT_SECONDS)),
-                   retries=max(0, int(number("LEASH_HTTP_RETRIES", DEFAULT_RETRIES))))
-
-    def limits(self) -> httpx.Limits:
-        return httpx.Limits(max_connections=self.max_connections,
-                            max_keepalive_connections=self.max_keepalive_connections,
-                            keepalive_expiry=self.keepalive_expiry_seconds)
-
-
 class VisecaClient:
     """One pooled `httpx.AsyncClient` for the process lifetime.
 
-    The pool is created on first use and closed once by `aclose()` (or by leaving `async with`).
-    Reopening a closed client is an error, not a quiet new pool: a client closed at shutdown must not
-    keep a socket alive because some straggler made one more call.
+    The pool is built in `__init__` — constructing it opens no socket, so it costs nothing until the
+    first request and makes "exactly once" structural rather than something a check-then-set has to get
+    right. Connections are then reused instead of paying a TLS handshake per request inside an
+    8-second decision budget. `aclose()` closes it; closing twice is a no-op, and a closed client raises
+    `ClientClosed` rather than quietly opening a second pool.
 
-    Every request carries an explicit timeout built from the *remaining budget* for that call, so a
-    decision POST can never hold a socket longer than the time left before `deadline_at`. The
-    long-poll keeps its own, much longer, read timeout: waiting 25 seconds for work is not the same
-    kind of wait as sending an answer.
+    `budget_seconds` bounds *every* phase of one call — connect, read, write and the wait for a pooled
+    connection — so a send can never outlive the authoritative `deadline_at`. Without a budget the
+    configured timeout applies, with connect capped separately: waiting 25 seconds for work on the long
+    poll is not a reason to wait 25 seconds to reach a dead host.
+
+    Settings come from `leash.config.Settings` through `platform_client()`. This class reads no
+    environment of its own except in `from_env`, which exists for scripts.
     """
 
     def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL, timeout: float = DEFAULT_TIMEOUT_SECONDS,
-                 transport: httpx.AsyncBaseTransport | None = None, pool: PoolSettings | None = None):
+                 transport: httpx.AsyncBaseTransport | None = None, *,
+                 max_connections: int = DEFAULT_MAX_CONNECTIONS,
+                 max_keepalive_connections: int = DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
+                 keepalive_expiry_seconds: float = DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
+                 connect_timeout_seconds: float = DEFAULT_CONNECT_TIMEOUT_SECONDS,
+                 pool_timeout_seconds: float | None = None,
+                 connect_retries: int = DEFAULT_CONNECT_RETRIES):
         if not api_key:
             raise MissingApiKey("TEAM_API_KEY is empty")
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.pool = pool or PoolSettings()
+        self.connect_timeout_seconds = connect_timeout_seconds
+        self.connect_retries = connect_retries
+        self.limits = httpx.Limits(max_connections=max_connections,
+                                   max_keepalive_connections=max_keepalive_connections,
+                                   keepalive_expiry=keepalive_expiry_seconds)
         self._api_key = api_key
-        self._transport = transport
-        self._http: httpx.AsyncClient | None = None
+        #: How long to wait for a free pooled connection. `None` means "as long as the call's own
+        #: timeout": under a bounded budget that is already the right answer, and a short explicit value
+        #: is how a saturated pool is made to fail loudly rather than queue.
+        self._pool_timeout = pool_timeout_seconds
         self._closed = False
+        # An injected transport (tests, the fake API) is used as given: retries belong to the real one.
+        self._http = httpx.AsyncClient(
+            base_url=self.base_url, limits=self.limits, timeout=self._timeout(),
+            transport=transport if transport is not None
+            else httpx.AsyncHTTPTransport(limits=self.limits, retries=connect_retries))
 
     @classmethod
     def from_env(cls, transport: httpx.AsyncBaseTransport | None = None) -> "VisecaClient":
+        """For scripts. Services build the client from `Settings` via `config.platform_client`."""
         key = os.environ.get("TEAM_API_KEY", "")
         if not key:
             raise MissingApiKey("set TEAM_API_KEY to the team's bearer key")
         timeout = float(os.environ.get("LEASH_API_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
-        return cls(key, os.environ.get("LEASH_BASE_URL", DEFAULT_BASE_URL), timeout, transport,
-                   PoolSettings.from_env())
+        return cls(key, os.environ.get("LEASH_BASE_URL", DEFAULT_BASE_URL), timeout, transport)
 
     def __repr__(self) -> str:
         return f"VisecaClient(base_url={self.base_url!r}, timeout={self.timeout}, api_key=<redacted>)"
@@ -200,53 +188,49 @@ class VisecaClient:
     def closed(self) -> bool:
         return self._closed
 
-    def _client(self) -> httpx.AsyncClient:
-        """The one pooled client. Created once, never recreated after `aclose()`."""
-        if self._closed:
-            raise ClientClosed("the Viseca client is closed; create a new one to reconnect")
-        if self._http is None:
-            self._http = httpx.AsyncClient(base_url=self.base_url, transport=self._transport,
-                                           timeout=self._timeout(self.timeout), limits=self.pool.limits())
+    @property
+    def http(self) -> httpx.AsyncClient:
+        """The pooled client. The same object for this client's whole life."""
         return self._http
 
     async def aclose(self) -> None:
         """Close the pool. Calling it twice is a no-op, so shutdown paths can overlap safely."""
-        http, self._http, self._closed = self._http, None, True
-        if http is not None:
-            await http.aclose()
+        if self._closed:
+            return
+        self._closed = True
+        await self._http.aclose()
 
     async def __aenter__(self) -> "VisecaClient":
-        self._client()
         return self
 
     async def __aexit__(self, *_: Any) -> None:
         await self.aclose()
 
-    def _timeout(self, budget: float) -> httpx.Timeout:
-        """Connect, read, write and pool all inside `budget`: no phase may outlive the whole call."""
-        left = max(0.0, budget)
-        return httpx.Timeout(connect=min(self.pool.connect_timeout_seconds, left), read=left, write=left,
-                             pool=left)
+    def _timeout(self, *, timeout: float | None = None, budget_seconds: float | None = None) -> httpx.Timeout:
+        """Per-phase timeouts. A budget caps every phase; without one the configured timeout applies."""
+        base = self.timeout if timeout is None else timeout
+        connect = min(self.connect_timeout_seconds, base)
+        pool = base if self._pool_timeout is None else self._pool_timeout
+        if budget_seconds is None:
+            return httpx.Timeout(connect=connect, read=base, write=base, pool=pool)
+        left = max(0.0, budget_seconds)
+        return httpx.Timeout(connect=min(connect, left), read=min(base, left), write=min(base, left),
+                             pool=min(pool, left))
 
     async def _request(self, method: str, path: str, *, auth: bool = True, json: JSON = None,
-                       params: Mapping[str, Any] | None = None, timeout: float | None = None) -> httpx.Response:
+                       params: Mapping[str, Any] | None = None, timeout: float | None = None,
+                       budget_seconds: float | None = None) -> httpx.Response:
+        if self._closed:
+            raise ClientClosed("the Viseca client is closed; create a new one to reconnect")
+        if budget_seconds is not None and budget_seconds <= 0:
+            # Sending now could only land after the deadline; the outbox delivers it instead (LEASH-054).
+            raise TimeoutError(f"no time left to {method} {path}")
         headers = {"Accept": "application/json"}
         if auth:
             headers["Authorization"] = f"Bearer {self._api_key}"
-        budget = self.timeout if timeout is None else timeout
-        ends_at = time.monotonic() + max(0.0, budget)
-        attempts = 1 + (max(0, self.pool.retries) if method in SAFE_METHODS else 0)
-        for attempt in range(1, attempts + 1):
-            left = budget if attempt == 1 else ends_at - time.monotonic()  # a retry gets only what is left
-            try:
-                response = await self._client().request(method, path, headers=headers, json=json, params=params,
-                                                        timeout=self._timeout(left))
-                break
-            except httpx.TransportError:
-                # A retry is only ever an extra attempt inside the same budget, and only for a method
-                # that changes nothing at the platform.
-                if attempt == attempts or ends_at - time.monotonic() <= 0:
-                    raise
+        response = await self._http.request(
+            method, path, headers=headers, json=json, params=params,
+            timeout=self._timeout(timeout=timeout, budget_seconds=budget_seconds))
         if not response.is_success:
             error = None
             try:
@@ -305,10 +289,14 @@ class VisecaClient:
                                 timeout=wait + LONG_POLL_MARGIN_SECONDS)
 
     async def post_decision(self, authorization_id: str, decision: Mapping[str, Any],
-                            timeout: float | None = None) -> JSON:
-        """`timeout` is the time left before `deadline_at`: the POST never outlives the deadline."""
+                            budget_seconds: float | None = None) -> JSON:
+        """`budget_seconds` is the time actually left before `deadline_at`.
+
+        It bounds every phase inside httpx, so the POST cannot outlive the deadline even if the outer
+        `wait_for` were removed. With nothing left it refuses to start: the outbox delivers it instead.
+        """
         return await self._json("POST", f"/v1/authorizations/{authorization_id}/decision", json=decision,
-                                timeout=timeout)
+                                budget_seconds=budget_seconds)
 
     async def resolve(self, authorization_id: str, answer: Mapping[str, Any]) -> JSON:
         return await self._json("POST", f"/v1/authorizations/{authorization_id}/resolve", json=answer)

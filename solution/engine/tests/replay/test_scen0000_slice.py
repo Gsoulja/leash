@@ -28,7 +28,7 @@ class Sent:
     def __init__(self) -> None:
         self.bodies: dict[str, dict] = {}
 
-    async def send(self, authorization_id, body):
+    async def send(self, authorization_id, body, budget_seconds=None):
         self.bodies[authorization_id] = dict(body)
 
 

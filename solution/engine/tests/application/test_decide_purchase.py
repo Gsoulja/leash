@@ -81,7 +81,7 @@ class FakeSender:
     def __init__(self):
         self.sent: list[tuple[str, dict]] = []
 
-    async def send(self, authorization_id, body):
+    async def send(self, authorization_id, body, budget_seconds=None):
         self.sent.append((authorization_id, body))
 
 
@@ -249,7 +249,7 @@ def test_a_request_past_its_deadline_is_not_decided():
 
 def test_send_failure_leaves_it_unmarked_for_the_outbox():
     class Down:
-        async def send(self, aid, body):
+        async def send(self, aid, body, budget_seconds=None):
             raise ConnectionError("platform down")
 
     store = FakeStore()
@@ -262,7 +262,7 @@ class SentAt(FakeSender):
         super().__init__()
         self.at: list[float] = []
 
-    async def send(self, authorization_id, body):
+    async def send(self, authorization_id, body, budget_seconds=None):
         self.at.append(time.monotonic())
         await super().send(authorization_id, body)
 
@@ -305,7 +305,7 @@ def test_a_commit_that_lands_at_the_watchdog_sends_the_committed_decision():
 
 def test_a_hanging_send_is_bounded():
     class Hanging:
-        async def send(self, aid, body):
+        async def send(self, aid, body, budget_seconds=None):
             await asyncio.sleep(10)
 
     start = time.monotonic()
@@ -447,7 +447,7 @@ def test_a_hanging_send_is_abandoned_before_the_deadline():
     """The POST timeout is capped by the time left, so a stalled platform cannot run past it."""
 
     class Hangs(FakeSender):
-        async def send(self, authorization_id, body):
+        async def send(self, authorization_id, body, budget_seconds=None):
             await asyncio.sleep(30)
 
     plan = DeadlinePlan(send_seconds=5.0, lock_seconds=0.2, decide_seconds=0.2, fallback_seconds=0.2)

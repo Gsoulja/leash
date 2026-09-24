@@ -67,20 +67,31 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # the reviewer: an identical second order went from `possible_duplicate` (step_up under DEC-029/030) to no
 # check at all. That is what AC4 asks for — a decision the platform never accepted is not a purchase that
 # happened — but it is a loosening for later purchases and must not be recorded as anything else.
+# Re-pinned again 2026-09-24 (LEASH-136, reconciled with feature/LEASH-136). `application/decide_purchase.py`
+# is in SHARED_ENFORCEMENT and its send path changed in four ways: it refuses to start once nothing remains
+# before `deadline_at`; it is bounded by `min(plan.send_seconds, left)` rather than the old
+# `max(send_seconds, left)`; it hands that same number to the sender, so connect, read, write and the pool
+# wait are bounded inside httpx too; and the `Sender` port gained an optional `budget_seconds`, which is a
+# signature change in a hashed module and so moves every fingerprint on its own.
+#
+# None of these reads a rule, a compiled mandate, a fact, a check or an amount. Each only shortens how long
+# the engine waits to hand over an answer it has already decided, so every field moved for one reason and no
+# field's meaning changed. `leash.config`, `leash.service` and the viseca_api adapter are all in
+# NOT_A_FIELD_MEANING, so moving the pool settings into Settings contributes nothing to these hashes.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "08944bcb129e",
-    "authorization.fulfillment_method@v1": "44e6c6972e69",
-    "merchant.merchant_category@v1": "44fac5c0764b",
-    "items.item_category@v1": "46a851c69129",
-    "items.item_id@v1": "24b4db15f80f",
-    "leash.items.size.v1@v1": "fd01a97c13b9",
-    "leash.merchant.prior_purchases.v1@v1": "08a751a72599",
-    "leash.order.return_days.v1@v1": "fd2a2852b500",
-    "leash.items.unrequested_count.v1@v1": "cbc403bc73e5",
-    "leash.purchase.max_count.v2@v2": "14b79ee411c5",
-    "leash.items.max_quantity.v1@v1": "5d94955206d9",
-    "leash.session.risk_score.v1@v1": "ec9760a65360",
-    "leash.orders.split_check.v1@v1": "6d90572a824f",
+    "authorization.billing_amount_chf@v1": "a6522843e351",
+    "authorization.fulfillment_method@v1": "114e9345918b",
+    "merchant.merchant_category@v1": "642243284277",
+    "items.item_category@v1": "1b44526a0289",
+    "items.item_id@v1": "5208ed8fd2a2",
+    "leash.items.size.v1@v1": "5dcc5359257c",
+    "leash.merchant.prior_purchases.v1@v1": "db50702d88a6",
+    "leash.order.return_days.v1@v1": "0b5a6293901d",
+    "leash.items.unrequested_count.v1@v1": "853a9323334b",
+    "leash.purchase.max_count.v2@v2": "d6a5919933a7",
+    "leash.items.max_quantity.v1@v1": "4c0d1a36e807",
+    "leash.session.risk_score.v1@v1": "a76b70645781",
+    "leash.orders.split_check.v1@v1": "108de4259e0d",
 }
 
 

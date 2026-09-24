@@ -41,7 +41,7 @@ class WorkerApi(Protocol):
     async def get_run(self, run_id: str) -> Any: ...
 
     async def post_decision(self, authorization_id: str, decision: Mapping[str, Any],
-                            timeout: float | None = None) -> Any: ...
+                            budget_seconds: float | None = None) -> Any: ...
 
 
 class Handler(Protocol):
@@ -51,17 +51,17 @@ class Handler(Protocol):
 class ApiSender:
     """DecidePurchase's Sender: POST /v1/authorizations/{id}/decision.
 
-    `send_seconds` is the deadline plan's own send budget, passed down as the HTTP timeout so the
-    socket is not held past it. DecidePurchase caps the whole call by the time actually left before
-    `deadline_at`, so the tighter of the two always wins.
+    The budget arrives per call, not per adapter: it is the time *actually* left before `deadline_at`,
+    which is the only number that can bound the send correctly. It reaches httpx, so connect, read,
+    write and the pool wait are each capped by it.
     """
 
-    def __init__(self, api: WorkerApi, *, send_seconds: float | None = None) -> None:
+    def __init__(self, api: WorkerApi) -> None:
         self._api = api
-        self._send_seconds = send_seconds
 
-    async def send(self, authorization_id: str, body: Mapping[str, Any]) -> None:
-        await self._api.post_decision(authorization_id, body, self._send_seconds)
+    async def send(self, authorization_id: str, body: Mapping[str, Any],
+                   budget_seconds: float | None = None) -> None:
+        await self._api.post_decision(authorization_id, body, budget_seconds)
 
 
 def run_over(body: Any) -> bool:
@@ -209,13 +209,11 @@ def health_app(worker: Worker, *, stale_seconds: float = POLL_WAIT_SECONDS * 2 +
 # ----- process entry point -----------------------------------------------------------------------------
 
 async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exercised by the end-to-end test
-    from leash.adapters.viseca_api.client import PoolSettings, VisecaClient
-    from leash.config import Settings, install_redaction
+    from leash.config import Settings, install_redaction, platform_client
 
     settings = Settings.from_env(os.environ)
     install_redaction(settings)
-    client = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url, settings.api_timeout_seconds,
-                          pool=PoolSettings.from_env())
+    client = platform_client(settings)  # this process owns the pool and closes it
     # `async with` from here, not a later try/finally: bootstrap and the database pool are the two most
     # likely startup failures, and both happen after the HTTP pool is already open. Its close also runs
     # after the database close, so a database close that raises can't skip it.
@@ -242,8 +240,7 @@ async def _work(client: Any, settings: Any, run_id: str | None) -> None:  # prag
         store = PostgresDecisionStore(pool, engine_version=version, lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS)
         plan = DeadlinePlan.for_lock_timeout(lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS,
                                              send_seconds=settings.watchdog_margin_seconds / 2)
-        use_case = DecidePurchase(store=store, reader=RegexReader(),
-                                  sender=ApiSender(client, send_seconds=plan.send_seconds), plan=plan,
+        use_case = DecidePurchase(store=store, reader=RegexReader(), sender=ApiSender(client), plan=plan,
                                   engine_version=version, human_window_seconds=runtime.human_window_seconds,
                                   claim_refresh_seconds=DEFAULT_LEASE_SECONDS / 3)
         worker = Worker(client, use_case, validate=load_event_validator(schema), engine_version=version)

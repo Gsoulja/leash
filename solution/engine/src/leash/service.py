@@ -245,27 +245,46 @@ def load_catalogue(data_dir: Path) -> list[CatalogueItem]:
         return [CatalogueItem(r["item_id"], r["item_name"], r["item_category"]) for r in csv.DictReader(f)]
 
 
+class Servable(Protocol):
+    async def serve(self) -> None: ...
+
+
+class Closeable(Protocol):
+    async def aclose(self) -> None: ...
+
+
+async def serve_until_stopped(server: Servable, viseca: Closeable) -> None:
+    """Serve, then close the platform client — in the loop its sockets were opened on.
+
+    Closing from a second `asyncio.run` after serving has finished raises "Event loop is closed" from
+    httpcore once a keep-alive connection is live, so every clean shutdown would end on a traceback with
+    the socket not properly closed. Serving and closing in one loop is the fix, and it is why this is a
+    function rather than a `finally` around `uvicorn.run` (LEASH-136).
+    """
+    try:
+        await server.serve()
+    finally:
+        await viseca.aclose()
+
+
 def main() -> None:  # pragma: no cover - process entry point
     import uvicorn
 
-    from leash.adapters.viseca_api.client import PoolSettings, VisecaClient
-    from leash.config import Settings, configure_logging, install_redaction
+    from leash.config import Settings, configure_logging, install_redaction, platform_client
 
     configure_logging(os.environ.get("LEASH_LOG_LEVEL", "INFO"))
     settings = Settings.from_env(os.environ)
     install_redaction(settings)
     data_dir = Path(os.environ.get("LEASH_DATA_DIR", str(ENGINE.parents[1] / "data")))
     dist = os.environ.get("LEASH_APP_DIST")
-    viseca = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
-                          settings.api_timeout_seconds, pool=PoolSettings.from_env())
+    # This process builds the pooled client, so this process closes it — once, in the loop it served on.
+    viseca = platform_client(settings)
     app = create_api(settings.database_url.get_secret_value(), viseca, load_catalogue(data_dir),
                      cors_origins=[o for o in os.environ.get("LEASH_CORS_ORIGINS", "http://localhost:5173").split(",")
                                    if o],
                      app_dist=Path(dist) if dist else None,
                      expected_app_revision=os.environ.get("LEASH_APP_REVISION") or None)
-    try:
-        uvicorn.run(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
-                    port=int(os.environ.get("LEASH_API_PORT", "8080")),
-                    log_config=None)
-    finally:
-        asyncio.run(viseca.aclose())  # this process created the pool, so this process closes it — once
+    server = uvicorn.Server(uvicorn.Config(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
+                                           port=int(os.environ.get("LEASH_API_PORT", "8080")),
+                                           log_config=None))
+    asyncio.run(serve_until_stopped(server, viseca))
