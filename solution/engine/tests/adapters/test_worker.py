@@ -298,3 +298,20 @@ def test_worker_health_is_ready_only_while_polls_succeed():
     assert http.get("/readyz").status_code == 200
     now[0] += 61
     assert http.get("/readyz").status_code == 503
+
+
+# --- LEASH-136: the send budget reaches the platform call --------------------------------------
+
+def test_the_api_sender_passes_the_send_budget_as_the_http_timeout():
+    class Records:
+        def __init__(self):
+            self.calls = []
+
+        async def post_decision(self, authorization_id, decision, timeout=None):
+            self.calls.append((authorization_id, timeout))
+            return {"data": {}}
+
+    api = Records()
+    asyncio.run(ApiSender(api, send_seconds=0.75).send("AZ-1", {"decision": "approve"}))
+    asyncio.run(ApiSender(api).send("AZ-2", {"decision": "approve"}))
+    assert api.calls == [("AZ-1", 0.75), ("AZ-2", None)]
