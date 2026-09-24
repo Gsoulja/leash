@@ -2,7 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { Payment, Run, RunList, Spending } from "../api/client";
+import { useSelectedRun } from "../api/useSelectedRun";
 import { Cockpit } from "./Cockpit";
+
+// The run selection is owned by App.tsx now (LEASH-097); the tests drive the real hook through this harness.
+const CockpitHarness = () => <Cockpit selection={useSelectedRun()} />;
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -58,7 +62,7 @@ function setup(payments: Payment[][], spending: Spending[] = [SPENDING], runs: R
   vi.stubGlobal("EventSource", FakeEventSource);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  render(<Cockpit />, { wrapper });
+  render(<CockpitHarness />, { wrapper });
   return { calls, source: () => FakeEventSource.instances.at(-1)! };
 }
 
@@ -141,7 +145,7 @@ describe("Cockpit review fixes", () => {
         : new Response(JSON.stringify({ error: { code: "down", message: "x" } }), { status: 500 })));
     vi.stubGlobal("EventSource", FakeEventSource);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><Cockpit /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><CockpitHarness /></QueryClientProvider>);
     expect(await screen.findByText("Spending unavailable right now")).toBeInTheDocument();
     expect(screen.queryByText("CHF 0.00")).toBeNull();
   });
@@ -179,7 +183,7 @@ describe("Cockpit per run (LEASH-133)", () => {
     }));
     vi.stubGlobal("EventSource", FakeEventSource);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><Cockpit /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><CockpitHarness /></QueryClientProvider>);
     return { calls, source: () => FakeEventSource.instances.at(-1)! };
   }
 
@@ -258,7 +262,7 @@ describe("Cockpit per run (LEASH-133)", () => {
         : new Response(JSON.stringify(SPENDING), { status: 200 })));
     vi.stubGlobal("EventSource", FakeEventSource);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><Cockpit /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><CockpitHarness /></QueryClientProvider>);
     expect(await screen.findByText("Payments couldn't be loaded right now.")).toBeInTheDocument();
     expect(screen.queryByText(/No agent payments/)).toBeNull();
   });

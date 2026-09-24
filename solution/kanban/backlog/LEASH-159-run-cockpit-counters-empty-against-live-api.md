@@ -33,7 +33,7 @@ The customer app's run cockpit (README: "cockpit per run") is meant to show prog
 ### Dependencies
 - Shares its root cause with LEASH-158 (same live response shape mismatch) — fix them together if convenient, but they affect different call sites (`connection_check.py` script vs. the app-facing policy API) so are tracked separately.
 - Relates to LEASH-066 (built the run-start endpoint) and LEASH-133 (cockpit scoped to one run).
-- Blocks LEASH-128 ("Cockpit payments, counts and spending use the same run" criterion needs real counts, not always-empty ones).
+- Blocks LEASH-128 (the "Cockpit payments, counts and spending use the same run" criterion cannot show evidence with always-empty counts).
 
 ## Testing Requirements
 Add a test in `solution/engine/tests/adapters/test_policy_api.py` (or the nearest existing coverage for `runs_router`) that feeds `platform_status()` a `get_run` double shaped exactly like the verified live response (top-level count fields, no `counters` key) and asserts the returned counters are non-empty and correct, not `{}`.
