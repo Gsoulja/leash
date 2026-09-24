@@ -1,10 +1,30 @@
+# The ignore file BuildKit actually uses for this Dockerfile: a `<dockerfile>.dockerignore` next to it
+# takes precedence over the repository root's `.dockerignore`, and every build here is
+# `-f solution/engine/Dockerfile`, so this is the one that decides (LEASH-141).
+#
+# The image must be built from the repository, not from whatever the developer happens to have
+# installed or left lying about: `COPY solution/app/ ./` runs after `npm ci`, so a host `node_modules`
+# would overwrite the layer the lockfile produced, and the artifact APP_REVISION labels would not be the
+# one the lockfile describes.
 **/node_modules
 **/.venv
 **/__pycache__
+**/*.pyc
+**/*.egg-info
 **/.pytest_cache
 **/.mypy_cache
+**/.ruff_cache
 solution/app/dist
+solution/app/test-results
+solution/app/playwright-report
 solution/kanban
 solution/docs
 solution/prototype
+solution/training/data
 .git
+# Secrets never belong in a build context: anything copied in is readable in the image's layers.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*

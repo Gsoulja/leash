@@ -1,0 +1,210 @@
+# LEASH-141: everything that must pass before anything is released.
+#
+# One build, promoted — never rebuilt per stage, because a rebuild is a different artifact and the thing
+# we scanned would not be the thing we ship. Every gate below is in `release`'s `needs`, so a failing
+# safety test, a leaked secret or a vulnerable image stops the release rather than warning about it.
+# `solution/engine/tests/test_supply_chain.py` fails if a gate is ever dropped from that list.
+name: ci
+
+on:
+  push:
+    branches: [leash-mvp, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend tests and types
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
+        env:
+          POSTGRES_USER: leash
+          POSTGRES_PASSWORD: leash
+          POSTGRES_DB: leash
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U leash -d leash" --health-interval 2s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5          # a clean checkout: nothing from a developer's machine
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.8"
+          enable-cache: true
+      - name: install (locked)
+        working-directory: solution/engine
+        run: uv sync --frozen               # --frozen: the lockfile decides, not resolution at build time
+      - name: types
+        working-directory: solution/engine
+        run: uv run mypy src
+      - name: tests
+        working-directory: solution/engine
+        env:
+          DATABASE_URL: postgresql://leash:leash@localhost:55432/leash
+        run: uv run pytest -q               # unit, property, replay, contract, adapter, migration and e2e
+
+  frontend:
+    name: frontend tests and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: solution/app/package-lock.json
+      - name: install (locked)
+        working-directory: solution/app
+        run: npm ci                          # ci, not install: the lockfile decides
+      - name: types
+        working-directory: solution/app
+        run: npm run typecheck
+      - name: tests
+        working-directory: solution/app
+        run: npm test
+      - name: the generated API types still match the contract
+        working-directory: solution/app
+        run: |
+          npm run gen:api
+          git diff --exit-code -- src/api/schema.d.ts
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0                     # the whole history, not just the tip
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencies:
+    name: dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.8"
+      - name: python dependencies
+        working-directory: solution/engine
+        run: |
+          uv sync --frozen
+          # The locked dependency set, not the environment: `pip-audit` on the environment fails
+          # `--strict` because this project itself is not on PyPI and cannot be audited.
+          uv export --frozen --no-emit-project --no-dev --format requirements-txt > /tmp/locked.txt
+          uv run --with pip-audit pip-audit --strict --requirement /tmp/locked.txt
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: solution/app/package-lock.json
+      - name: node dependencies
+        working-directory: solution/app
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  image:
+    name: build and scan the image
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: build once
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: solution/engine/Dockerfile
+          build-args: APP_REVISION=${{ github.sha }}
+          tags: leash-engine:${{ github.sha }}
+          load: true
+          provenance: false                  # provenance is attached at release, to the pushed digest
+      - name: container scan
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        with:
+          image-ref: leash-engine:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"                     # a vulnerable image fails the job, it does not warn
+          ignore-unfixed: true
+      - name: SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: leash-engine:${{ github.sha }}
+          format: cyclonedx-json
+          artifact-name: sbom.cyclonedx.json
+          output-file: sbom.cyclonedx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: sbom.cyclonedx.json
+
+  release:
+    name: release
+    # Every gate. Dropping one from this list is what test_supply_chain.py exists to catch.
+    needs: [backend, frontend, secrets, dependencies, image]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/leash-mvp'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write                        # keyless signing and provenance
+      attestations: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: the registry only accepts a lowercase name; github.repository is not one
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/leash-engine" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: push the reviewed source, built once
+        id: push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: solution/engine/Dockerfile
+          build-args: APP_REVISION=${{ github.sha }}
+          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}
+          push: true
+      - name: provenance, bound to the pushed digest
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ${{ steps.name.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - name: sign
+        run: cosign sign --yes ${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sbom
+      - name: release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          SCHEMA=$(ls solution/engine/migrations/versions/*.py | sed 's#.*/##' | sort -V | tail -1)
+          cat > notes.md <<EOF
+          Commit: ${{ github.sha }}
+          Image: ${{ steps.name.outputs.image }}@${DIGEST}
+          Schema revision: ${SCHEMA%%_*}
+          Evidence: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SBOM and scan results are attached to that run; the image is signed and carries provenance.
+          EOF
+          gh release create "build-${{ github.run_number }}" --notes-file notes.md sbom.cyclonedx.json

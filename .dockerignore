@@ -1,0 +1,20 @@
+# LEASH-151: the image must build from the repository, not from whatever the developer happens to have
+# installed. Without this, `COPY solution/app/ ./` ships the host's node_modules (150+ MB) over the
+# layer `npm ci` just produced, so the artifact APP_REVISION labels is not the one the lockfile
+# describes — and every build drags the context along with it.
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/*.egg-info/
+solution/app/dist/
+solution/app/test-results/
+solution/app/playwright-report/
+solution/training/data/
+.git/
+.env
+.env.*
+!.env.example

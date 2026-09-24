@@ -20,6 +20,7 @@ dependencies = [
 leash-worker = "leash.adapters.viseca_api.worker:main"
 leash-api = "leash.service:main"
 leash-migrate = "leash.adapters.postgres.migrate:main"
+leash-reset = "leash.adapters.postgres.reset:main"
 
 [dependency-groups]
 dev = [

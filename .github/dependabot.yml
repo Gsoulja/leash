@@ -1,0 +1,20 @@
+# LEASH-141: base images and dependencies move through review, never by drift. Digest pins in the
+# Dockerfile and the compose file are what stop a tag changing under us; these updates are how they
+# change on purpose, as a pull request a person reads.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /solution/engine      # the Dockerfile's FROM and COPY --from pins
+    schedule: {interval: weekly}
+  - package-ecosystem: docker
+    directory: /solution             # docker-compose.yml's postgres pin
+    schedule: {interval: weekly}
+  - package-ecosystem: uv
+    directory: /solution/engine
+    schedule: {interval: weekly}
+  - package-ecosystem: npm
+    directory: /solution/app
+    schedule: {interval: weekly}
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}

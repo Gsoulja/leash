@@ -1,0 +1,9 @@
+# LEASH-141: who must review what. Branch protection is what makes this binding — see RELEASE.md.
+# The engine's decision path and the schema decide money, so they never merge without a second pair of
+# eyes; the registry's lock is the record of a deliberate change to what a rule means.
+/solution/engine/src/leash/domain/        @Gsoulja
+/solution/engine/src/leash/policy/        @Gsoulja
+/solution/engine/migrations/              @Gsoulja
+/solution/engine/tests/policy/            @Gsoulja
+/.github/                                 @Gsoulja
+/solution/engine/Dockerfile               @Gsoulja

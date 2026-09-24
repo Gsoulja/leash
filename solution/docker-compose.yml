@@ -9,6 +9,11 @@ x-engine: &engine
   build:
     context: ..
     dockerfile: solution/engine/Dockerfile
+    args:
+      # LEASH-151: the revision the frontend bundle is stamped with, and the one the API expects to be
+      # serving. Set it to the commit being demoed:
+      #   APP_REVISION=$(git rev-parse --short HEAD) docker compose ... up -d --build
+      APP_REVISION: ${APP_REVISION:-dev}
   environment: &engine-env
     DATABASE_URL: postgresql://leash:${LEASH_DB_PASSWORD:-leash}@db:5432/leash
     TEAM_API_KEY: ${TEAM_API_KEY:-fake-team-key}
@@ -18,7 +23,7 @@ x-engine: &engine
 
 services:
   db:
-    image: postgres:17
+    image: postgres:17@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
     environment:
       POSTGRES_USER: leash
       POSTGRES_PASSWORD: ${LEASH_DB_PASSWORD:-leash}  # applies when the volume is first created
@@ -68,6 +73,21 @@ services:
       retries: 20
     stop_grace_period: 30s
     restart: unless-stopped
+
+  # LEASH-151: one command, and it refuses to touch anything but a local demo database.
+  #   docker compose -f solution/docker-compose.yml --profile reset run --rm reset
+  reset:
+    <<: *engine
+    profiles: ["reset"]
+    command: ["leash-reset", "--yes"]
+    environment:
+      <<: *engine-env
+      LEASH_ALLOW_DEMO_RESET: "1"
+    depends_on:
+      # after the migrations, not merely after the database: a reset on an unmigrated volume would
+      # otherwise fail on a missing table rather than doing anything useful
+      migrate: {condition: service_completed_successfully}
+    restart: "no"
 
   fake:
     <<: *engine
