@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/authorizations/AU0001-02000a35/decision",
+    "body": {
+      "authorization_id": "AU0001-02000a35",
+      "decision": "approve",
+      "reason_codes": [
+        "within_limit"
+      ],
+      "customer_message": "Order at CHF 20.00 is within the CHF 20 per-purchase limit."
+    }
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "error": {
+        "code": "authorization_finalized",
+        "message": "Authorization is already final"
+      }
+    }
+  }
+}

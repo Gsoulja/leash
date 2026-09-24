@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "DELETE",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/mandates/TM1dd3ae0766eca9ba",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "mandate_id": "TM1dd3ae0766eca9ba",
+      "status": "revoked"
+    }
+  }
+}

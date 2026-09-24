@@ -1,0 +1,102 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/decision-requests/next?wait=25",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "event_id": 3,
+      "type": "authorization.request",
+      "run_id": "run_80e1be3d02000a35",
+      "authorization_id": "AU0001-02000a35",
+      "status": "awaiting_decision",
+      "occurred_at": "2026-09-24T12:42:23.003459Z",
+      "data": {
+        "type": "authorization.request",
+        "request_id": "req_4367ec2a3ae43ca6",
+        "deadline_at": "2026-09-24T12:42:31.003459Z",
+        "authorization": {
+          "authorization_id": "AU0001-02000a35",
+          "source_authorization_id": "AU0001",
+          "scenario_id": "SCEN0000",
+          "replay_order": 1,
+          "mandate_id": "TMc14417b720aea7e3",
+          "profile_id": "PROFILE_AUTH0001",
+          "card_id": "CA0001",
+          "initiator_type": "agent",
+          "merchant": {
+            "merchant_id": "ME0001",
+            "merchant_name": "Alpine Basket",
+            "merchant_category": "groceries",
+            "merchant_mcc": "5411",
+            "merchant_country": "CH",
+            "merchant_city": "Zurich",
+            "availability": "store_and_online",
+            "recurring_capable": "false"
+          },
+          "timestamp": "2026-08-09T10:04:00Z",
+          "amount": 20.0,
+          "currency": "CHF",
+          "billing_amount_chf": 20.0,
+          "items_subtotal": 13.0,
+          "delivery_fee": 7.0,
+          "channel": "ecommerce",
+          "customer_device_id": "DVC-13A598",
+          "authority_status": "active",
+          "card_status_at_attempt": "active",
+          "spend_in_period_before_chf": null,
+          "recent_attempt_count_10m": 0,
+          "fulfillment_method": "delivery",
+          "delivery_by": "2026-08-10",
+          "order_returnable": "false",
+          "order_cancellable": "unknown",
+          "related_authorization_id": null,
+          "related_authorization_status": null,
+          "purchase_description": "Grocery delivery order",
+          "items": [
+            {
+              "line_no": 1,
+              "item_id": "IT0001",
+              "item_name": "Fresh produce selection",
+              "item_category": "groceries",
+              "quantity": 1,
+              "unit_price": 13.0,
+              "currency": "CHF",
+              "item_details": "One small basket of seasonal fruit and vegetables"
+            }
+          ]
+        },
+        "mandate": {
+          "mandate_id": "TMc14417b720aea7e3",
+          "status": "active",
+          "customer_id": "CU0001",
+          "card_id": "CA0001",
+          "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+          "hard_rules": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": 20,
+              "currency": "CHF",
+              "scope": "purchase",
+              "period_days": null
+            }
+          ],
+          "uncertainty_policy": "ask",
+          "profile_id": "PROFILE_AUTH0001"
+        },
+        "context": {
+          "approved_spend_in_period_chf": 0.0,
+          "recent_authorizations": []
+        },
+        "runtime": {
+          "received_at": "2026-09-24T12:42:23.003459Z",
+          "history_window_minutes": 10,
+          "context_basis": "run_decisions_and_scenario_timestamps"
+        }
+      }
+    }
+  }
+}

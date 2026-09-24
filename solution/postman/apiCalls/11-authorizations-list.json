@@ -1,0 +1,164 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/authorizations",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "authorization_id": "AU0001-1375ddae",
+        "source_authorization_id": "AU0001",
+        "scenario_id": "SCEN0000",
+        "run_id": "run_66f5cf3a1375ddae",
+        "status": "timeout",
+        "decision": {
+          "type": "authorization.decision",
+          "authorization_id": "AU0001-1375ddae",
+          "decision": "decline",
+          "reason_codes": [
+            "timeout"
+          ],
+          "customer_message": "The request expired before it was delivered.",
+          "evidence": [],
+          "engine_version": null,
+          "decision_source": "timeout"
+        },
+        "decision_source": "timeout",
+        "reason_codes": [
+          "timeout"
+        ],
+        "occurred_at": "2026-09-24T12:39:03.034327Z",
+        "finalized_at": "2026-09-24T12:42:28.161950Z",
+        "authorization": {
+          "authorization_id": "AU0001-1375ddae",
+          "source_authorization_id": "AU0001",
+          "scenario_id": "SCEN0000",
+          "replay_order": 1,
+          "mandate_id": "TM312e04c6ed4741c6",
+          "profile_id": "PROFILE_AUTH0001",
+          "card_id": "CA0001",
+          "initiator_type": "agent",
+          "merchant": {
+            "merchant_id": "ME0001",
+            "merchant_name": "Alpine Basket",
+            "merchant_category": "groceries",
+            "merchant_mcc": "5411",
+            "merchant_country": "CH",
+            "merchant_city": "Zurich",
+            "availability": "store_and_online",
+            "recurring_capable": "false"
+          },
+          "timestamp": "2026-08-09T10:04:00Z",
+          "amount": 20.0,
+          "currency": "CHF",
+          "billing_amount_chf": 20.0,
+          "items_subtotal": 13.0,
+          "delivery_fee": 7.0,
+          "channel": "ecommerce",
+          "customer_device_id": "DVC-13A598",
+          "authority_status": "active",
+          "card_status_at_attempt": "active",
+          "spend_in_period_before_chf": null,
+          "recent_attempt_count_10m": 0,
+          "fulfillment_method": "delivery",
+          "delivery_by": "2026-08-10",
+          "order_returnable": "false",
+          "order_cancellable": "unknown",
+          "related_authorization_id": null,
+          "related_authorization_status": null,
+          "purchase_description": "Grocery delivery order",
+          "items": [
+            {
+              "line_no": 1,
+              "item_id": "IT0001",
+              "item_name": "Fresh produce selection",
+              "item_category": "groceries",
+              "quantity": 1,
+              "unit_price": 13.0,
+              "currency": "CHF",
+              "item_details": "One small basket of seasonal fruit and vegetables"
+            }
+          ]
+        }
+      },
+      {
+        "authorization_id": "AU0001-02000a35",
+        "source_authorization_id": "AU0001",
+        "scenario_id": "SCEN0000",
+        "run_id": "run_80e1be3d02000a35",
+        "status": "timeout",
+        "decision": {
+          "type": "authorization.decision",
+          "authorization_id": "AU0001-02000a35",
+          "decision": "decline",
+          "reason_codes": [
+            "timeout"
+          ],
+          "customer_message": "No decision was received before the deadline.",
+          "evidence": [],
+          "engine_version": null,
+          "decision_source": "timeout"
+        },
+        "decision_source": "timeout",
+        "reason_codes": [
+          "timeout"
+        ],
+        "occurred_at": "2026-09-24T12:42:23.003506Z",
+        "finalized_at": "2026-09-24T12:42:33.706291Z",
+        "authorization": {
+          "authorization_id": "AU0001-02000a35",
+          "source_authorization_id": "AU0001",
+          "scenario_id": "SCEN0000",
+          "replay_order": 1,
+          "mandate_id": "TMc14417b720aea7e3",
+          "profile_id": "PROFILE_AUTH0001",
+          "card_id": "CA0001",
+          "initiator_type": "agent",
+          "merchant": {
+            "merchant_id": "ME0001",
+            "merchant_name": "Alpine Basket",
+            "merchant_category": "groceries",
+            "merchant_mcc": "5411",
+            "merchant_country": "CH",
+            "merchant_city": "Zurich",
+            "availability": "store_and_online",
+            "recurring_capable": "false"
+          },
+          "timestamp": "2026-08-09T10:04:00Z",
+          "amount": 20.0,
+          "currency": "CHF",
+          "billing_amount_chf": 20.0,
+          "items_subtotal": 13.0,
+          "delivery_fee": 7.0,
+          "channel": "ecommerce",
+          "customer_device_id": "DVC-13A598",
+          "authority_status": "active",
+          "card_status_at_attempt": "active",
+          "spend_in_period_before_chf": null,
+          "recent_attempt_count_10m": 0,
+          "fulfillment_method": "delivery",
+          "delivery_by": "2026-08-10",
+          "order_returnable": "false",
+          "order_cancellable": "unknown",
+          "related_authorization_id": null,
+          "related_authorization_status": null,
+          "purchase_description": "Grocery delivery order",
+          "items": [
+            {
+              "line_no": 1,
+              "item_id": "IT0001",
+              "item_name": "Fresh produce selection",
+              "item_category": "groceries",
+              "quantity": 1,
+              "unit_price": 13.0,
+              "currency": "CHF",
+              "item_details": "One small basket of seasonal fruit and vegetables"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
