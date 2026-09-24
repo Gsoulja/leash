@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/stamp.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "mock": "cd ../contracts && uv run --project ../engine uvicorn mock_server:app --port 8787",

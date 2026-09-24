@@ -9,6 +9,8 @@ this as a one-shot service).
 import asyncio
 import contextlib
 import csv
+import hashlib
+import json
 import logging
 import os
 from collections.abc import AsyncIterator, Mapping, Sequence
@@ -42,6 +44,74 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
+#: What the built bundle says about itself (LEASH-151), written by `solution/app/scripts/stamp.mjs`.
+BUILD_STAMP = "build.json"
+
+
+def build_stamp(app_dist: Path | None) -> dict[str, Any]:
+    """The served bundle's own identity, or why it can't be read. Never raises."""
+    if app_dist is None:
+        return {"served": None, "problem": "no app bundle is being served"}
+    stamp = app_dist / BUILD_STAMP
+    try:
+        loaded = json.loads(stamp.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"served": None, "problem": f"the served bundle has no {BUILD_STAMP}: it was not built by "
+                                           "`npm run build`, or a stale volume is shadowing it"}
+    except (OSError, ValueError) as exc:
+        return {"served": None, "problem": f"{BUILD_STAMP} is unreadable ({type(exc).__name__})"}
+    return {"served": loaded if isinstance(loaded, dict) else None,
+            "problem": None if isinstance(loaded, dict) else f"{BUILD_STAMP} is not an object"}
+
+
+def bundle_hash(app_dist: Path) -> str:
+    """The same content hash `solution/app/scripts/stamp.mjs` writes: every served file, path included.
+
+    Recomputed rather than trusted, because the stamp travels *inside* `dist/`: a volume that replaces
+    the whole directory brings its own stamp with it, and a revision string alone would agree.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(p for p in app_dist.rglob("*") if p.is_file() and p.name != BUILD_STAMP):
+        digest.update(path.relative_to(app_dist).as_posix().encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:16]
+
+
+def bundle_problems(app_dist: Path | None, expected_revision: str | None) -> list[str]:
+    """Why the bundle on disk is not the one this image was built with (LEASH-151).
+
+    Two independent checks, because each alone has a hole:
+
+    - the stamp's **revision** against this image's `LEASH_APP_REVISION` — catches an older build, but
+      not one whose revision string happens to match (the Compose default is `dev` for every build);
+    - the stamp's **bundle hash** against the files actually on disk right now — catches any swapped or
+      missing asset, whatever the stamp claims, including a whole-directory replacement.
+
+    With no expected revision configured (plain `uv run leash-api`, `npm run dev`) there is nothing to
+    compare against for the first check; the content check still runs, because a bundle that does not
+    match its own stamp is wrong under any configuration.
+    """
+    if app_dist is None:
+        return []
+    stamp = build_stamp(app_dist)
+    if stamp["problem"] is not None:
+        return [str(stamp["problem"])] if expected_revision else []
+    served = stamp["served"] or {}
+    problems = []
+    if expected_revision and served.get("revision") != expected_revision:
+        problems.append(f"the served bundle is revision {served.get('revision')!r}, this image expects "
+                        f"{expected_revision!r}; rebuild the app image, or remove the volume shadowing "
+                        "solution/app/dist")
+    stamped = served.get("bundle")
+    if isinstance(stamped, str):
+        actual = bundle_hash(app_dist)
+        if actual != stamped:
+            problems.append(f"the served files hash to {actual}, but build.json says {stamped}; the bundle "
+                            "is not the one that was built — rebuild the app image, or remove the volume "
+                            "shadowing solution/app/dist")
+    return problems
+
+
 async def _readiness(pool: asyncpg.Pool, head: str) -> list[str]:
     reasons = []
     try:
@@ -64,7 +134,8 @@ class PlatformApi(PlatformMandates, MandateChanges, ResolveApi, RunApi, Protocol
 def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[CatalogueItem], *,
                engine_version: str = "leash",
                cors_origins: Sequence[str] = ("http://localhost:5173",), app_dist: Path | None = None,
-               background_seconds: float = 1.0, scenario_cards: Mapping[str, str] | None = None) -> FastAPI:
+               background_seconds: float = 1.0, scenario_cards: Mapping[str, str] | None = None,
+               expected_app_revision: str | None = None) -> FastAPI:
     state: dict[str, Any] = {}
     mandates = StoredMandates()
     if scenario_cards is None:  # each scenario's card, from its first purchase in the pack
@@ -114,6 +185,8 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
             if state["hub"] is not None:
                 await state["hub"].stop()
             await state["pool"].close()
+            # The platform client is *given* to us, and a worker in the same process may share it, so
+            # the app never closes it: whoever created the pool closes it (see `main`).
 
     app = FastAPI(title="Leash", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=list(cors_origins),
@@ -133,9 +206,18 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/api/build")
+    async def build() -> dict[str, Any]:
+        """What is actually being served (LEASH-151): the bundle's own stamp and the engine's version."""
+        stamp = build_stamp(app_dist)
+        return {"engine_version": engine_version, "expected_app_revision": expected_app_revision,
+                "app": stamp["served"], "problem": stamp["problem"]}
+
     @app.get("/readyz")
     async def readyz() -> Any:
-        reasons = await _readiness(state["pool"], head)
+        # The bundle check comes first and is cheap: serving the wrong frontend is not a transient
+        # state that will resolve itself, and a rehearsal should be told at once.
+        reasons = bundle_problems(app_dist, expected_app_revision) + await _readiness(state["pool"], head)
         if reasons or state["hub"] is None:
             return JSONResponse({"status": "not_ready", "reasons": reasons or ["the event stream is starting"]},
                                 status_code=503)
@@ -166,7 +248,7 @@ def load_catalogue(data_dir: Path) -> list[CatalogueItem]:
 def main() -> None:  # pragma: no cover - process entry point
     import uvicorn
 
-    from leash.adapters.viseca_api.client import VisecaClient
+    from leash.adapters.viseca_api.client import PoolSettings, VisecaClient
     from leash.config import Settings, configure_logging, install_redaction
 
     configure_logging(os.environ.get("LEASH_LOG_LEVEL", "INFO"))
@@ -174,13 +256,16 @@ def main() -> None:  # pragma: no cover - process entry point
     install_redaction(settings)
     data_dir = Path(os.environ.get("LEASH_DATA_DIR", str(ENGINE.parents[1] / "data")))
     dist = os.environ.get("LEASH_APP_DIST")
-    app = create_api(settings.database_url.get_secret_value(),
-                     VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
-                                  settings.api_timeout_seconds),
-                     load_catalogue(data_dir),
+    viseca = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
+                          settings.api_timeout_seconds, pool=PoolSettings.from_env())
+    app = create_api(settings.database_url.get_secret_value(), viseca, load_catalogue(data_dir),
                      cors_origins=[o for o in os.environ.get("LEASH_CORS_ORIGINS", "http://localhost:5173").split(",")
                                    if o],
-                     app_dist=Path(dist) if dist else None)
-    uvicorn.run(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
-                port=int(os.environ.get("LEASH_API_PORT", "8080")),
-                log_config=None)
+                     app_dist=Path(dist) if dist else None,
+                     expected_app_revision=os.environ.get("LEASH_APP_REVISION") or None)
+    try:
+        uvicorn.run(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
+                    port=int(os.environ.get("LEASH_API_PORT", "8080")),
+                    log_config=None)
+    finally:
+        asyncio.run(viseca.aclose())  # this process created the pool, so this process closes it — once

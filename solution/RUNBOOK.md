@@ -69,15 +69,72 @@ docker compose -f solution/docker-compose.yml stop worker     # finishes the eve
 docker compose -f solution/docker-compose.yml up -d --wait    # everything back; migrate re-runs harmlessly
 ```
 
-## 5. Reset (development only)
+## 5. Reset to the demo baseline (LEASH-151)
 
-These commands delete data. Never run them on event day.
+One command between rehearsals. It clears everything the demo writes, reloads the challenge pack, and
+then **checks** the result rather than assuming it — no leftover rows, no duplicate authorization IDs,
+and per-card history totals equal to `data/authorization_history.csv`. It prints how long it took and
+fails with a numbered list if the baseline is not clean.
+
+```bash
+docker compose -f solution/docker-compose.yml --profile reset run --rm reset
+```
+
+Locally, without Compose:
+
+```bash
+DATABASE_URL=postgresql://leash:leash@localhost:55432/leash uv run leash-reset --yes
+```
+
+Two guards, because it deletes data: it needs `--yes` (or `LEASH_ALLOW_DEMO_RESET=1`), and it refuses a
+database host that is not local unless given `--live`. "Local" is resolved the way libpq resolves it —
+the URL's host, then a `?host=` parameter, then `PGHOST`, then a unix socket — so
+`DATABASE_URL=postgresql:///leash` with `PGHOST` pointing at a real server is refused, not mistaken for
+localhost. The Compose service name `db` counts as local; on a machine where `db` resolves to something
+real, `--yes` is the guard that remains. It clears drafts and their revisions, mandates
+and versions, runs, authorizations, the append-only decision log, the outbox and the reader cache —
+lifting the log's append-only trigger only for that truncate, and putting it back in the same
+transaction. Reference data is upserted by the seed, never dropped.
+
+It is idempotent: running it twice leaves identical state, and a test asserts exactly that.
+
+Dropping the whole volume still works and is heavier (the migrations run again afterwards):
 
 ```bash
 docker compose -f solution/docker-compose.yml --profile fake down -v   # drops the local database volume
 ```
 
 The fake platform keeps its state in memory, so restarting `fake` resets it.
+
+## 5a. Serving the right frontend
+
+The image always rebuilds the app and stamps `dist/build.json` with the revision it was built from;
+`dist/` is never copied in from the build context and never mounted. Build with the commit you are
+demoing so the stamp is meaningful:
+
+```bash
+APP_REVISION=$(git rev-parse --short HEAD) \
+  docker compose -f solution/docker-compose.yml --profile fake up -d --build --wait
+curl -s localhost:8080/api/build      # what is actually being served
+```
+
+`/api/build` returns the bundle's own `revision`, its content `bundle` hash, the build time, and the
+revision the image expects. **`/readyz` returns 503** when either check fails:
+
+- the stamp's **revision** differs from the image's `LEASH_APP_REVISION`, or there is no stamp at all;
+- the **files actually on disk** do not hash to what `build.json` claims.
+
+The second check is the one that matters when `APP_REVISION` is left at its default: every build then
+stamps `dev`, so a stale `dist/` mounted over the image would carry a matching revision string. The
+content hash is recomputed from the served files on each readiness call, so a swapped, added or missing
+asset is caught whatever the stamp says. Both messages name the action: rebuild the image, or remove the
+volume.
+
+With no `LEASH_APP_REVISION` set (plain `uv run leash-api`, or `npm run dev`) there is no revision to
+compare — but a bundle that contradicts its own stamp is still reported, because that is wrong under any
+configuration.
+
+Set `APP_REVISION` anyway when you build for a rehearsal: `dev` tells nobody which commit is on screen.
 
 ## 6. Recovery
 
