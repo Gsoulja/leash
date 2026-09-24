@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/healthz",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "service": "saw26-sandbox",
+      "api_version": "0.1.0",
+      "pack_version": "saw26"
+    }
+  }
+}

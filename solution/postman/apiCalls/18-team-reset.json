@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/team/reset",
+    "body": {
+      "confirmed": true
+    }
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "error": {
+        "code": "reset_disabled",
+        "message": "Team reset is disabled during judging"
+      }
+    }
+  }
+}

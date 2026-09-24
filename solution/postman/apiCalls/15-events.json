@@ -1,0 +1,363 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/events?since=0",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "since": 0,
+      "next_cursor": 9,
+      "events": [
+        {
+          "event_id": 1,
+          "type": "authorization.decision",
+          "run_id": "run_66f5cf3a1375ddae",
+          "authorization_id": "AU0001-1375ddae",
+          "status": "timeout",
+          "occurred_at": "2026-09-24T12:42:28.161963Z",
+          "data": {
+            "type": "authorization.decision",
+            "authorization_id": "AU0001-1375ddae",
+            "decision": "decline",
+            "reason_codes": [
+              "timeout"
+            ],
+            "customer_message": "The request expired before it was delivered.",
+            "evidence": [],
+            "engine_version": null,
+            "decision_source": "timeout"
+          }
+        },
+        {
+          "event_id": 2,
+          "type": "scenario.completed",
+          "run_id": "run_66f5cf3a1375ddae",
+          "authorization_id": null,
+          "status": "completed",
+          "occurred_at": "2026-09-24T12:42:28.161987Z",
+          "data": {
+            "run_id": "run_66f5cf3a1375ddae",
+            "scenario_id": "SCEN0000",
+            "mandate_id": "TM312e04c6ed4741c6",
+            "status": "completed",
+            "fixture_profiles": [
+              {
+                "profile_id": "PROFILE_AUTH0001",
+                "customer_id": "CU0001",
+                "card_id": "CA0001"
+              }
+            ],
+            "generated_event_count": 1,
+            "delivered_event_count": 0,
+            "finalized_event_count": 1,
+            "processed_event_count": 1,
+            "pending_event_count": 0,
+            "queued_event_count": 0,
+            "platform_rejected_count": 0
+          }
+        },
+        {
+          "event_id": 3,
+          "type": "authorization.request",
+          "run_id": "run_80e1be3d02000a35",
+          "authorization_id": "AU0001-02000a35",
+          "status": "awaiting_decision",
+          "occurred_at": "2026-09-24T12:42:28.162008Z",
+          "data": {
+            "type": "authorization.request",
+            "request_id": "req_4367ec2a3ae43ca6",
+            "deadline_at": "2026-09-24T12:42:31.003459Z",
+            "authorization": {
+              "authorization_id": "AU0001-02000a35",
+              "source_authorization_id": "AU0001",
+              "scenario_id": "SCEN0000",
+              "replay_order": 1,
+              "mandate_id": "TMc14417b720aea7e3",
+              "profile_id": "PROFILE_AUTH0001",
+              "card_id": "CA0001",
+              "initiator_type": "agent",
+              "merchant": {
+                "merchant_id": "ME0001",
+                "merchant_name": "Alpine Basket",
+                "merchant_category": "groceries",
+                "merchant_mcc": "5411",
+                "merchant_country": "CH",
+                "merchant_city": "Zurich",
+                "availability": "store_and_online",
+                "recurring_capable": "false"
+              },
+              "timestamp": "2026-08-09T10:04:00Z",
+              "amount": 20.0,
+              "currency": "CHF",
+              "billing_amount_chf": 20.0,
+              "items_subtotal": 13.0,
+              "delivery_fee": 7.0,
+              "channel": "ecommerce",
+              "customer_device_id": "DVC-13A598",
+              "authority_status": "active",
+              "card_status_at_attempt": "active",
+              "spend_in_period_before_chf": null,
+              "recent_attempt_count_10m": 0,
+              "fulfillment_method": "delivery",
+              "delivery_by": "2026-08-10",
+              "order_returnable": "false",
+              "order_cancellable": "unknown",
+              "related_authorization_id": null,
+              "related_authorization_status": null,
+              "purchase_description": "Grocery delivery order",
+              "items": [
+                {
+                  "line_no": 1,
+                  "item_id": "IT0001",
+                  "item_name": "Fresh produce selection",
+                  "item_category": "groceries",
+                  "quantity": 1,
+                  "unit_price": 13.0,
+                  "currency": "CHF",
+                  "item_details": "One small basket of seasonal fruit and vegetables"
+                }
+              ]
+            },
+            "mandate": {
+              "mandate_id": "TMc14417b720aea7e3",
+              "status": "active",
+              "customer_id": "CU0001",
+              "card_id": "CA0001",
+              "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+              "hard_rules": [
+                {
+                  "field": "authorization.billing_amount_chf",
+                  "operator": "<=",
+                  "value": 20,
+                  "currency": "CHF",
+                  "scope": "purchase",
+                  "period_days": null
+                }
+              ],
+              "uncertainty_policy": "ask",
+              "profile_id": "PROFILE_AUTH0001"
+            },
+            "context": {
+              "approved_spend_in_period_chf": 0.0,
+              "recent_authorizations": []
+            },
+            "runtime": {
+              "received_at": "2026-09-24T12:42:23.003459Z",
+              "history_window_minutes": 10,
+              "context_basis": "run_decisions_and_scenario_timestamps"
+            }
+          }
+        },
+        {
+          "event_id": 4,
+          "type": "authorization.decision",
+          "run_id": "run_80e1be3d02000a35",
+          "authorization_id": "AU0001-02000a35",
+          "status": "timeout",
+          "occurred_at": "2026-09-24T12:42:33.706306Z",
+          "data": {
+            "type": "authorization.decision",
+            "authorization_id": "AU0001-02000a35",
+            "decision": "decline",
+            "reason_codes": [
+              "timeout"
+            ],
+            "customer_message": "No decision was received before the deadline.",
+            "evidence": [],
+            "engine_version": null,
+            "decision_source": "timeout"
+          }
+        },
+        {
+          "event_id": 5,
+          "type": "scenario.completed",
+          "run_id": "run_80e1be3d02000a35",
+          "authorization_id": null,
+          "status": "completed",
+          "occurred_at": "2026-09-24T12:42:33.706343Z",
+          "data": {
+            "run_id": "run_80e1be3d02000a35",
+            "scenario_id": "SCEN0000",
+            "mandate_id": "TMc14417b720aea7e3",
+            "status": "completed",
+            "fixture_profiles": [
+              {
+                "profile_id": "PROFILE_AUTH0001",
+                "customer_id": "CU0001",
+                "card_id": "CA0001"
+              }
+            ],
+            "generated_event_count": 1,
+            "delivered_event_count": 1,
+            "finalized_event_count": 1,
+            "processed_event_count": 1,
+            "pending_event_count": 0,
+            "queued_event_count": 0,
+            "platform_rejected_count": 0
+          }
+        },
+        {
+          "event_id": 6,
+          "type": "authorization.request",
+          "run_id": "run_1b63dbcf30ba5d9a",
+          "authorization_id": "AU0001-30ba5d9a",
+          "status": "awaiting_decision",
+          "occurred_at": "2026-09-24T12:42:57.751684Z",
+          "data": {
+            "type": "authorization.request",
+            "request_id": "req_33a3b13481626f20",
+            "deadline_at": "2026-09-24T12:43:05.425578Z",
+            "authorization": {
+              "authorization_id": "AU0001-30ba5d9a",
+              "source_authorization_id": "AU0001",
+              "scenario_id": "SCEN0000",
+              "replay_order": 1,
+              "mandate_id": "TMc14417b720aea7e3",
+              "profile_id": "PROFILE_AUTH0001",
+              "card_id": "CA0001",
+              "initiator_type": "agent",
+              "merchant": {
+                "merchant_id": "ME0001",
+                "merchant_name": "Alpine Basket",
+                "merchant_category": "groceries",
+                "merchant_mcc": "5411",
+                "merchant_country": "CH",
+                "merchant_city": "Zurich",
+                "availability": "store_and_online",
+                "recurring_capable": "false"
+              },
+              "timestamp": "2026-08-09T10:04:00Z",
+              "amount": 20.0,
+              "currency": "CHF",
+              "billing_amount_chf": 20.0,
+              "items_subtotal": 13.0,
+              "delivery_fee": 7.0,
+              "channel": "ecommerce",
+              "customer_device_id": "DVC-13A598",
+              "authority_status": "active",
+              "card_status_at_attempt": "active",
+              "spend_in_period_before_chf": null,
+              "recent_attempt_count_10m": 0,
+              "fulfillment_method": "delivery",
+              "delivery_by": "2026-08-10",
+              "order_returnable": "false",
+              "order_cancellable": "unknown",
+              "related_authorization_id": null,
+              "related_authorization_status": null,
+              "purchase_description": "Grocery delivery order",
+              "items": [
+                {
+                  "line_no": 1,
+                  "item_id": "IT0001",
+                  "item_name": "Fresh produce selection",
+                  "item_category": "groceries",
+                  "quantity": 1,
+                  "unit_price": 13.0,
+                  "currency": "CHF",
+                  "item_details": "One small basket of seasonal fruit and vegetables"
+                }
+              ]
+            },
+            "mandate": {
+              "mandate_id": "TMc14417b720aea7e3",
+              "status": "active",
+              "customer_id": "CU0001",
+              "card_id": "CA0001",
+              "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+              "hard_rules": [
+                {
+                  "field": "authorization.billing_amount_chf",
+                  "operator": "<=",
+                  "value": 20,
+                  "currency": "CHF",
+                  "scope": "purchase",
+                  "period_days": null
+                }
+              ],
+              "uncertainty_policy": "ask",
+              "profile_id": "PROFILE_AUTH0001"
+            },
+            "context": {
+              "approved_spend_in_period_chf": 0.0,
+              "recent_authorizations": []
+            },
+            "runtime": {
+              "received_at": "2026-09-24T12:42:57.425578Z",
+              "history_window_minutes": 10,
+              "context_basis": "run_decisions_and_scenario_timestamps"
+            }
+          }
+        },
+        {
+          "event_id": 7,
+          "type": "authorization.decision",
+          "run_id": "run_1b63dbcf30ba5d9a",
+          "authorization_id": "AU0001-30ba5d9a",
+          "status": "pending_step_up",
+          "occurred_at": "2026-09-24T12:42:58.006942Z",
+          "data": {
+            "authorization_id": "AU0001-30ba5d9a",
+            "decision": "step_up",
+            "reason_codes": [
+              "customer_confirmation"
+            ],
+            "customer_message": "Please review this purchase.",
+            "evidence": [],
+            "engine_version": null,
+            "decision_source": "team"
+          }
+        },
+        {
+          "event_id": 8,
+          "type": "authorization.decision",
+          "run_id": "run_1b63dbcf30ba5d9a",
+          "authorization_id": "AU0001-30ba5d9a",
+          "status": "approved",
+          "occurred_at": "2026-09-24T12:42:58.210773Z",
+          "data": {
+            "type": "authorization.decision",
+            "authorization_id": "AU0001-30ba5d9a",
+            "decision": "approve",
+            "reason_codes": [
+              "human_confirmation"
+            ],
+            "customer_message": "The customer confirmed this purchase.",
+            "evidence": [],
+            "engine_version": null,
+            "decision_source": "human"
+          }
+        },
+        {
+          "event_id": 9,
+          "type": "scenario.completed",
+          "run_id": "run_1b63dbcf30ba5d9a",
+          "authorization_id": null,
+          "status": "completed",
+          "occurred_at": "2026-09-24T12:42:58.210828Z",
+          "data": {
+            "run_id": "run_1b63dbcf30ba5d9a",
+            "scenario_id": "SCEN0000",
+            "mandate_id": "TMc14417b720aea7e3",
+            "status": "completed",
+            "fixture_profiles": [
+              {
+                "profile_id": "PROFILE_AUTH0001",
+                "customer_id": "CU0001",
+                "card_id": "CA0001"
+              }
+            ],
+            "generated_event_count": 1,
+            "delivered_event_count": 1,
+            "finalized_event_count": 1,
+            "processed_event_count": 1,
+            "pending_event_count": 0,
+            "queued_event_count": 0,
+            "platform_rejected_count": 0
+          }
+        }
+      ]
+    }
+  }
+}

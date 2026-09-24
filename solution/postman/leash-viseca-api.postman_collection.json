@@ -1,0 +1,307 @@
+{
+  "info": {
+    "name": "Leash — Viseca Agent on a Leash API",
+    "description": "All endpoints from technical_details.md section 4-8. Use with the 'Leash — Viseca sandbox' environment (base_url, team_api_key). Requests are ordered as a working flow: health -> bootstrap/reference data -> create+confirm mandate -> start run -> poll/decide -> resolve -> mandate lifecycle -> reset.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{team_api_key}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io" },
+    { "key": "team_api_key", "value": "" },
+    { "key": "draft_id", "value": "" },
+    { "key": "mandate_id", "value": "" },
+    { "key": "run_id", "value": "" },
+    { "key": "authorization_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health & discovery",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/healthz", "host": ["{{base_url}}"], "path": ["healthz"] }
+          }
+        },
+        {
+          "name": "GET /v1/bootstrap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/v1/bootstrap", "host": ["{{base_url}}"], "path": ["v1", "bootstrap"] }
+          }
+        },
+        {
+          "name": "GET /v1/reference-data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/v1/reference-data", "host": ["{{base_url}}"], "path": ["v1", "reference-data"] }
+          }
+        },
+        {
+          "name": "GET /v1/reference-data/authorization-history.csv",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/reference-data/authorization-history.csv",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "reference-data", "authorization-history.csv"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Mandate lifecycle",
+      "item": [
+        {
+          "name": "POST /v1/mandates (create draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.draft_id) { pm.collectionVariables.set('draft_id', body.draft_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"instruction\": \"Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.\",\n  \"hard_rules\": [\n    {\n      \"field\": \"authorization.billing_amount_chf\",\n      \"operator\": \"<=\",\n      \"value\": 20,\n      \"currency\": \"CHF\",\n      \"scope\": \"purchase\"\n    }\n  ],\n  \"uncertainty_policy\": \"ask\",\n  \"guidance\": [],\n  \"open_questions\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/v1/mandates", "host": ["{{base_url}}"], "path": ["v1", "mandates"] }
+          }
+        },
+        {
+          "name": "POST /v1/mandates/{draft_id}/confirm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.mandate_id) { pm.collectionVariables.set('mandate_id', body.mandate_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/mandates/{{draft_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "mandates", "{{draft_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "GET /v1/mandates/{mandate_id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/mandates/{{mandate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "mandates", "{{mandate_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /v1/mandates/{mandate_id} (tighten uncertainty_policy)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uncertainty_policy\": \"decline\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/mandates/{{mandate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "mandates", "{{mandate_id}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /v1/mandates/{mandate_id} (revoke)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/mandates/{{mandate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "mandates", "{{mandate_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Scenario runs",
+      "item": [
+        {
+          "name": "POST /v1/scenario-runs (start run)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.run_id) { pm.collectionVariables.set('run_id', body.run_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario_id\": \"SCEN0000\",\n  \"mandate_id\": \"{{mandate_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/v1/scenario-runs", "host": ["{{base_url}}"], "path": ["v1", "scenario-runs"] }
+          }
+        },
+        {
+          "name": "GET /v1/scenario-runs/{run_id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/scenario-runs/{{run_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "scenario-runs", "{{run_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Worker loop",
+      "item": [
+        {
+          "name": "GET /v1/decision-requests/next?wait=25 (long-poll)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  const id = body?.data?.authorization?.authorization_id;",
+                  "  if (id) { pm.collectionVariables.set('authorization_id', id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/decision-requests/next?wait=25",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "decision-requests", "next"],
+              "query": [{ "key": "wait", "value": "25" }]
+            }
+          }
+        },
+        {
+          "name": "POST /v1/authorizations/{authorization_id}/decision",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authorization_id\": \"{{authorization_id}}\",\n  \"decision\": \"step_up\",\n  \"reason_codes\": [\"customer_confirmation\"],\n  \"customer_message\": \"Please review this purchase.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/authorizations/{{authorization_id}}/decision",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "authorizations", "{{authorization_id}}", "decision"]
+            }
+          }
+        },
+        {
+          "name": "POST /v1/authorizations/{authorization_id}/resolve",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"customer_message\": \"The customer confirmed this purchase.\",\n  \"evidence\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/authorizations/{{authorization_id}}/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "authorizations", "{{authorization_id}}", "resolve"]
+            }
+          }
+        },
+        {
+          "name": "GET /v1/authorizations (list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/v1/authorizations", "host": ["{{base_url}}"], "path": ["v1", "authorizations"] }
+          }
+        },
+        {
+          "name": "GET /v1/events?since=0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/events?since=0",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "events"],
+              "query": [{ "key": "since", "value": "0" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Development utilities",
+      "item": [
+        {
+          "name": "POST /v1/team/reset",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/v1/team/reset", "host": ["{{base_url}}"], "path": ["v1", "team", "reset"] }
+          }
+        }
+      ]
+    }
+  ]
+}

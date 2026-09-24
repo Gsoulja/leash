@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/reference-data/authorization-history.csv",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "note": "CSV body saved separately as 03-reference-data-authorization-history.csv (4702 lines, ~1.5MB)",
+    "preview": ""
+  }
+}

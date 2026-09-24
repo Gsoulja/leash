@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/authorizations/AU0001-30ba5d9a/decision",
+    "body": {
+      "authorization_id": "AU0001-30ba5d9a",
+      "decision": "step_up",
+      "reason_codes": [
+        "customer_confirmation"
+      ],
+      "customer_message": "Please review this purchase."
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "authorization_id": "AU0001-30ba5d9a",
+      "status": "pending_step_up",
+      "decision": {
+        "authorization_id": "AU0001-30ba5d9a",
+        "decision": "step_up",
+        "reason_codes": [
+          "customer_confirmation"
+        ],
+        "customer_message": "Please review this purchase.",
+        "evidence": [],
+        "engine_version": null,
+        "decision_source": "team"
+      },
+      "step_up_expires_at": "2026-09-24T12:44:58.006923Z"
+    }
+  }
+}

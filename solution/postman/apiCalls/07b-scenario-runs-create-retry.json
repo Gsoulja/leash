@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/scenario-runs",
+    "body": {
+      "scenario_id": "SCEN0000",
+      "mandate_id": "TMc14417b720aea7e3"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "run_id": "run_1b63dbcf30ba5d9a",
+      "scenario_id": "SCEN0000",
+      "mandate_id": "TMc14417b720aea7e3",
+      "status": "running",
+      "fixture_profiles": [
+        {
+          "profile_id": "PROFILE_AUTH0001",
+          "customer_id": "CU0001",
+          "card_id": "CA0001"
+        }
+      ],
+      "generated_event_count": 1,
+      "delivered_event_count": 0,
+      "finalized_event_count": 0,
+      "processed_event_count": 0,
+      "pending_event_count": 0,
+      "queued_event_count": 1,
+      "platform_rejected_count": 0
+    }
+  }
+}

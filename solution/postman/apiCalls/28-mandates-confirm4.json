@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/mandates/draft_e5f48ab397298b8a/confirm",
+    "body": {
+      "confirmed": true
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "draft_id": "draft_e5f48ab397298b8a",
+      "mandate_id": "TM0742b77fe9dabaa6",
+      "status": "active",
+      "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+      "hard_rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "operator": "<=",
+          "value": 20,
+          "currency": "CHF",
+          "scope": "purchase",
+          "period_days": null
+        }
+      ],
+      "uncertainty_policy": "ask",
+      "guidance": [],
+      "open_questions": [],
+      "created_at": "2026-09-24T12:58:30.866348Z"
+    }
+  }
+}

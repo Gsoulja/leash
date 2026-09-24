@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "PATCH",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/mandates/TM0742b77fe9dabaa6",
+    "body": {
+      "hard_rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "operator": "<=",
+          "value": 20,
+          "currency": "CHF",
+          "scope": "purchase",
+          "period_days": null
+        },
+        {
+          "field": "authorization.merchant_category",
+          "operator": "=",
+          "value": "groceries"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "error": {
+        "code": "mandate_widening",
+        "message": "An active mandate may only preserve or add hard rules"
+      }
+    }
+  }
+}

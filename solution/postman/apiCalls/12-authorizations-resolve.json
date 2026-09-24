@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io/v1/authorizations/AU0001-30ba5d9a/resolve",
+    "body": {
+      "decision": "approve",
+      "customer_message": "The customer confirmed this purchase.",
+      "evidence": []
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "authorization_id": "AU0001-30ba5d9a",
+      "status": "approved",
+      "decision": {
+        "type": "authorization.decision",
+        "authorization_id": "AU0001-30ba5d9a",
+        "decision": "approve",
+        "reason_codes": [
+          "human_confirmation"
+        ],
+        "customer_message": "The customer confirmed this purchase.",
+        "evidence": [],
+        "engine_version": null,
+        "decision_source": "human"
+      },
+      "resolved_by": "human"
+    }
+  }
+}
