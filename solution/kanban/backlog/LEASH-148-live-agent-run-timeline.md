@@ -6,10 +6,10 @@
 **Estimated Effort**: L
 **Milestone**: M8 — Great demo
 **Rule source**: Product
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-144
 **Task ID**: 144-T4
-**Blocked by**: LEASH-145, LEASH-147
+**Blocked by**: LEASH-145, LEASH-147, LEASH-130
 **Blocks**: LEASH-149, LEASH-150, LEASH-152, LEASH-153
 **Updated**: 2026-09-24
 
@@ -28,6 +28,8 @@ Visible execution is the core of the demo: the audience needs to see Leash media
 - [ ] Reconnect and reload reconstruct the same timeline from durable state.
 - [ ] A waiting payment opens the existing customer decision prompt with context.
 - [ ] No-event periods show a meaningful active state rather than a frozen screen.
+- [ ] Leash permission activity and external shopping-agent activity have distinct sources; no searching event is shown without evidence.
+- [ ] Outcome labels follow platform acceptance from LEASH-130. Approval, submitted, accepted and not sent cannot collapse into “Paid”.
 
 ## Technical Approach
 Build a run projection from `GET /api/runs/{id}`, run-scoped payments and SSE invalidation. Add event types only where a real durable fact is missing.
@@ -35,6 +37,7 @@ Build a run projection from `GET /api/runs/{id}`, run-scoped payments and SSE in
 ### Dependencies
 - Needs LEASH-145.
 - Needs LEASH-147.
+- Needs LEASH-130.
 - Blocks LEASH-149.
 - Blocks LEASH-150.
 - Blocks LEASH-152.

@@ -6,10 +6,10 @@
 **Estimated Effort**: S
 **Milestone**: M8 — Great demo
 **Rule source**: Product
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-144
 **Task ID**: 144-T9
-**Blocked by**: LEASH-101, LEASH-133, LEASH-145, LEASH-146, LEASH-147, LEASH-148, LEASH-149, LEASH-150, LEASH-151, LEASH-152
+**Blocked by**: LEASH-101, LEASH-133, LEASH-145, LEASH-146, LEASH-147, LEASH-148, LEASH-149, LEASH-150, LEASH-151, LEASH-152, LEASH-156
 **Blocks**: LEASH-128
 **Gate**: DECISION — a person unfamiliar with the implementation can explain the agent, the protection and the outcome after one rehearsal.
 **Updated**: 2026-09-24
@@ -27,11 +27,14 @@ Feature completeness is not demo readiness; the audience must see the agent act 
 - [ ] The agent visibly works; no silent wait exceeds the approved threshold.
 - [ ] Cockpit, Agent summary and payment details agree on counts, outcomes and spending.
 - [ ] No internal scenario IDs, decision codes or raw rule syntax appear in the primary customer journey.
-- [ ] The LLM is demonstrably limited to shopping chat and draft generation; the deterministic control layer remains authoritative.
+- [ ] The LLM is demonstrably limited to permission clarification and draft generation; the deterministic control layer remains authoritative.
 - [ ] A network interruption or accidental refresh has a rehearsed recovery path.
 - [ ] Projector text is readable and all primary controls remain keyboard accessible.
 - [ ] Two observers unfamiliar with the code correctly explain what was allowed, what was blocked and why.
 - [ ] The final evidence bundle contains the script, recording, screenshots, timings and known fallback plan.
+- [ ] LEASH-156 supplies complete-journey safety evidence, extraction/omission metrics and the context comparison, independently of presentation quality.
+- [ ] Observers can distinguish customer preference, confirmed permission, external-agent checkout and platform-accepted outcome.
+- [ ] Any Laya claim names the evaluated task and supporting report; an unvalidated permission verifier is visibly disabled or shadow-only.
 
 ## Technical Approach
 Use a fixed rehearsal script and scoring sheet. Record defects as new tickets; do not waive a failed P0 criterion verbally.
@@ -47,6 +50,7 @@ Use a fixed rehearsal script and scoring sheet. Record defects as new tickets; d
 - Needs LEASH-150.
 - Needs LEASH-151.
 - Needs LEASH-152.
+- Needs LEASH-156.
 - Blocks LEASH-128.
 
 ## Testing Requirements

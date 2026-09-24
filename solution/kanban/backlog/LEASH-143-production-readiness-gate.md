@@ -6,10 +6,10 @@
 **Estimated Effort**: S
 **Milestone**: M7 — Production hardening
 **Rule source**: Engineering
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-129
 **Task ID**: 129-T14
-**Blocked by**: LEASH-130, LEASH-131, LEASH-132, LEASH-133, LEASH-135, LEASH-136, LEASH-137, LEASH-138, LEASH-139, LEASH-140, LEASH-141, LEASH-142
+**Blocked by**: LEASH-130, LEASH-131, LEASH-132, LEASH-133, LEASH-135, LEASH-136, LEASH-137, LEASH-138, LEASH-139, LEASH-140, LEASH-141, LEASH-142, LEASH-156
 **Blocks**: none
 **Gate**: DECISION — product, engineering, security and operations jointly accept the evidence and residual risks.
 **Updated**: 2026-09-24
@@ -28,12 +28,25 @@ No production launch occurs because a demo works; every safety, security and ope
 - [ ] Data retention, encryption, audit and incident-response controls are approved.
 - [ ] The deployed artifact is signed, reproducible and linked to its source and schema revision.
 - [ ] Every accepted residual risk has an owner and expiry date.
+- [ ] The permission journey evidence in LEASH-156 passes and production authentication, consent binding and payment-path enforcement in LEASH-140 are verified; prototype login exclusions do not apply.
 
 ## Technical Approach
 Maintain a release evidence index linking automated reports, drill records, dashboards, security review and signed artifacts.
 
 ### Dependencies
-- Needs LEASH-130 through LEASH-133 and LEASH-135 through LEASH-142.
+- Needs LEASH-130.
+- Needs LEASH-131.
+- Needs LEASH-132.
+- Needs LEASH-133.
+- Needs LEASH-135.
+- Needs LEASH-136.
+- Needs LEASH-137.
+- Needs LEASH-138.
+- Needs LEASH-139.
+- Needs LEASH-140.
+- Needs LEASH-141.
+- Needs LEASH-142.
+- Needs LEASH-156.
 
 ## Testing Requirements
 A human review panel walks every criterion and records approve/reject with evidence links.

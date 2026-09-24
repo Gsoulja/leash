@@ -6,7 +6,7 @@
 **Estimated Effort**: L
 **Milestone**: M8 — Great demo
 **Rule source**: Product
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-144
 **Task ID**: 144-T1
 **Blocked by**: LEASH-101
@@ -28,6 +28,9 @@ The product must feel like an agent that understands, clarifies and reports—no
 - [ ] Loading, retry and refusal states appear as messages at the point where they occurred.
 - [ ] Reload and tab changes preserve the conversation without duplicating messages.
 - [ ] The transcript never claims work that the backend has not recorded.
+- [ ] Messages distinguish Leash’s permission assistant from the external shopping agent; Leash never claims to search or purchase on its own.
+- [ ] Context-based questions disclose their source as a preference or observation, permit disagreement, and do not imply prior customer approval.
+- [ ] Corrections show the superseded and current draft revisions; reload preserves the latest revision and cannot restore a stale confirmation action.
 
 ## Technical Approach
 Model the UI as explicit conversation states derived from the policy draft, its questions and mutation results. Keep the draft ID durable, but render semantic message components rather than raw API structures.
@@ -41,6 +44,8 @@ Model the UI as explicit conversation states derived from the policy draft, its 
 - Blocks LEASH-153.
 
 ## Testing Requirements
+Include background preference accepted/rejected, an explicit current-request override, a draft correction and stale-tab review recovery.
+
 Write component tests for the empty, compiling, clarification, error, ready and reloaded states. Add a browser test that completes a clarification without leaving the conversation.
 
 ## Related Files

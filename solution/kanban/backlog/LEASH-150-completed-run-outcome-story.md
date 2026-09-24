@@ -6,10 +6,10 @@
 **Estimated Effort**: M
 **Milestone**: M8 — Great demo
 **Rule source**: Product
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-144
 **Task ID**: 144-T6
-**Blocked by**: LEASH-133, LEASH-148
+**Blocked by**: LEASH-133, LEASH-148, LEASH-130
 **Blocks**: LEASH-153
 **Updated**: 2026-09-24
 
@@ -34,6 +34,7 @@ Build the summary from the run-scoped read model fixed by LEASH-133. Reuse `Paym
 ### Dependencies
 - Needs LEASH-133.
 - Needs LEASH-148.
+- Needs LEASH-130.
 - Blocks LEASH-153.
 
 ## Testing Requirements

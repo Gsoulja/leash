@@ -6,13 +6,13 @@
 **Estimated Effort**: L
 **Milestone**: M8 — Great demo
 **Rule source**: Product
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Blocked by**: LEASH-101
 **Blocks**: none
 **Updated**: 2026-09-24
 
 ## Description
-Turn the customer app from a policy form into a convincing agent experience: a natural conversation, visible work, clear interventions, truthful results and presenter-controlled pacing.
+Turn the customer app from a policy form into a clear permission-control experience: a natural conversation, visible work, clear interventions, truthful results and presenter-controlled pacing.
 
 ## Business Value
 Judges must understand within seconds what the agent is doing, how Leash constrains it, when the customer intervenes and why the final outcome is trustworthy.
@@ -27,7 +27,7 @@ Judges must understand within seconds what the agent is doing, how Leash constra
 ## Sub-tasks
 - LEASH-145 — Build the conversational Agent journey.
 - LEASH-146 — Replace the technical permission dump with a human review.
-- LEASH-147 — Let the Agent launch curated shopping runs.
+- LEASH-147 — Hand off to the external agent through curated simulator runs.
 - LEASH-148 — Show a live run activity timeline.
 - LEASH-149 — Add presenter demo controls.
 - LEASH-150 — Tell the completed-run outcome story.
@@ -39,7 +39,7 @@ Judges must understand within seconds what the agent is doing, how Leash constra
 Keep domain decisions and platform state authoritative. Build a customer-facing narrative projection and a separate presenter-only orchestration surface around the existing run, payment and event APIs.
 
 ### Dependencies
-- Needs LEASH-101 for the LLM-backed shopping conversation and safe draft proposal boundary.
+- Needs LEASH-101 for the LLM-backed permission conversation and safe draft proposal boundary.
 - The epic closes when LEASH-145 through LEASH-153 are done.
 
 ## Testing Requirements

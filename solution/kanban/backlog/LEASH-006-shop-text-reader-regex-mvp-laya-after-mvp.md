@@ -4,10 +4,12 @@
 **Priority**: P0
 **Type**: epic
 **Total Effort**: ~54 h (13 tickets; ~10 h in the MVP)
-**Updated**: 2026-09-23
+**Updated**: 2026-09-24
 
 ## Description
 The deterministic regex reader and its fallback wrapper are MVP. The Laya training pipeline and in-engine adapter come after the MVP (DEC-020).
+
+Permission extraction verification is a separate task (LEASH-155), using the reviewed permission corpus (LEASH-156). Completing this shop-text pipeline does not validate permission extraction.
 
 ## Business Value
 Reads untrusted shop text better than regex, which is our model-based differentiator, without ever deciding a verdict.

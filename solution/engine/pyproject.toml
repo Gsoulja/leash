@@ -39,6 +39,7 @@ packages = ["src/leash"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # so tests can import the `evals` harness
 
 [[tool.mypy.overrides]]
 # asyncpg ships no type information; its use stays inside the Postgres adapters.

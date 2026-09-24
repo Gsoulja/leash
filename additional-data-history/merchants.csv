@@ -1,0 +1,304 @@
+merchant_id,merchant_name,merchant_category,merchant_mcc,merchant_country,merchant_city,availability,recurring_capable
+ME0001,Alpine Basket,groceries,5411,CH,Zurich,store_and_online,false
+ME0002,Neighbour Pantry,groceries,5411,CH,Bern,store_and_online,false
+ME0003,Lakeview Grocer,groceries,5411,CH,Lausanne,store_and_online,false
+ME0004,Sunrise Provisions,groceries,5411,CH,Lugano,store_and_online,false
+ME0005,Rhine Pantry,groceries,5411,DE,Freiburg,store_and_online,false
+ME0006,RailNest,transport,4111,CH,Bern,online,false
+ME0007,MetroHop,transport,4111,CH,Zurich,store_and_online,false
+ME0008,LakeLine Mobility,transport,4111,CH,Geneva,online,false
+ME0009,RoadPine Energy,fuel,5541,CH,Lucerne,store,false
+ME0010,Alto Charge,fuel,5541,IT,Como,store,false
+ME0011,Cedar Table,dining,5812,CH,Basel,store,false
+ME0012,Basil and Board,dining,5812,CH,Lausanne,store,false
+ME0013,Noon Spoon,dining,5812,CH,Zurich,store,false
+ME0014,Riverside Plate,dining,5812,DE,Munich,store,false
+ME0015,MealWing,food_delivery,5812,CH,Zurich,online,false
+ME0016,NightOwl Kitchen,food_delivery,5812,CH,Geneva,online,false
+ME0017,StoryArc Media,subscriptions,5815,CH,Bern,online,true
+ME0018,NorthTone Digital,subscriptions,5815,GB,London,online,true
+ME0019,CloudShelf Books,books,5942,CH,Basel,store_and_online,false
+ME0020,BrightPage Learning,books,5942,CH,Bern,online,false
+ME0021,London Leaf Books,books,5942,GB,London,online,false
+ME0022,PixelHarbor,electronics,5732,CH,Zurich,store_and_online,false
+ME0023,Circuit and Pine,electronics,5732,CH,Lausanne,store_and_online,false
+ME0024,HarborByte,electronics,5732,US,Boston,online,false
+ME0025,Loom and Pine,clothing,5651,CH,St. Gallen,store_and_online,false
+ME0026,RainThread,clothing,5651,CH,Lugano,online,false
+ME0027,Milano Weave,clothing,5651,IT,Milan,store_and_online,false
+ME0028,TrailSpark,sporting_goods,5941,CH,Lucerne,store_and_online,false
+ME0029,Summit Thread,sporting_goods,5941,CH,Interlaken,online,false
+ME0030,AlpenWerk Sport,sporting_goods,5941,AT,Innsbruck,store_and_online,false
+ME0031,HomeMend Market,home_improvement,5211,CH,Lausanne,store_and_online,false
+ME0032,Tool and Timber,home_improvement,5211,CH,Winterthur,store_and_online,false
+ME0033,Atelier Fixe,home_improvement,5211,FR,Lyon,online,false
+ME0034,Little Lantern,kids_family,5945,CH,Zurich,store_and_online,false
+ME0035,Growing Steps,kids_family,5945,CH,Bern,online,false
+ME0036,Paw and Whisker,pet_care,5995,CH,Geneva,store_and_online,true
+ME0037,Happy Trail Pets,pet_care,5995,CH,Fribourg,online,true
+ME0038,HealthBridge Pharmacy,health,5912,CH,Geneva,store_and_online,false
+ME0039,MotionCare,health,5912,CH,Basel,store,false
+ME0040,SummitStay,hotel,7011,CH,Lucerne,online,false
+ME0041,IsarNest Hotel,hotel,7011,DE,Munich,online,false
+ME0044,FlyNorth Europe,travel,4722,NL,Amsterdam,online,false
+ME0045,EuroTrail Tickets,travel,4722,DE,Berlin,online,false
+ME0046,LensTrail,photography,7221,CH,Fribourg,store_and_online,false
+ME0047,SilverFrame,photography,7221,FR,Annecy,online,false
+ME0048,EventForge,entertainment,7929,CH,Bern,online,false
+ME0049,ScreenGarden,entertainment,7929,CH,Basel,store_and_online,false
+ME0051,WorkCanvas,software,7372,NL,Amsterdam,online,true
+ME0052,PlainLedger,software,7372,CH,Zurich,online,true
+ME0053,GreenLoop,sustainable_goods,5399,CH,Neuchatel,store_and_online,false
+ME0054,Repair and Reuse,sustainable_goods,5399,CH,Biel,store,false
+ME0055,Parcel and Pine,household,5399,CH,Basel,store_and_online,false
+ME0056,RoomKind,household,5399,CH,Lausanne,online,false
+ME0057,CashPoint Central,cash_withdrawal,6011,CH,Zurich,atm,false
+ME0058,Cobalt Coatworks,clothing,5651,CH,Chur,store_and_online,false
+ME0059,PixelHarbour,electronics,5732,CH,Zurich,online,false
+ME0060,Thames Weave,clothing,5651,GB,London,online,false
+ME0061,Cascade Outfitters,sporting_goods,5941,US,Portland,online,false
+ME0101,Ticino Foods,groceries,5411,CH,Vevey,store,false
+ME0102,Rhine Fresh,groceries,5411,CH,Winterthur,store_and_online,false
+ME0103,Green Corner Store,groceries,5411,CH,Basel,store,false
+ME0104,Terrace Larder,groceries,5411,CH,Schaffhausen,store_and_online,false
+ME0105,Meadow Corner Store,groceries,5411,CH,Neuchatel,store,false
+ME0106,Orchard Market,groceries,5411,IT,Como,store,false
+ME0107,Terrace Grocer,groceries,5411,CH,Winterthur,store_and_online,false
+ME0108,Valley Fresh,groceries,5411,CH,Lucerne,store_and_online,false
+ME0109,Alpine Corner Store,groceries,5411,CH,Vevey,store_and_online,false
+ME0110,Meadow Grocer,groceries,5411,CH,Vevey,store_and_online,false
+ME0111,Corner Foods,groceries,5411,CH,Winterthur,online,false
+ME0112,Jura Grocer,groceries,5411,DE,Hamburg,store,false
+ME0113,Morning Provisions,groceries,5411,CH,Basel,store_and_online,false
+ME0114,Terrace Pantry,groceries,5411,CH,Lucerne,store,false
+ME0115,Terrace Market,groceries,5411,CH,Olten,store_and_online,false
+ME0116,Meadow Fresh,groceries,5411,CH,Fribourg,store_and_online,false
+ME0117,Green Market,groceries,5411,CH,Neuchatel,store,false
+ME0118,Old Town Fresh,groceries,5411,CH,Lugano,store_and_online,false
+ME0119,Orchard Foods,groceries,5411,CH,Fribourg,store_and_online,false
+ME0120,Ticino Market,groceries,5411,CH,Schaffhausen,store_and_online,false
+ME0121,Reuss Pantry,groceries,5411,CH,Chur,store_and_online,false
+ME0122,Alpine Pantry,groceries,5411,CH,Winterthur,store_and_online,false
+ME0123,Alp Mobility,transport,4111,CH,Vevey,online,false
+ME0124,Rail Line,transport,4111,IT,Verona,online,false
+ME0125,Lake Mobility,transport,4111,DE,Berlin,store_and_online,false
+ME0126,Tram Hop,transport,4111,CH,Aarau,online,false
+ME0127,Swift Transit,transport,4111,CH,Biel,online,false
+ME0128,Swift Pass,transport,4111,CH,Bern,store_and_online,false
+ME0129,Cross Ride,transport,4111,CH,Aarau,online,false
+ME0130,Metro Line,transport,4111,CH,Fribourg,online,false
+ME0131,Tram Link,transport,4111,CH,Biel,store_and_online,false
+ME0132,Bridge Pass,transport,4111,CH,Aarau,online,false
+ME0133,Alto Fuel,fuel,5541,IT,Milan,store,false
+ME0134,North Service,fuel,5541,DE,Frankfurt,store,false
+ME0135,North Charge,fuel,5541,CH,St. Gallen,store,false
+ME0136,Volt Power,fuel,5541,DE,Hamburg,store,false
+ME0137,Pass Stop,fuel,5541,CH,Fribourg,store,false
+ME0138,Ridge Fuel,fuel,5541,IT,Milan,store,false
+ME0139,Alto Stop,fuel,5541,CH,Zurich,store,false
+ME0140,Alto Station,fuel,5541,CH,Lugano,store,false
+ME0141,Noon Room,dining,5812,CH,Sion,store,false
+ME0142,Cedar Corner,dining,5812,CH,Olten,store,false
+ME0143,Maple Spoon,dining,5812,IT,Milan,store,false
+ME0144,Basil Grill,dining,5812,CH,Bern,store,false
+ME0145,Pepper Spoon,dining,5812,CH,Schaffhausen,store,false
+ME0146,Harbour Kitchen,dining,5812,CH,Winterthur,store,false
+ME0147,Juniper Plate,dining,5812,CH,Lausanne,store,false
+ME0148,Maple Corner,dining,5812,CH,Zurich,store,false
+ME0149,Noon Kitchen,dining,5812,FR,Lyon,store,false
+ME0150,Riverside Cafe,dining,5812,CH,Fribourg,store,false
+ME0151,Saffron Room,dining,5812,CH,Lausanne,store,false
+ME0152,Harbour Spoon,dining,5812,DE,Lorrach,store,false
+ME0153,Fig Corner,dining,5812,FR,Annemasse,store,false
+ME0154,Copper Table,dining,5812,CH,Interlaken,store,false
+ME0155,Saffron Corner,dining,5812,CH,Aarau,store,false
+ME0156,Riverside Kitchen,dining,5812,CH,Zug,store,false
+ME0157,Noon Table,dining,5812,CH,Lugano,store,false
+ME0158,Harbour Plate,dining,5812,CH,Zug,store,false
+ME0159,Olive Counter,dining,5812,CH,Lucerne,store,false
+ME0160,Juniper Table,dining,5812,CH,Thun,store,false
+ME0161,Maple Room,dining,5812,CH,Zurich,store_and_online,false
+ME0162,Slate Room,dining,5812,CH,Sion,store,false
+ME0163,Linden and Board,dining,5812,DE,Lorrach,store,false
+ME0164,Riverside Table,dining,5812,FR,Lyon,store,false
+ME0165,Copper Kitchen,dining,5812,CH,Schaffhausen,store,false
+ME0166,Cedar Cafe,dining,5812,FR,Grenoble,store,false
+ME0167,Meal Courier,food_delivery,5812,CH,Basel,online,false
+ME0168,Spoon Runner,food_delivery,5812,CH,Winterthur,online,false
+ME0169,Evening Wing,food_delivery,5812,CH,Bern,online,false
+ME0170,Plate Box,food_delivery,5812,CH,Biel,online,false
+ME0171,Door Express,food_delivery,5812,DE,Hamburg,online,false
+ME0172,Night Owl Kitchen,food_delivery,5812,CH,Sion,online,false
+ME0173,Late Courier,food_delivery,5812,CH,Vevey,online,false
+ME0174,Door Kitchen,food_delivery,5812,CH,Chur,online,false
+ME0175,North Cast,subscriptions,5815,GB,Manchester,online,true
+ME0176,Loop Arc Media,subscriptions,5815,GB,London,online,true
+ME0177,Bright Press Digital,subscriptions,5815,CH,Aarau,online,true
+ME0178,North Flow,subscriptions,5815,GB,Manchester,online,true
+ME0179,Wave Press Digital,subscriptions,5815,US,Seattle,online,true
+ME0180,Stream Player,subscriptions,5815,CH,Sion,online,true
+ME0181,Loop Media,subscriptions,5815,GB,Manchester,online,true
+ME0182,Signal Press Digital,subscriptions,5815,US,New York,online,true
+ME0183,Bright Media,subscriptions,5815,NL,Rotterdam,online,true
+ME0184,Wave Cast,subscriptions,5815,CH,Sion,online,true
+ME0185,Cloud Press,books,5942,CH,Bern,online,false
+ME0186,Margin Page Learning,books,5942,GB,Bristol,store_and_online,false
+ME0187,Margin Press,books,5942,GB,Edinburgh,store_and_online,false
+ME0188,Fable Library,books,5942,CH,Olten,store_and_online,false
+ME0189,Paper Corner Books,books,5942,DE,Frankfurt,online,false
+ME0190,Bookend Leaf Books,books,5942,CH,Biel,store_and_online,false
+ME0191,Quiet and Quill,books,5942,DE,Cologne,store_and_online,false
+ME0192,Bright Page Learning,books,5942,CH,Neuchatel,online,false
+ME0193,Signal Hub,electronics,5732,US,New York,store_and_online,false
+ME0194,Quartz and Pine,electronics,5732,CH,Thun,online,false
+ME0195,Nano Works,electronics,5732,CH,Fribourg,store_and_online,false
+ME0196,Byte and Pine,electronics,5732,CH,Fribourg,online,false
+ME0197,Harbor Store,electronics,5732,CH,Fribourg,store_and_online,false
+ME0198,Chip Works,electronics,5732,CH,Lucerne,store_and_online,false
+ME0199,Pixel Hub,electronics,5732,CH,Vevey,store_and_online,false
+ME0200,Micro Point,electronics,5732,CH,Zurich,online,false
+ME0201,Pixel Store,electronics,5732,CH,Lugano,online,false
+ME0202,Chip Depot,electronics,5732,CH,Olten,online,false
+ME0203,Beam Works,electronics,5732,DE,Lorrach,online,false
+ME0204,Signal and Pine,electronics,5732,CH,Lausanne,online,false
+ME0205,Cotton Thread,clothing,5651,CH,Schaffhausen,store_and_online,false
+ME0206,Linen Outfit,clothing,5651,DE,Konstanz,online,false
+ME0207,Loom Outfit,clothing,5651,IT,Turin,store_and_online,false
+ME0208,Ash Weave,clothing,5651,IT,Verona,online,false
+ME0209,Ash Cloth,clothing,5651,IT,Turin,store_and_online,false
+ME0210,Cotton Wardrobe,clothing,5651,CH,Winterthur,online,false
+ME0211,Alpine Studio,clothing,5651,DE,Frankfurt,online,false
+ME0212,Thames Attire,clothing,5651,IT,Bologna,store_and_online,false
+ME0213,Alpine Wardrobe,clothing,5651,FR,Strasbourg,online,false
+ME0214,Stitch Tailors,clothing,5651,CH,Lucerne,store_and_online,false
+ME0215,Indigo Studio,clothing,5651,GB,Manchester,store,false
+ME0216,Velvet Weave,clothing,5651,CH,Lugano,store_and_online,false
+ME0217,Alpine Thread,clothing,5651,CH,Zug,online,false
+ME0218,Indigo Wardrobe,clothing,5651,FR,Paris,store_and_online,false
+ME0219,Wool Thread,clothing,5651,CH,Lucerne,store_and_online,false
+ME0220,Indigo Cloth,clothing,5651,CH,Zurich,store_and_online,false
+ME0221,Vertical Athletics,sporting_goods,5941,DE,Konstanz,store_and_online,false
+ME0222,Vertical Supply,sporting_goods,5941,CH,Vevey,online,false
+ME0223,Vertical Werk Sport,sporting_goods,5941,CH,Interlaken,online,false
+ME0224,Alpen Base,sporting_goods,5941,CH,St. Gallen,store_and_online,false
+ME0225,Trek Werk Sport,sporting_goods,5941,DE,Stuttgart,store_and_online,false
+ME0226,Trek Supply,sporting_goods,5941,AT,Vienna,online,false
+ME0227,Stride Spark,sporting_goods,5941,DE,Frankfurt,store_and_online,false
+ME0228,Glacier Werk Sport,sporting_goods,5941,CH,Sion,store_and_online,false
+ME0229,Cascade Run,sporting_goods,5941,CH,Lucerne,online,false
+ME0230,Alpen Spark,sporting_goods,5941,CH,Geneva,store_and_online,false
+ME0231,Crest Werk Sport,sporting_goods,5941,DE,Frankfurt,store_and_online,false
+ME0232,Glacier Supply,sporting_goods,5941,CH,Neuchatel,online,false
+ME0233,Timber Hardware,home_improvement,5211,FR,Paris,store_and_online,false
+ME0234,Fix Yard,home_improvement,5211,CH,Basel,online,false
+ME0235,Brick Mend Market,home_improvement,5211,CH,St. Gallen,store_and_online,false
+ME0236,Fix Fixe,home_improvement,5211,CH,Schaffhausen,store_and_online,false
+ME0237,Home Works,home_improvement,5211,CH,Interlaken,store_and_online,false
+ME0238,Brick Hardware,home_improvement,5211,DE,Freiburg,store_and_online,false
+ME0239,Hammer Supply,home_improvement,5211,CH,Zug,online,false
+ME0240,Brick Works,home_improvement,5211,CH,Lausanne,online,false
+ME0241,Growing Kids,kids_family,5945,CH,Lausanne,online,false
+ME0242,Sprout Toys,kids_family,5945,CH,Lucerne,online,false
+ME0243,Pebble Family,kids_family,5945,CH,Sion,store_and_online,false
+ME0244,Growing Toys,kids_family,5945,CH,Interlaken,store_and_online,false
+ME0245,Growing Family,kids_family,5945,CH,Vevey,online,false
+ME0246,Little Steps,kids_family,5945,DE,Hamburg,online,false
+ME0247,Bright Steps,kids_family,5945,CH,Biel,store_and_online,false
+ME0248,Tail and Bowl,pet_care,5995,CH,Biel,online,true
+ME0249,Whisker Pet Store,pet_care,5995,CH,Schaffhausen,online,false
+ME0250,Kibble Pet Store,pet_care,5995,CH,Bern,store_and_online,true
+ME0251,Furry and Bowl,pet_care,5995,DE,Berlin,store_and_online,true
+ME0252,Whisker and Bowl,pet_care,5995,CH,Olten,online,false
+ME0253,Kibble and Whisker,pet_care,5995,CH,Geneva,online,false
+ME0254,Well Care,health,5912,CH,Basel,store,false
+ME0255,Care Clinic,health,5912,CH,Zug,store_and_online,false
+ME0256,Bahnhof Care,health,5912,CH,Basel,store_and_online,false
+ME0257,Alpine Physio,health,5912,CH,Aarau,store,false
+ME0258,Green Cross Drugstore,health,5912,CH,Chur,store,false
+ME0259,Bahnhof Physio,health,5912,CH,Basel,store_and_online,false
+ME0260,Well Wellness,health,5912,CH,Schaffhausen,store,false
+ME0261,Lake Care,health,5912,CH,Aarau,store_and_online,false
+ME0262,Central Apotheke,health,5912,CH,Biel,store,false
+ME0263,Vital Wellness,health,5912,CH,Interlaken,store,false
+ME0264,Harbour Stay,hotel,7011,CH,Lausanne,online,false
+ME0265,Old Town Nest Hotel,hotel,7011,CH,Lucerne,online,false
+ME0266,Harbour Hotel,hotel,7011,IT,Turin,online,false
+ME0267,River Nest Hotel,hotel,7011,CH,Thun,online,false
+ME0268,Summit Stay,hotel,7011,CH,St. Gallen,online,false
+ME0269,Quiet Nest Hotel,hotel,7011,CH,Vevey,online,false
+ME0270,Summit Suites,hotel,7011,AT,Bregenz,online,false
+ME0271,Pine Inn,hotel,7011,CH,Biel,online,false
+ME0272,River Rooms,hotel,7011,FR,Annecy,online,false
+ME0273,Lake Hotel,hotel,7011,GB,London,online,false
+ME0274,Station Nest Hotel,hotel,7011,IT,Varese,online,false
+ME0275,Station Hotel,hotel,7011,FR,Strasbourg,online,false
+ME0276,Sky Voyages,travel,4722,NL,Utrecht,online,false
+ME0277,Compass Tickets,travel,4722,DE,Frankfurt,online,false
+ME0278,Blue Trail Tickets,travel,4722,CH,Zurich,online,false
+ME0279,Trans Way,travel,4722,DE,Hamburg,online,false
+ME0280,Euro Routes,travel,4722,NL,Amsterdam,online,false
+ME0281,Compass Routes,travel,4722,CH,Zurich,online,false
+ME0282,Sky Fares,travel,4722,DE,Hamburg,online,false
+ME0283,Focus and Film,photography,7221,DE,Freiburg,store_and_online,false
+ME0284,Silver Works,photography,7221,FR,Mulhouse,store_and_online,false
+ME0285,Shutter Trail,photography,7221,FR,Strasbourg,online,false
+ME0286,Light Lab,photography,7221,DE,Stuttgart,store_and_online,false
+ME0287,Silver Lab,photography,7221,CH,Bern,store_and_online,false
+ME0288,Spotlight Box Office,entertainment,7929,CH,Chur,online,false
+ME0289,Stage Garden,entertainment,7929,CH,Zug,online,false
+ME0290,Encore Box Office,entertainment,7929,CH,Lucerne,online,false
+ME0291,Curtain Box Office,entertainment,7929,CH,Bern,online,false
+ME0292,Arena Box Office,entertainment,7929,CH,Geneva,store_and_online,false
+ME0293,Screen Forge,entertainment,7929,CH,Thun,online,false
+ME0294,Arena Tickets,entertainment,7929,CH,Basel,online,false
+ME0295,Work Apps,software,7372,NL,Amsterdam,online,true
+ME0296,Stack Canvas,software,7372,US,Austin,online,true
+ME0297,Plain Apps,software,7372,CH,Chur,online,true
+ME0298,Sync Studio,software,7372,GB,Edinburgh,online,true
+ME0299,Sync Tools,software,7372,CH,Chur,online,true
+ME0300,Plain Suite,software,7372,GB,Manchester,online,true
+ME0301,Draft Apps,software,7372,CH,Sion,online,true
+ME0302,Plain Labs,software,7372,NL,Utrecht,online,true
+ME0303,Vector Suite,software,7372,GB,Bristol,online,true
+ME0304,Canvas Tools,software,7372,NL,Utrecht,online,true
+ME0305,Re Wise,sustainable_goods,5399,CH,Bern,store,false
+ME0306,Green Station,sustainable_goods,5399,CH,Zug,store_and_online,false
+ME0307,Repair Store,sustainable_goods,5399,CH,Bern,store_and_online,false
+ME0308,Green Loop,sustainable_goods,5399,CH,Vevey,store,false
+ME0309,Second Life Goods,sustainable_goods,5399,CH,Fribourg,store,false
+ME0310,Room Living,household,5399,CH,Chur,store_and_online,false
+ME0311,Nest Kind,household,5399,NL,Rotterdam,store_and_online,false
+ME0312,Linen Living,household,5399,NL,Eindhoven,store_and_online,false
+ME0313,Home Ware,household,5399,CH,Basel,store_and_online,false
+ME0314,Hearth and Pine,household,5399,CH,Fribourg,store_and_online,false
+ME0315,Room and Home,household,5399,CH,Bern,online,false
+ME0316,Home Store,household,5399,CH,Zug,online,false
+ME0317,Tidy Living,household,5399,CH,Interlaken,online,false
+ME0318,Station Point,cash_withdrawal,6011,CH,Basel,atm,false
+ME0319,Bahnhof Cash Point,cash_withdrawal,6011,CH,Olten,atm,false
+ME0320,Main Street ATM,cash_withdrawal,6011,CH,Zug,atm,false
+ME0321,Cash Point Central,cash_withdrawal,6011,IT,Milan,atm,false
+ME0322,Cash Cashpoint,cash_withdrawal,6011,IT,Varese,atm,false
+ME0323,Ash Weave Outlet,clothing,5651,US,Austin,online,false
+ME0324,Meadow Corner Store Store,groceries,5411,CH,Interlaken,online,false
+ME0325,London Leaf Bookss,books,5942,NL,Eindhoven,online,false
+ME0326,PixelHarbor Store,electronics,5732,CH,Lugano,online,false
+ME0327,Alpen Base Official,sporting_goods,5941,US,Portland,online,false
+ME0328,Kibble-Pet Store,pet_care,5995,NL,Amsterdam,online,true
+ME0329,Stack Canvas Direct,software,7372,DE,Konstanz,online,true
+ME0330,Whisker Pet Stoure,pet_care,5995,NL,Eindhoven,online,false
+ME0331,Vertical Athletics Store,sporting_goods,5941,DE,Cologne,online,false
+ME0332,Furry and Bowl Outlet,pet_care,5995,DE,Stuttgart,online,true
+ME0333,Pllain Labs,software,7372,NL,Rotterdam,online,true
+ME0334,Thames Weaves,clothing,5651,US,Seattle,online,false
+ME0335,Morning-Provisions,groceries,5411,GB,Edinburgh,online,false
+ME0336,Quiet and Quilll,books,5942,US,Austin,online,false
+ME0337,PlainLedger Direct,software,7372,GB,Manchester,online,true
+ME0338,Courner Foods,groceries,5411,GB,London,online,false
+ME0339,Signall Hub,electronics,5732,GB,London,online,false
+ME0340,Paper Corner Books Direct,books,5942,GB,London,online,false
+ME0341,Green Corner Stores,groceries,5411,US,Boston,online,false
+ME0342,Terrace Market Store,groceries,5411,CH,Winterthur,online,false
+ME0343,Terrace Larders,groceries,5411,NL,Amsterdam,online,false
+ME0344,Whisker and Bowll,pet_care,5995,CH,Vevey,online,false
+ME0345,Stride Spark Store,sporting_goods,5941,GB,London,online,false

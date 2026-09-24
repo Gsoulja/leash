@@ -1,0 +1,424 @@
+{
+  "generated_at": "2026-09-24T09:49:17+00:00",
+  "revision": "8fe5c24",
+  "summary": {
+    "pass": 5,
+    "fail": 0,
+    "info": 2
+  },
+  "claims": [
+    {
+      "id": "E-01",
+      "claim": "The engine is deterministic: identical inputs always produce identical verdicts",
+      "status": "pass",
+      "metric": "3 independent replays agree on all 45 purchases",
+      "evidence": [
+        "Verdict-table digest: `cf2fe9351ab42b6f`",
+        "No clock, database or model call takes part in `decide()`; it is a pure function.",
+        "A disagreement here would mean hidden state leaked into the domain."
+      ],
+      "detail": {
+        "digest": "cf2fe9351ab42b6f",
+        "replays": 3
+      }
+    },
+    {
+      "id": "E-02",
+      "claim": "Every verdict is pinned to a recorded baseline",
+      "status": "pass",
+      "metric": "45/45 purchases unchanged",
+      "evidence": [
+        "No verdict or reason code changed since the baseline was recorded."
+      ],
+      "detail": {
+        "changed": []
+      }
+    },
+    {
+      "id": "E-03",
+      "claim": "Ordinary purchases are not blocked: the verdict mix is reported, never assumed",
+      "status": "info",
+      "metric": "12 approve, 11 step_up, 22 decline of 45",
+      "evidence": [
+        "`SCEN0000`: 1 approve, 0 step_up, 0 decline",
+        "`SCEN0001`: 5 approve, 2 step_up, 3 decline",
+        "`SCEN0002`: 1 approve, 3 step_up, 8 decline",
+        "`SCEN0003`: 4 approve, 1 step_up, 6 decline",
+        "`SCEN0004`: 1 approve, 5 step_up, 5 decline",
+        "There is no expected-verdict column in the pack, so this is a measurement, not a score.",
+        "It exists so that a change which quietly raises the block rate is visible."
+      ],
+      "detail": {
+        "overall": {
+          "approve": 12,
+          "decline": 22,
+          "step_up": 11
+        },
+        "per_scenario": {
+          "SCEN0000": {
+            "approve": 1
+          },
+          "SCEN0001": {
+            "approve": 5,
+            "decline": 3,
+            "step_up": 2
+          },
+          "SCEN0002": {
+            "approve": 1,
+            "decline": 8,
+            "step_up": 3
+          },
+          "SCEN0003": {
+            "approve": 4,
+            "step_up": 1,
+            "decline": 6
+          },
+          "SCEN0004": {
+            "approve": 1,
+            "step_up": 5,
+            "decline": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "E-04",
+      "claim": "Every rule field the engine advertises is exercised by a real purchase",
+      "status": "pass",
+      "metric": "13/13 registry fields used \u00b7 13 checks fired \u00b7 17 distinct reason codes",
+      "evidence": [
+        "Checks that ran at least once: duplicate, fulfilment, items, known, once, period, price, returns, session, shoptype, size, split, text.",
+        "Reason codes observed: already_purchased, final_sale, instruction_in_shop_text, item_mismatch, lookalike_merchant, merchant_category, outside_purpose, over_order_limit, over_period_limit, possible_duplicate, possible_split, returns_too_short, returns_unknown, session_risk, size_mismatch, unfamiliar_merchant, unrequested_addon.",
+        "No registry field is left unexercised."
+      ],
+      "detail": {
+        "registry_fields": [
+          "authorization.billing_amount_chf",
+          "authorization.fulfillment_method",
+          "items.item_category",
+          "items.item_id",
+          "leash.items.max_quantity.v1",
+          "leash.items.size.v1",
+          "leash.items.unrequested_count.v1",
+          "leash.merchant.prior_purchases.v1",
+          "leash.order.return_days.v1",
+          "leash.orders.split_check.v1",
+          "leash.purchase.max_count.v2",
+          "leash.session.risk_score.v1",
+          "merchant.merchant_category"
+        ],
+        "used": [
+          "authorization.billing_amount_chf",
+          "authorization.fulfillment_method",
+          "items.item_category",
+          "items.item_id",
+          "leash.items.max_quantity.v1",
+          "leash.items.size.v1",
+          "leash.items.unrequested_count.v1",
+          "leash.merchant.prior_purchases.v1",
+          "leash.order.return_days.v1",
+          "leash.orders.split_check.v1",
+          "leash.purchase.max_count.v2",
+          "leash.session.risk_score.v1",
+          "merchant.merchant_category"
+        ],
+        "unexercised": [],
+        "checks_fired": [
+          "duplicate",
+          "fulfilment",
+          "items",
+          "known",
+          "once",
+          "period",
+          "price",
+          "returns",
+          "session",
+          "shoptype",
+          "size",
+          "split",
+          "text"
+        ],
+        "reason_codes": [
+          "already_purchased",
+          "final_sale",
+          "instruction_in_shop_text",
+          "item_mismatch",
+          "lookalike_merchant",
+          "merchant_category",
+          "outside_purpose",
+          "over_order_limit",
+          "over_period_limit",
+          "possible_duplicate",
+          "possible_split",
+          "returns_too_short",
+          "returns_unknown",
+          "session_risk",
+          "size_mismatch",
+          "unfamiliar_merchant",
+          "unrequested_addon"
+        ]
+      }
+    },
+    {
+      "id": "E-05",
+      "claim": "A model, a mandate change or merchant text can never loosen a verdict",
+      "status": "pass",
+      "metric": "992/992 offline tests passed",
+      "evidence": [
+        "Tightening a mandate never makes any of the 45 verdicts less strict.",
+        "Model-supplied facts never make a verdict less strict than the deterministic one.",
+        "Merchant text never changes the status of a limit check.",
+        "A mandate rule the engine cannot evaluate never approves.",
+        "Proven by the seeded property suite and the domain rules under tests/domain, tests/policy, tests/property, tests/application, tests/contracts."
+      ],
+      "detail": {
+        "suites": [
+          "tests/domain",
+          "tests/policy",
+          "tests/property",
+          "tests/application",
+          "tests/contracts"
+        ],
+        "tests": 992,
+        "passed": 992,
+        "failures": []
+      }
+    },
+    {
+      "id": "E-06",
+      "claim": "Every verdict that rests on our own assumption rather than the brief is declared",
+      "status": "info",
+      "metric": "the largest single assumption controls 7/45 verdicts",
+      "evidence": [
+        "**DEC-013** \u2014 Singular wording means buy it once: decides 5/45 verdicts, and appears in 21 explanations.",
+        "**DEC-014** \u2014 \"A shop I use regularly\" = 3 earlier approved purchases: decides 7/45 verdicts, and appears in 7 explanations.",
+        "**DEC-022** \u2014 \"For delivery\" is an enforceable fulfilment rule: decides 0/45 verdicts, and appears in 0 explanations.",
+        "**DEC-024** \u2014 Session risk scoring v1: decides 1/45 verdicts, and appears in 5 explanations.",
+        "**DEC-023** \u2014 Split-order detection is on: decides 3/45 verdicts, and appears in 3 explanations.",
+        "**Uncertainty policy** set to `approve` instead of `ask`: moves 1/45.",
+        "**Uncertainty policy** set to `decline` instead of `ask`: moves 11/45.",
+        "Each row re-runs all 45 purchases with that assumption removed and counts what moves.",
+        "A verdict can survive an assumption being wrong and still lose the reason it was explained with.",
+        "These are the questions whose answers would change the most, listed in `docs/decisions.md`."
+      ],
+      "detail": {
+        "DEC-013": {
+          "description": "Singular wording means buy it once",
+          "fields": [
+            "leash.purchase.max_count.v2",
+            "leash.items.max_quantity.v1"
+          ],
+          "verdicts_controlled": 5,
+          "explanations_affected": 21,
+          "purchases": [
+            "AU0019",
+            "AU0023",
+            "AU0038",
+            "AU0042",
+            "AU0045"
+          ]
+        },
+        "DEC-014": {
+          "description": "\"A shop I use regularly\" = 3 earlier approved purchases",
+          "fields": [
+            "leash.merchant.prior_purchases.v1"
+          ],
+          "verdicts_controlled": 7,
+          "explanations_affected": 7,
+          "purchases": [
+            "AU0027",
+            "AU0028",
+            "AU0029",
+            "AU0030",
+            "AU0033",
+            "AU0039",
+            "AU0044"
+          ]
+        },
+        "DEC-022": {
+          "description": "\"For delivery\" is an enforceable fulfilment rule",
+          "fields": [
+            "authorization.fulfillment_method"
+          ],
+          "verdicts_controlled": 0,
+          "explanations_affected": 0,
+          "purchases": []
+        },
+        "DEC-024": {
+          "description": "Session risk scoring v1",
+          "fields": [
+            "leash.session.risk_score.v1"
+          ],
+          "verdicts_controlled": 1,
+          "explanations_affected": 5,
+          "purchases": [
+            "AU0026"
+          ]
+        },
+        "DEC-023": {
+          "description": "Split-order detection is on",
+          "fields": [
+            "leash.orders.split_check.v1"
+          ],
+          "verdicts_controlled": 3,
+          "explanations_affected": 3,
+          "purchases": [
+            "AU0006",
+            "AU0007",
+            "AU0008"
+          ]
+        },
+        "uncertainty:approve": {
+          "verdicts_controlled": 1,
+          "explanations_affected": 2,
+          "purchases": [
+            "AU0026"
+          ]
+        },
+        "uncertainty:decline": {
+          "verdicts_controlled": 11,
+          "explanations_affected": 11,
+          "purchases": [
+            "AU0006",
+            "AU0007",
+            "AU0016",
+            "AU0019",
+            "AU0023",
+            "AU0026",
+            "AU0036",
+            "AU0038",
+            "AU0040",
+            "AU0042",
+            "AU0045"
+          ]
+        }
+      }
+    },
+    {
+      "id": "E-07",
+      "claim": "No approach that only changes fact reading is ever less strict than the reference",
+      "status": "pass",
+      "metric": "4 approaches compared, 0 safety breaches",
+      "evidence": [
+        "`regex`: 12 approve / 11 step_up / 22 decline \u00b7 0 stricter, 0 looser than `regex` \u00b7 90 facts read \u00b7 0.58 ms/purchase",
+        "`blind`: 11 approve / 14 step_up / 20 decline \u00b7 1 stricter, 2 looser than `regex` \u00b7 0 facts read \u00b7 0.51 ms/purchase",
+        "`policy-decline`: 12 approve / 0 step_up / 33 decline \u00b7 11 stricter, 0 looser than `regex` \u00b7 90 facts read \u00b7 0.53 ms/purchase",
+        "`policy-approve`: 13 approve / 10 step_up / 22 decline \u00b7 0 stricter, 1 looser than `regex` \u00b7 90 facts read \u00b7 0.67 ms/purchase"
+      ],
+      "detail": {
+        "results": [
+          {
+            "approach": "regex",
+            "description": "Deterministic regex reader, hand-compiled mandates (the reference)",
+            "verdicts": {
+              "approve": 12,
+              "decline": 22,
+              "step_up": 11
+            },
+            "facts_established": {
+              "size": 23,
+              "return_days": 31,
+              "final_sale": 32,
+              "injection": 2,
+              "addons": 2
+            },
+            "deterministic": true,
+            "ms_per_purchase": 0.578,
+            "digest": "cf2fe9351ab42b6f",
+            "safety_gate": true,
+            "stricter": [],
+            "looser": [],
+            "breached": false
+          },
+          {
+            "approach": "blind",
+            "description": "No merchant text read at all: the floor every reader must improve on",
+            "verdicts": {
+              "approve": 11,
+              "decline": 20,
+              "step_up": 14
+            },
+            "facts_established": {
+              "size": 0,
+              "return_days": 0,
+              "final_sale": 0,
+              "injection": 0,
+              "addons": 0
+            },
+            "deterministic": true,
+            "ms_per_purchase": 0.509,
+            "digest": "08496c979b6daae9",
+            "safety_gate": false,
+            "stricter": [
+              "AU0012"
+            ],
+            "looser": [
+              "AU0013",
+              "AU0015"
+            ],
+            "breached": false
+          },
+          {
+            "approach": "policy-decline",
+            "description": "Uncertainty policy set to decline instead of ask",
+            "verdicts": {
+              "approve": 12,
+              "decline": 33
+            },
+            "facts_established": {
+              "size": 23,
+              "return_days": 31,
+              "final_sale": 32,
+              "injection": 2,
+              "addons": 2
+            },
+            "deterministic": true,
+            "ms_per_purchase": 0.529,
+            "digest": "97e5a149b8383381",
+            "safety_gate": false,
+            "stricter": [
+              "AU0006",
+              "AU0007",
+              "AU0016",
+              "AU0019",
+              "AU0023",
+              "AU0026",
+              "AU0036",
+              "AU0038",
+              "AU0040",
+              "AU0042",
+              "AU0045"
+            ],
+            "looser": [],
+            "breached": false
+          },
+          {
+            "approach": "policy-approve",
+            "description": "Uncertainty policy set to approve instead of ask",
+            "verdicts": {
+              "approve": 13,
+              "decline": 22,
+              "step_up": 10
+            },
+            "facts_established": {
+              "size": 23,
+              "return_days": 31,
+              "final_sale": 32,
+              "injection": 2,
+              "addons": 2
+            },
+            "deterministic": true,
+            "ms_per_purchase": 0.671,
+            "digest": "5850a316d4871f7f",
+            "safety_gate": false,
+            "stricter": [],
+            "looser": [
+              "AU0026"
+            ],
+            "breached": false
+          }
+        ]
+      }
+    }
+  ]
+}

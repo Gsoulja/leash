@@ -1,6 +1,6 @@
 # Leash — Viseca "Agent on a Leash" challenge
 
-We are building the **wallet control layer** for AI shopping agents (Swiss {ai} Weeks 2026, Viseca). For every purchase an agent proposes, the engine returns `approve`, `decline` or `step_up` (ask the customer), explains why, and remembers state. We do **not** build the scored shopping agent (Viseca's simulator plays it). Our own shop assistant is a demo add-on that goes through the same engine as any other untrusted agent.
+We are building the **wallet control layer** for AI shopping agents (Swiss {ai} Weeks 2026, Viseca). For every purchase an agent proposes, the engine returns `approve`, `decline` or `step_up` (ask the customer), explains why, and remembers state. We do **not** build the scored shopping agent (Viseca's simulator plays it). Leash’s permission assistant clarifies intent and proposes draft rules only; product search and order preparation belong to the external agent. The 2026-09-24 agreement and DEC-033–037 supersede the earlier own-shop-assistant demo scope.
 
 ## Repository layout
 
@@ -27,6 +27,8 @@ Read `technical_details.md` and `data/data_dictionary.md` before touching anythi
 - **Deadlines:** `deadline_at` is authoritative (8 s from queueing by default). The watchdog sends a safe `step_up` when remaining time drops below a margin covering lock wait and sending. The human window and other timeouts come from `/v1/bootstrap`, never constants. Readers get at most 1 s.
 - **Money:** `Decimal`, half-even rounding to cents, convert with the row's `currency` (never the merchant's country). `billing_amount_chf` already includes delivery.
 - **Missing is not permission.** `null` and `"unknown"` are missing facts: they lead to the uncertainty policy, never to a pass.
+- **Customer context is not authority.** Profile preferences and scoped earlier history can suggest questions, never silently grant permission. Preserve source references and check both invented and omitted conditions.
+- **Unconfirmed drafts may be corrected.** Create a new revision, preserve the transcript, invalidate stale confirmation actions and re-review; submitted platform drafts remain immutable. This does not loosen active mandates.
 - **Mandates only tighten, by appending.** Existing `hard_rules` are never removed or replaced; a stricter rule is added and the strictest rule per field wins. `uncertainty_policy` can only move to `decline`.
 - **The mandate inside the live event is authoritative for its run.** Compile it from `hard_rules` through the field registry; never re-interpret the instruction text; the local copy only cross-checks. Every enforceable permission is a `hard_rule` (`guidance` never reaches live events).
 - **An unsupported mandate rule never approves** (`step_up`, or `decline` under a decline policy; reason `unsupported_mandate_rule`).
@@ -75,7 +77,7 @@ Avoid: a model making approve/decline calls, `float` money, naive datetimes, glo
 - **Backend:** Python 3.12 managed with `uv`, FastAPI, Pydantic v2, asyncpg, httpx, Alembic.
 - **Database:** Postgres 17 (Docker Compose for local). `NUMERIC(12,2)` for money, `timestamptz` everywhere, per-card `pg_advisory_xact_lock` around each decision and each customer resolution.
 - **Frontend (planned):** React + TypeScript + Vite, TanStack Query, `EventSource` for asks. Reuse the prototype's design tokens (one-app look). No Next.js, no React Native.
-- **Model:** Laya (`laya-multilingual` base), loaded once at startup, called with a 1 s timeout. Training pipeline in `solution/docs/laya-training-pipeline.html`.
+- **Model plan:** the current checkout worker uses regex. Optional Laya shop-text reading is planned in `solution/docs/laya-training-pipeline.html`; permission verification is a separate baseline/evaluation task (LEASH-155). No model may activate permission or approve payment. Model choice, fine-tuning need and verifier release thresholds remain open.
 
 ## Development workflow: TDD
 
@@ -121,7 +123,7 @@ uv run pytest -x -q     # stop at first failure while doing TDD
 ## Planning
 
 - **Board:** `solution/kanban/`, one ticket per file, worked with `/graphloop`. Only a human moves tickets to `done/`.
-- **Milestones:** M0 contracts and decisions → M1 SCEN0000 offline slice → M2 all scenarios offline → M3 durable fake-API integration → M4 customer-control journey → M5 hosted API and release → M6 differentiators (Laya training, shop assistant, inspector) after the MVP.
+- **Milestones:** M0 contracts and decisions → M1 SCEN0000 offline slice → M2 all scenarios offline → M3 durable fake-API integration → M4 customer-control journey → M5 hosted API and release → M6 optional shop-text modeling and inspector → M7 production hardening → M8 permission conversation, context, external-agent handoff and evaluated customer journey (DEC-033–037).
 - **Decision log:** `solution/docs/decisions.md`. A ticket that depends on a team decision or assumption cites its `DEC-` ID. Change the log before changing behaviour.
 - **Definition of Ready (light):** the ticket names its rule source (Viseca / team / assumption), gives one example and one edge case, and has no open decision that could change it.
 - **Release:** LEASH-128 is an evidence-based readiness gate; the freeze (LEASH-115) depends only on it.

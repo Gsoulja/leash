@@ -74,6 +74,20 @@ Reviewed with the product owner on 2026-09-23. Tickets reference these IDs.
 | DEC-019 | End-user login is out of scope for the prototype. | Team | Accepted |
 | DEC-020 | MVP = milestones M0–M5. After MVP (M6): Laya training and inference (LEASH-073–082), shop assistant (LEASH-100–103), engine inspector (LEASH-097). The regex reader and its fallback wrapper (LEASH-070–072) stay in the MVP. | Team | Accepted |
 
+## Permission-control agreement — 2026-09-24
+
+Accepted product direction from the customer discussion; these are implementation requirements, not claims that the work is complete. DEC-033 supersedes the own-shopping-assistant scope in DEC-020. Earlier numerical defaults and Viseca contract rules remain unchanged unless a separate decision explicitly changes them.
+
+| ID | Decision | Source | Status |
+| --- | --- | --- | --- |
+| DEC-033 | Leash builds the permission/control layer. Its LLM clarifies and proposes rules; an external shopping agent searches and prepares orders. Viseca's simulator represents that agent in the challenge. No permission-LLM tool may activate authority, start shopping or decide payment. | Product owner, 2026-09-24 | Accepted |
+| DEC-034 | Background preferences and scoped earlier history inform questions, not authority. Preserve provenance and freshness; separate customer populations and current intent from inferred habits. Profile suggestions require explicit adoption and final confirmation. | Product owner, 2026-09-24 | Accepted |
+| DEC-035 | Review is derived from exact enforceable rules and uncertainty policy, with Must follow / May choose / Must ask. Unconfirmed corrections create a new local draft revision; stale review/confirm actions fail. Submitted platform drafts are immutable; active mandates retain DEC-006. Consent binds the reviewed revision. | Product owner, 2026-09-24 | Accepted |
+| DEC-036 | Verify both support for proposed rules and omissions from source intent. Laya permission verification is separate from shop-text reading; evaluate a reviewed baseline, calibrate and use shadow mode before any active use. Fine-tune only when evidence justifies it. Model agreement never grants authority. | Product owner, 2026-09-24 | Accepted |
+| DEC-037 | Preserve evidence from conversation and context through confirmed permission, run, actual checkout, checks and platform outcome. A local approval is not platform acceptance, and neither proves delivery. Production requires authenticated consent and a controlled payment path; the credential protocol remains open. | Product owner, 2026-09-24 | Accepted |
+
+Open implementation choices: LLM, permission-verifier quality thresholds and training need, production customer authentication, external-agent identity and credential format. DEC-019 excludes login only from the prototype. Historical defaults such as DEC-013/014 must be visible interpretations in review, not falsely attributed to literal customer words; an unresolved chosen-product reference still requires clarification.
+
 ## Questions for the Viseca experts (LEASH-110)
 
 1. No answer within the human window: what does the platform record? (DEC-016)

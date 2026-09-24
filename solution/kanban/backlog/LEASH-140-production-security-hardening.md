@@ -6,7 +6,7 @@
 **Estimated Effort**: L
 **Milestone**: M7 — Production hardening
 **Rule source**: Engineering
-**Decisions**: none
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
 **Parent**: LEASH-129
 **Task ID**: 129-T11
 **Blocked by**: none
@@ -29,6 +29,9 @@ Financial authorization data and controls need defense in depth across infrastru
 - [ ] Stored sensitive fields are encrypted according to data classification.
 - [ ] Audit events are tamper-evident and identify their originating workload or operator process.
 - [ ] A threat model covers replay, tampering, prompt injection, denial of service and insider misuse.
+- [ ] Real-customer reads and mutations require authenticated identity and server-side customer/account/card ownership checks; permission-LLM credentials cannot impersonate customer confirmation.
+- [ ] Consent evidence binds the authenticated customer to the exact reviewed draft revision, payload and time; replayed, stale or cross-customer confirmations and purchase answers are rejected.
+- [ ] Production agent identity, scoped credentials and authoritative checkout ingestion are explicitly designed and tested so the agent cannot bypass Leash with general card authority. Simulator evidence alone does not satisfy this criterion.
 
 ## Technical Approach
 Apply controls at the edge, workload identity, database and storage layers; keep merchant text untrusted throughout.
@@ -38,6 +41,8 @@ Apply controls at the edge, workload identity, database and storage layers; keep
 - Blocks LEASH-143.
 
 ## Testing Requirements
+Include unauthenticated and cross-customer reads/mutations, forged consent, stale-revision replay and attempted bypass through agent credentials. The authentication mechanism and production credential protocol remain design decisions; no particular vendor or signing scheme is assumed.
+
 Add configuration tests and security integration tests for TLS enforcement, secret rotation, privilege denial, request limits and sensitive-data-safe audit output.
 
 ## Related Files

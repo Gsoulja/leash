@@ -1,0 +1,147 @@
+item_id,item_name,item_category,item_description,unit_price_min_chf,unit_price_typical_chf,unit_price_max_chf
+IT0001,Fresh produce selection,groceries,Seasonal fruit and vegetables; a typical weekly produce basket.,12.00,28.00,90.00
+IT0002,Pantry staples,groceries,"Long-lasting cupboard staples including rice, pasta, and tinned goods.",20.00,50.00,140.00
+IT0003,Breakfast supplies,groceries,"Bread, oats, and yoghurt for everyday breakfasts.",15.00,30.00,100.00
+IT0004,Weekly grocery basket,groceries,Food and household staples for one weekly shop.,45.00,95.00,180.00
+IT0005,Digital gift voucher,gift_card,Digital gift card spendable with the issuing merchant.,20.00,50.00,200.00
+IT0006,Kitchen storage containers,household,Reusable food containers in assorted sizes.,15.00,38.00,190.00
+IT0007,Household essentials,household,Shared consumables and common household refills.,20.00,70.00,180.00
+IT0008,Cleaning supplies,household,Surface and laundry cleaning products in standard pack sizes.,12.00,45.00,110.00
+IT0009,Everyday waterproof jacket,clothing,Waterproof everyday jacket with a standard return window.,60.00,140.00,280.00
+IT0010,Waterproof work jacket,clothing,Waterproof jacket suited to working days.,55.00,120.00,240.00
+IT0011,Waterproof rain coat,clothing,Lightweight waterproof rain coat with a shorter return window.,50.00,130.00,260.00
+IT0012,Hotel room,hotel,Hotel room booking; cancellation terms vary by rate and are carried on the order.,130.00,280.00,620.00
+IT0013,Serviced apartment stay,hotel,Serviced apartment booking; cancellation terms vary by rate and are carried on the order.,130.00,280.00,620.00
+IT0014,Road-running shoes,sporting_goods,Road-running shoes available in standard sizes.,70.00,140.00,240.00
+IT0015,Monthly learning subscription,subscriptions,One month of a digital learning subscription.,8.00,19.00,70.00
+IT0016,Premium membership,membership,Premium tier of a digital learning service for one month.,15.00,30.00,90.00
+IT0017,27-inch computer monitor,electronics,27-inch computer monitor covered by a standard manufacturer warranty.,140.00,270.00,650.00
+IT0018,Fresh produce order,groceries,Standing fresh produce order with seasonal contents.,12.00,42.00,90.00
+IT0019,Pantry restock,groceries,Restock of shared household pantry staples.,20.00,60.00,140.00
+IT0020,Family breakfast supplies,groceries,Breakfast staples sized for a family.,15.00,45.00,100.00
+IT0021,Regional rail ticket,transport,Single journey ticket on regional public transport.,8.00,28.00,80.00
+IT0022,Monthly transit pass,transport,Monthly pass for unlimited regional public transport.,60.00,90.00,140.00
+IT0023,Airport transfer,transport,Prepaid transfer between the city and the airport.,35.00,75.00,150.00
+IT0024,City day pass,transport,Day pass for unlimited travel within one city zone.,5.00,12.00,30.00
+IT0025,Fuel purchase,fuel,Standard fuel fill at a service station.,35.00,75.00,130.00
+IT0026,Electric vehicle charging session,fuel,One electric-vehicle charging session.,10.00,30.00,65.00
+IT0027,Motorway service stop,fuel,Fuel and refreshments at a motorway service area.,10.00,35.00,90.00
+IT0028,Fuel and car wash,fuel,Fuel purchase combined with a car wash.,45.00,90.00,145.00
+IT0029,Dinner reservation,dining,Reserved dinner for one or more guests.,35.00,85.00,160.00
+IT0030,Lunch order,dining,Quick lunch order at a café or counter.,15.00,35.00,70.00
+IT0031,Team meal,dining,Shared meal for a small team.,60.00,140.00,280.00
+IT0032,Weekend brunch,dining,Weekend brunch for a small group.,20.00,55.00,110.00
+IT0033,Dinner delivery,food_delivery,Prepared dinner delivered to the door.,25.00,50.00,90.00
+IT0034,Late-shift meal,food_delivery,Prepared meal ordered outside standard hours.,18.00,35.00,70.00
+IT0035,Family meal delivery,food_delivery,Family-sized prepared meal delivered to the door.,40.00,70.00,120.00
+IT0036,Prepared lunch order,food_delivery,Prepared lunch ordered online for pickup or delivery.,15.00,30.00,60.00
+IT0037,Monthly media subscription,subscriptions,One month of a digital media streaming subscription.,8.00,16.00,28.00
+IT0038,Cloud storage plan,subscriptions,Monthly cloud storage plan.,3.00,10.00,24.00
+IT0039,Digital newspaper plan,subscriptions,Monthly digital newspaper subscription.,8.00,18.00,35.00
+IT0040,Music plan,subscriptions,Monthly music streaming subscription.,8.00,14.00,24.00
+IT0041,Paperback book order,books,Paperback book order from a bookseller.,10.00,25.00,55.00
+IT0042,Professional reference book,books,Technical reference or professional book.,35.00,70.00,140.00
+IT0043,Children's book set,books,Set of children's books with clear pricing.,18.00,40.00,85.00
+IT0044,E-book bundle,books,Bundle of digital books on a single purchase.,12.00,35.00,75.00
+IT0045,Noise-cancelling headphones,electronics,Noise-cancelling headphones from a specialist electronics seller.,60.00,190.00,420.00
+IT0046,Computer monitor,electronics,Computer monitor with a standard seller warranty.,140.00,320.00,650.00
+IT0047,Phone charger,electronics,Phone charger and cable accessory.,10.00,30.00,85.00
+IT0048,Tablet accessory,electronics,Tablet accessory such as a cover or keyboard.,15.00,60.00,180.00
+IT0049,Everyday jacket,clothing,Everyday jacket for regular wear.,60.00,140.00,280.00
+IT0050,Work shoes,clothing,Work shoes for regular professional use.,55.00,120.00,240.00
+IT0051,Seasonal clothing order,clothing,Seasonal clothing order from a familiar retailer.,35.00,100.00,260.00
+IT0052,Rain coat,clothing,Rain coat with a clear return window.,50.00,130.00,260.00
+IT0053,Running shoes,sporting_goods,Running shoes available in standard sizes.,70.00,140.00,240.00
+IT0054,Hiking boots,sporting_goods,Hiking boots for trail use.,90.00,180.00,320.00
+IT0055,Cycling accessories,sporting_goods,Cycling accessories from a specialist retailer.,15.00,75.00,250.00
+IT0056,Training equipment,sporting_goods,Training equipment for home or gym use.,20.00,90.00,300.00
+IT0057,Wall paint and brushes,home_improvement,Wall paint and brushes for a renovation project.,45.00,120.00,260.00
+IT0058,Tool set,home_improvement,Tool set for home repair work.,40.00,150.00,480.00
+IT0059,Shelving materials,home_improvement,Shelving materials sized for one room.,30.00,140.00,420.00
+IT0060,Kitchen repair parts,home_improvement,Spare parts for kitchen repairs.,15.00,80.00,260.00
+IT0061,Personal care set,cosmetics,"Everyday personal care and cosmetics such as skincare, toiletries, and grooming products.",10.00,35.00,120.00
+IT0062,Fragrance and beauty gift,cosmetics,Fragrance or beauty product of the kind usually bought as a personal treat rather than a household staple.,25.00,70.00,220.00
+IT0063,Trail-running shoes,sporting_goods,"Off-road running shoes with a lugged sole, sold in standard sizes.",80.00,150.00,260.00
+IT0064,Cycling helmet,sporting_goods,Road cycling helmet sold in standard sizes.,50.00,110.00,250.00
+IT0065,Running socks,sporting_goods,"Technical running socks, usually sold in packs.",8.00,18.00,40.00
+IT0066,Extended protection plan,subscriptions,Optional add-on service extending repair cover beyond the seller warranty.,25.00,79.00,180.00
+IT0101,Laptop computer,electronics,"Mid-range laptop for everyday and office use, covered by a standard manufacturer warranty.",550.00,950.00,2400.00
+IT0102,Smartwatch,electronics,"Smartwatch with fitness tracking, sold with a standard seller warranty.",120.00,260.00,650.00
+IT0103,Wireless keyboard and mouse,electronics,Wireless keyboard and mouse set for desktop use.,30.00,70.00,180.00
+IT0104,USB-C hub,electronics,Multi-port USB-C hub for laptops.,20.00,45.00,120.00
+IT0105,Printer ink cartridges,electronics,Replacement ink cartridges in a multipack.,25.00,55.00,130.00
+IT0106,32-inch computer monitor,electronics,32-inch computer monitor covered by a standard manufacturer warranty.,220.00,380.00,900.00
+IT0107,Espresso machine,household,Countertop espresso machine with a two-year warranty.,120.00,320.00,900.00
+IT0108,Vacuum cleaner,household,Cordless stick vacuum cleaner.,90.00,260.00,700.00
+IT0109,Bed linen set,household,Cotton bed linen set in standard sizes.,25.00,55.00,180.00
+IT0110,Towels and bath set,household,Bath towel set in standard sizes.,20.00,45.00,140.00
+IT0111,Light bulbs and batteries,household,Household consumables such as bulbs and batteries.,8.00,22.00,70.00
+IT0112,Winter boots,clothing,Insulated winter boots sold in standard sizes.,70.00,160.00,320.00
+IT0113,Children's rainwear,clothing,Children's rain jacket and trousers in age sizes.,25.00,60.00,150.00
+IT0114,Sports jersey,clothing,Team sports jersey in standard sizes.,40.00,90.00,180.00
+IT0115,Formal shirt,clothing,Formal shirt sold in collar sizes.,35.00,80.00,200.00
+IT0116,Ski jacket,clothing,Insulated ski jacket in standard sizes.,120.00,280.00,700.00
+IT0117,Hiking backpack,sporting_goods,Daypack or trekking backpack sized in litres.,40.00,120.00,320.00
+IT0118,Climbing harness,sporting_goods,Climbing harness sold in standard sizes.,50.00,90.00,200.00
+IT0119,Yoga mat,sporting_goods,Non-slip yoga mat.,20.00,45.00,120.00
+IT0120,Ski rental,sporting_goods,Multi-day ski and boot rental.,60.00,150.00,400.00
+IT0121,Bicycle tyres,sporting_goods,Pair of road or gravel bicycle tyres.,30.00,80.00,180.00
+IT0122,Fitness tracker,sporting_goods,Wrist fitness tracker with heart-rate monitoring.,40.00,110.00,300.00
+IT0123,Camera lens,photography,"Interchangeable camera lens from a specialist shop, with a return window.",250.00,620.00,2400.00
+IT0124,Tripod,photography,Camera tripod with a standard head.,45.00,160.00,600.00
+IT0125,Memory card set,photography,High-speed memory cards in a multipack.,30.00,90.00,300.00
+IT0126,Photo printing order,photography,Printed photographs or a photo book.,15.00,60.00,300.00
+IT0127,Concert tickets,entertainment,Standard admission concert tickets from a ticket seller.,35.00,95.00,320.00
+IT0128,Festival day ticket,entertainment,One-day festival admission.,40.00,95.00,260.00
+IT0129,Cinema tickets,entertainment,Cinema admission for one or more people.,12.00,40.00,120.00
+IT0130,Museum passes,entertainment,Museum admission passes.,10.00,35.00,120.00
+IT0131,VIP upgrade,entertainment,Premium or VIP ticket tier upgrade for an event.,60.00,180.00,600.00
+IT0132,Economy flight ticket,travel,Economy class flight ticket; fare rules are carried on the order.,60.00,220.00,900.00
+IT0133,Return train booking,travel,Return international train booking.,60.00,190.00,500.00
+IT0134,Ferry booking,travel,Ferry crossing booking for passengers and optionally a vehicle.,40.00,160.00,700.00
+IT0135,Travel luggage fee,travel,Checked baggage fee added to a flight booking.,25.00,60.00,200.00
+IT0136,Travel insurance add-on,travel,Optional travel insurance offered at checkout.,15.00,45.00,200.00
+IT0137,Pet food delivery,pet_care,Standing order of pet food in the usual formula.,25.00,55.00,160.00
+IT0138,"Pet food, sensitive formula",pet_care,Pet food in a veterinary sensitive-digestion formula.,35.00,75.00,200.00
+IT0139,Pet supplements,pet_care,Joint or coat supplements for pets.,15.00,40.00,120.00
+IT0140,Pet bedding,pet_care,Washable pet bed or bedding.,20.00,50.00,180.00
+IT0141,Veterinary supplies,pet_care,Routine care products such as flea and worm treatments.,15.00,45.00,150.00
+IT0142,Pharmacy essentials,health,Over-the-counter pharmacy items.,8.00,30.00,120.00
+IT0143,Prescription co-payment,health,Co-payment for a prescription medicine.,5.00,25.00,150.00
+IT0144,First-aid supplies,health,First-aid kit contents and dressings.,10.00,30.00,90.00
+IT0145,Physiotherapy session,health,One physiotherapy session.,60.00,110.00,220.00
+IT0146,Vitamins and supplements,health,Daily vitamins or supplements.,10.00,35.00,120.00
+IT0147,Baby care supplies,kids_family,"Nappies, wipes, and baby toiletries.",15.00,45.00,150.00
+IT0148,School supplies,kids_family,Stationery and school supplies for one child.,15.00,50.00,160.00
+IT0149,Building toy set,kids_family,Construction toy set for children.,20.00,60.00,250.00
+IT0150,Car seat,kids_family,Child car seat meeting current safety standards.,120.00,280.00,600.00
+IT0151,Second-life clothing order,sustainable_goods,Pre-owned clothing from a second-life store.,10.00,40.00,150.00
+IT0152,Refurbished phone,sustainable_goods,"Refurbished smartphone graded by condition, with a seller warranty.",150.00,380.00,900.00
+IT0153,Repair service,sustainable_goods,Repair of a household item or garment.,15.00,45.00,200.00
+IT0154,Refillable household products,sustainable_goods,Refills for household cleaning products.,8.00,30.00,90.00
+IT0155,Annual media subscription,subscriptions,Twelve months of a digital media subscription billed upfront.,60.00,140.00,320.00
+IT0156,Fitness app subscription,subscriptions,One month of a fitness app subscription.,5.00,15.00,40.00
+IT0157,Language learning plan,subscriptions,One month of a language learning service.,8.00,18.00,45.00
+IT0158,Premium streaming tier,membership,Premium tier upgrade of a streaming service for one month.,12.00,25.00,60.00
+IT0159,Gym membership,membership,Monthly gym membership.,40.00,85.00,200.00
+IT0160,Store loyalty membership,membership,Paid annual loyalty membership with a retailer.,20.00,60.00,150.00
+IT0161,Prepaid gift card,gift_card,"Prepaid gift card for a retailer or platform, redeemable by anyone holding the code.",25.00,100.00,500.00
+IT0162,Bathroom fittings,home_improvement,"Taps, brackets, or other bathroom fittings.",30.00,120.00,500.00
+IT0163,Garden tools,home_improvement,Hand tools for garden work.,20.00,70.00,300.00
+IT0164,Flooring materials,home_improvement,Flooring materials sized for one room.,150.00,480.00,2500.00
+IT0165,Bakery and dairy order,groceries,"Bread, milk, cheese, and other fresh dairy.",8.00,22.00,70.00
+IT0166,Drinks and snacks,groceries,"Soft drinks, snacks, and party supplies.",10.00,30.00,120.00
+IT0167,Frozen food order,groceries,Frozen meals and ingredients.,12.00,35.00,110.00
+IT0168,Wine and spirits,groceries,Alcoholic beverages sold by a licensed retailer.,15.00,45.00,300.00
+IT0169,Weekly meal kit,food_delivery,Meal kit box with recipes and ingredients for one week.,40.00,75.00,160.00
+IT0170,Takeaway dinner,dining,Takeaway dinner collected from a restaurant.,15.00,35.00,90.00
+IT0171,"Hotel room, refundable rate",hotel,Hotel room at a refundable rate; cancellation terms are carried on the order.,110.00,240.00,600.00
+IT0172,"Hotel room, non-refundable rate",hotel,Hotel room at a discounted non-refundable rate.,90.00,190.00,480.00
+IT0173,Hostel bed,hotel,Bed in a shared hostel dormitory.,30.00,55.00,120.00
+IT0174,Skincare set,cosmetics,Everyday skincare products.,15.00,45.00,180.00
+IT0175,Audiobook credit,books,Credit for one audiobook.,8.00,15.00,40.00
+IT0176,Language textbook,books,Language course textbook with exercises.,25.00,55.00,120.00
+IT0177,Design software plan,software,Monthly design software licence.,15.00,55.00,150.00
+IT0178,Password manager plan,software,Annual password manager plan.,20.00,40.00,90.00
+IT0179,VPN subscription,software,Monthly VPN service subscription.,4.00,10.00,25.00
+IT0180,Accounting software plan,software,Monthly small-business accounting software plan.,15.00,40.00,120.00

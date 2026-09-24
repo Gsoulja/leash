@@ -94,12 +94,13 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
 <header>
   <span class="eyebrow">Agent on a Leash · Viseca challenge · design v0.1</span>
   <h1>Leash: system design</h1>
-  <p class="lede">A wallet control layer that decides whether an AI shopping agent may spend a customer's money, plus a shop assistant that has to pass through it like any other agent.</p>
+  <p class="lede">A wallet control layer that decides whether an AI shopping agent may spend a customer's money, with a permission assistant that proposes rules for customer review. Product search and order preparation belong to an external shopping agent.</p>
+  <p class="note"><strong>Scope updated 2026-09-24.</strong> This is a design, not a completion report. The <a href="product-notes.md">current product agreement</a> and DEC-033–037 govern permission context, draft revisions and external-agent handoff. Optional Laya components below remain planned.</p>
   <p class="note">Every team decision and assumption behind this design is in the <a href="decisions.md">decision log</a>; <code>DEC-</code> numbers below refer to it.</p>
   <div class="principles">
     <div class="principle"><h3>Rules decide, models advise</h3><p>Deterministic checks own every verdict. Laya can only add caution, never approve.</p></div>
     <div class="principle"><h3>Shop text is data</h3><p>Nothing in <code>item_details</code> or the agent's request can change the mandate.</p></div>
-    <div class="principle"><h3>Nothing bypasses the engine</h3><p>Our own assistant is just another untrusted client with no write access to mandates.</p></div>
+    <div class="principle"><h3>Nothing bypasses the engine</h3><p>The permission LLM cannot activate mandates, start purchases or call decision endpoints. External checkout events pass through the control engine.</p></div>
     <div class="principle"><h3>Predictable when degraded</h3><p>Model down means regex only; a fact a rule needs but regex can't establish follows the uncertainty policy. Deadline close means a safe <code>step_up</code>, never silent approval.</p></div>
   </div>
 </header>
@@ -108,7 +109,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
   <h2>Components and trust boundaries</h2>
   <figure>
     <div class="scroll">
-    <svg viewBox="0 0 1000 575" role="img" aria-label="Architecture: customer app and policy service manage mandates through the Viseca API; the decision engine long-polls purchase events, reads facts via regex and Laya, keeps state, and answers within 8 seconds; the shop assistant proposes purchases into the same engine as an untrusted client.">
+    <svg viewBox="0 0 1000 575" role="img" aria-label="Architecture: customer app and policy service manage mandates through the Viseca API; the decision engine long-polls purchase events, reads facts via regex and Laya, keeps state, and answers within 8 seconds; the permission assistant proposes drafts to the policy service and never purchases; external-agent checkout events arrive through Viseca.">
       <defs>
         <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker>
         <marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-w"/></marker>
@@ -121,11 +122,11 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
       <text x="130" y="68" text-anchor="middle" class="s">card owner, the only rule-maker</text>
 
       <rect x="400" y="24" width="200" height="60" rx="12" class="untrusted"/>
-      <text x="500" y="50" text-anchor="middle" class="t">Shop assistant</text>
-      <text x="500" y="68" text-anchor="middle" class="s">LLM chat · catalogue search</text>
+      <text x="500" y="50" text-anchor="middle" class="t">Permission assistant</text>
+      <text x="500" y="68" text-anchor="middle" class="s">LLM · context · draft proposals</text>
 
       <line x1="222" y1="54" x2="398" y2="54" class="e" marker-start="url(#m)" marker-end="url(#m)"/>
-      <text x="310" y="46" text-anchor="middle" class="lbl">chat, picks product</text>
+      <text x="310" y="46" text-anchor="middle" class="lbl">clarifies authority</text>
 
       <!-- customer app + policy -->
       <rect x="40" y="150" width="200" height="100" rx="12" class="n"/>
@@ -136,7 +137,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
 
       <rect x="40" y="310" width="200" height="100" rx="12" class="n"/>
       <text x="60" y="340" class="t">Policy service</text>
-      <text x="60" y="360" class="s">wish → hard_rules (+ Laya)</text>
+      <text x="60" y="360" class="s">validated draft → rules</text>
       <text x="60" y="377" class="s">mandate lifecycle</text>
       <text x="60" y="394" class="s">relays human answers</text>
 
@@ -164,7 +165,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
       <rect x="345" y="330" width="150" height="90" rx="10" class="n-in"/>
       <text x="360" y="357" class="t">Fact reader</text>
       <text x="360" y="376" class="s">regex: size, return days</text>
-      <text x="360" y="393" class="s">Laya on local GPU</text>
+      <text x="360" y="393" class="s">optional Laya reader</text>
       <text x="360" y="410" class="s">1 s timeout → fallback</text>
 
       <rect x="545" y="330" width="145" height="90" rx="10" class="n-in"/>
@@ -192,10 +193,9 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
       <line x1="318" y1="205" x2="242" y2="205" class="e-a" marker-end="url(#ma)"/>
       <text x="280" y="197" text-anchor="middle" class="lbl">asks, feed</text>
 
-      <!-- assistant -> engine (vision track) -->
-      <line x1="440" y1="86" x2="440" y2="203" class="e-w" marker-end="url(#mw)"/>
-      <text x="450" y="118" class="lbl-w">proposes purchase</text>
-      <text x="450" y="131" class="lbl-w">(vision track, local)</text>
+      <!-- Permission proposals go only to the policy service. -->
+      <path d="M400 78 H280 V350 H242" class="e-w" marker-end="url(#mw)"/>
+      <text x="290" y="118" class="lbl-w">draft only</text>
 
       <!-- Viseca API -->
       <rect x="800" y="140" width="170" height="340" rx="12" class="n"/>
@@ -224,7 +224,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
       <text x="424" y="562" class="s">decision path: must answer before deadline_at</text>
     </svg>
     </div>
-    <figcaption><b>Four deployable parts.</b> The customer app and policy service can ship inside Viseca one. The decision engine scales and deploys on its own. The only way into a verdict is the engine, and both the simulator's agent and our own assistant reach it as untrusted input. Mandates change only through the policy service after the customer confirms.</figcaption>
+    <figcaption><b>Four deployable parts.</b> The customer app and policy service can ship inside Viseca one. The decision engine scales and deploys on its own. The only way into a verdict is the engine, and external-agent checkout events reach it through the platform (the Viseca simulator in the challenge). The permission assistant has no payment path. Mandates change only through the policy service after the customer confirms.</figcaption>
   </figure>
 
   <div class="tablebox">
@@ -232,11 +232,11 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
       <thead><tr><th>Component</th><th>Owns</th><th>Must never</th><th>Suggested stack</th></tr></thead>
       <tbody>
         <tr><td>Customer app</td><td>Rule review, confirm, step-up prompt, agreed-vs-paid view, tighten and revoke</td><td>Invent a human answer</td><td>React + Vite, phone-width layout, SSE for asks</td></tr>
-        <tr><td>Policy service</td><td>Instruction → <code>hard_rules</code>, open questions, mandate CRUD, relaying <code>/resolve</code></td><td>Remove or loosen an existing rule</td><td>Python FastAPI</td></tr>
+        <tr><td>Policy service</td><td>Instruction → <code>hard_rules</code>, open questions, mandate CRUD, relaying <code>/resolve</code></td><td>Remove or loosen an active mandate rule; unconfirmed drafts use revision-safe corrections</td><td>Python FastAPI</td></tr>
         <tr><td>Decision engine</td><td>Worker loop, facts, rules, context checks, verdict, explanation</td><td>Let model output approve a purchase</td><td>Python asyncio, same service as the worker</td></tr>
         <tr><td>Fact reader</td><td>Regex extraction, Laya questions on <code>item_details</code></td><td>Block the deadline (hard 1 s timeout)</td><td>Laya preloaded on the RTX 5070 Ti</td></tr>
         <tr><td>State store</td><td>Final approvals, 7-day ledger, seen IDs, pending asks, card history index</td><td>Count a paused purchase as spend</td><td>Postgres 17 (DEC-001)</td></tr>
-        <tr><td>Shop assistant</td><td>Chat, catalogue search, drafting a mandate for the customer to confirm</td><td>Write mandates or call the decision API directly</td><td>LLM with tool calls over <code>items.csv</code> / <code>merchants.csv</code></td></tr>
+        <tr><td>Permission assistant</td><td>Clarification, relevant context, evidenced draft proposals</td><td>Activate authority, purchase, or call decision endpoints</td><td>LLM with scoped read-only context and draft proposals; optional reference lookup</td></tr>
       </tbody>
     </table>
   </div>

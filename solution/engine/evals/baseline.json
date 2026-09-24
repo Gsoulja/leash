@@ -1,0 +1,275 @@
+{
+  "digest": "cf2fe9351ab42b6f",
+  "purchases": {
+    "AU0001": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0002": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0003": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0004": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit"
+      ]
+    },
+    "AU0005": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0006": {
+      "verdict": "step_up",
+      "reasons": [
+        "possible_split"
+      ]
+    },
+    "AU0007": {
+      "verdict": "step_up",
+      "reasons": [
+        "outside_purpose"
+      ]
+    },
+    "AU0008": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0009": {
+      "verdict": "decline",
+      "reasons": [
+        "over_period_limit"
+      ]
+    },
+    "AU0010": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit",
+        "over_period_limit"
+      ]
+    },
+    "AU0011": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0012": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0013": {
+      "verdict": "decline",
+      "reasons": [
+        "already_purchased",
+        "size_mismatch"
+      ]
+    },
+    "AU0014": {
+      "verdict": "decline",
+      "reasons": [
+        "already_purchased",
+        "final_sale"
+      ]
+    },
+    "AU0015": {
+      "verdict": "decline",
+      "reasons": [
+        "already_purchased",
+        "returns_too_short"
+      ]
+    },
+    "AU0016": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased",
+        "returns_unknown"
+      ]
+    },
+    "AU0017": {
+      "verdict": "decline",
+      "reasons": [
+        "item_mismatch",
+        "already_purchased"
+      ]
+    },
+    "AU0018": {
+      "verdict": "decline",
+      "reasons": [
+        "unrequested_addon",
+        "already_purchased"
+      ]
+    },
+    "AU0019": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased"
+      ]
+    },
+    "AU0020": {
+      "verdict": "decline",
+      "reasons": [
+        "item_mismatch",
+        "already_purchased",
+        "size_mismatch"
+      ]
+    },
+    "AU0021": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit",
+        "already_purchased"
+      ]
+    },
+    "AU0022": {
+      "verdict": "decline",
+      "reasons": [
+        "merchant_category",
+        "already_purchased"
+      ]
+    },
+    "AU0023": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased"
+      ]
+    },
+    "AU0024": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0025": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0026": {
+      "verdict": "step_up",
+      "reasons": [
+        "session_risk"
+      ]
+    },
+    "AU0027": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant",
+        "session_risk"
+      ]
+    },
+    "AU0028": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant",
+        "session_risk"
+      ]
+    },
+    "AU0029": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant",
+        "session_risk"
+      ]
+    },
+    "AU0030": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant",
+        "session_risk"
+      ]
+    },
+    "AU0031": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0032": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0033": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant"
+      ]
+    },
+    "AU0034": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit"
+      ]
+    },
+    "AU0035": {
+      "verdict": "approve",
+      "reasons": []
+    },
+    "AU0036": {
+      "verdict": "step_up",
+      "reasons": [
+        "possible_duplicate",
+        "already_purchased"
+      ]
+    },
+    "AU0037": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit",
+        "already_purchased",
+        "instruction_in_shop_text"
+      ]
+    },
+    "AU0038": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased"
+      ]
+    },
+    "AU0039": {
+      "verdict": "decline",
+      "reasons": [
+        "lookalike_merchant",
+        "already_purchased"
+      ]
+    },
+    "AU0040": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased",
+        "instruction_in_shop_text"
+      ]
+    },
+    "AU0041": {
+      "verdict": "decline",
+      "reasons": [
+        "over_order_limit",
+        "unrequested_addon",
+        "already_purchased"
+      ]
+    },
+    "AU0042": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased"
+      ]
+    },
+    "AU0043": {
+      "verdict": "decline",
+      "reasons": [
+        "item_mismatch",
+        "already_purchased"
+      ]
+    },
+    "AU0044": {
+      "verdict": "decline",
+      "reasons": [
+        "unfamiliar_merchant",
+        "already_purchased"
+      ]
+    },
+    "AU0045": {
+      "verdict": "step_up",
+      "reasons": [
+        "already_purchased"
+      ]
+    }
+  }
+}

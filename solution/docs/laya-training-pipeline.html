@@ -96,13 +96,14 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
 
 <header>
   <span class="eyebrow">Agent on a Leash · model pipeline · design v0.1</span>
-  <h1>Laya training pipeline</h1>
-  <p class="lede">How we turn the open Laya checkpoint into the fact reader for the decision engine: data factory, proper-scoring fine-tune, calibration, a learned "ask me" head, and an adversarial loop, all gated before the engine loads a new version.</p>
+  <h1>Laya shop-text pipeline</h1>
+  <p class="note"><strong>Scope update · 2026-09-24.</strong> This page describes the optional merchant-text pipeline (LEASH-073–082). Permission verification is a separate baseline/evaluation task, LEASH-155, using reviewed conversation/context examples from LEASH-156. Fine-tuning is conditional on measured need; neither task grants authority. See the <a href="product-notes.md">current product agreement</a>.</p>
+  <p class="lede">Proposed tools for adapting a Laya checkpoint to shop-text reading after baseline evaluation, with training used only if justified: data factory, proper-scoring fine-tune, calibration, a learned "ask me" head, and an adversarial loop, all gated before the engine loads a new version.</p>
   <p class="note">This is after-MVP work (DEC-020): the regex reader ships first. Decisions referenced as <code>DEC-</code> are in the <a href="decisions.md">decision log</a>. Merge rule (DEC-009): Laya may add facts or warnings, never erase a regex warning, never turn a missing fact into a pass.</p>
   <div class="principles">
     <div class="principle"><h3>The model reads, it never decides</h3><p>Laya answers five questions about shop text. The rules engine owns approve and decline.</p></div>
     <div class="principle"><h3>Labels come from construction</h3><p>We plant every injection and add-on ourselves, so we know the answer without hand labelling.</p></div>
-    <div class="principle"><h3>The pack is exam, not homework</h3><p>The 56 real cart lines and one whole attack family never enter training.</p></div>
+    <div class="principle"><h3>The pack is exam, not homework</h3><p>The 56 supplied synthetic cart lines and one whole attack family never enter training.</p></div>
     <div class="principle"><h3>Ship only if it beats regex</h3><p>No model version reaches the engine unless it clears the gate against the regex fallback.</p></div>
   </div>
 </header>
@@ -247,7 +248,7 @@ split:   family=fake_preauth → train</pre>
         <tr><td>Calibration</td><td>10% of train families, untouched by the optimiser</td><td>Only used to fit temperatures and the ask head's cost check</td></tr>
         <tr><td>Eval: in-family</td><td>New lines from training families</td><td>Measures learning, not generalisation</td></tr>
         <tr><td>Eval: held-out</td><td>One full attack family, one language, NotInject</td><td>The number we report</td></tr>
-        <tr><td>Eval: pack</td><td>The 56 real cart lines</td><td>Must-pass list in the gate</td></tr>
+        <tr><td>Eval: pack</td><td>The 56 supplied synthetic cart lines</td><td>Must-pass list in the gate</td></tr>
       </tbody>
     </table>
   </div>
@@ -297,7 +298,7 @@ split:   family=fake_preauth → train</pre>
       <text x="500" y="226" text-anchor="middle" class="s">gold targets can be soft: a paraphrase the verifier is unsure about gets 0.8 / 0.2, not 1 / 0</text>
     </svg>
     </div>
-    <figcaption><b>Why a proper scoring rule matters here.</b> A proper score is maximised only by reporting your true belief. That property is what lets the engine read "0.62 injection" as a real 62% and choose between asking and trusting. The notebook pairs the policy gradient with a full cross-entropy term, so in practice this behaves like supervised training that also rewards honest confidence.</figcaption>
+    <figcaption><b>Why a proper scoring rule matters here.</b> A proper score is maximised only by reporting your true belief. That training objective does not make a particular score a guaranteed real-world probability. Calibration and held-out evaluation on the intended task are still required; confidence never grants payment authority. The notebook pairs the policy gradient with a full cross-entropy term, so in practice this behaves like supervised training that also rewards honest confidence.</figcaption>
   </figure>
   <div class="tablebox">
     <table>

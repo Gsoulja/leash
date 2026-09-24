@@ -85,3 +85,18 @@ Gated tickets are never worked automatically.
 ```
 
 Every ticket follows the TDD rules in [`../../CLAUDE.md`](../../CLAUDE.md): write the failing test named in *Testing Requirements* first.
+
+## Current permission-control plan
+
+Updated 2026-09-24 from the product agreement. Existing ticket IDs and filenames are retained for link stability; their titles and scope now describe Leash as a permission layer for external shopping agents. No implementation stage was advanced by this planning update.
+
+- Context and history: [LEASH-154](backlog/LEASH-154-customer-context-for-permission-clarification.md).
+- Permission extraction, evidence and draft corrections: [LEASH-101](backlog/LEASH-101-assistant-chat-with-mandate-drafting.md).
+- Conversation and exact revision review: LEASH-145 and [LEASH-146](backlog/LEASH-146-human-readable-permission-review.md).
+- External-agent handoff and checkout binding: [LEASH-102](backlog/LEASH-102-assistant-purchases-through-the-engine.md), with customer launch in LEASH-147.
+- Platform outcome truth: LEASH-130; UI projection: LEASH-148 and LEASH-150.
+- Reviewed corpus, context comparison and end-to-end safety evidence: [LEASH-156](backlog/LEASH-156-permission-journey-acceptance-evidence.md), required by the demo and production gates.
+- Optional Laya permission verification: [LEASH-155](backlog/LEASH-155-permission-verifier-baseline-and-evaluation.md). This reuses the reviewed corpus and does not block the baseline journey. LEASH-073–082 remain the separate merchant-text pipeline.
+- Production identity, authenticated consent and payment-path enforcement: LEASH-140 and LEASH-143. Prototype login remains out of scope under DEC-019.
+
+See [product agreement](../docs/product-notes.md#current-agreement--permission-control-for-external-shopping-agents), [decisions DEC-033–037](../docs/decisions.md#permission-control-agreement--2026-09-24), and [designer brief](../docs/customer-journey-for-design.md). The first baseline does not require TaskCard signing, multi-protocol adapters, Laya fine-tuning or an in-house shopping executor. Only documented evidence can justify those additions.

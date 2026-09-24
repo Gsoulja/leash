@@ -10,8 +10,8 @@
 **Parent**: LEASH-006
 **Task ID**: 006-T7
 **Blocked by**: LEASH-071, LEASH-075
-**Blocks**: LEASH-081
-**Updated**: 2026-09-23
+**Blocks**: LEASH-077, LEASH-081
+**Updated**: 2026-09-24
 
 ## Description
 Score the regex reader on every eval set to set the bar Laya must beat.
@@ -29,6 +29,7 @@ The release gate compares against this.
 ### Dependencies
 - Needs LEASH-071.
 - Needs LEASH-075.
+- Blocks LEASH-077.
 - Blocks LEASH-081.
 
 ## Testing Requirements
