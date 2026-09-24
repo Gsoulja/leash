@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#eceae5;font-family:Inter,system-ui,sans-serif}a{color:#5b5b55}a:hover{color:#1a1a1a}</style></helmet>
+
+<div style="padding:28px 32px 44px;display:flex;flex-direction:column;gap:26px;max-width:1280px">
+
+<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline">
+<div style="font:700 17px Inter,sans-serif;color:#1a1a1a">Information architecture &amp; storyboards</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#77776f">organization · hierarchy · sequence</div>
+</div>
+
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:600 13px Inter,sans-serif">1 · Organization — four groups, nothing else</div>
+<div style="font:400 12px/1.6 Inter,sans-serif;color:#66665f;max-width:760px">Every screen in the app belongs to exactly one of these. The grouping mirrors the user's mental model — <b>set the rules</b>, <b>watch the agent</b>, <b>decide when asked</b>, <b>stop it</b> — not the data model.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+<div style="flex:1 1 240px;min-width:230px;border:1.5px solid #1a1a1a;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 13px Inter,sans-serif">{{ g.name }}</span><span style="font:500 9px 'IBM Plex Mono',monospace;color:#9a9a92">{{ g.code }}</span></div>
+<div style="font:400 11.5px/1.5 Inter,sans-serif;color:#66665f">{{ g.purpose }}</div>
+<div style="height:1px;background:#e2e0da"></div>
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<div style="font:400 11.5px/1.5 Inter,sans-serif">— {{ it }}</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:600 13px Inter,sans-serif">2 · Hierarchy — what nests inside what</div>
+<div style="font:400 12px/1.6 Inter,sans-serif;color:#66665f;max-width:760px">Three levels deep, maximum. A customer holds accounts; each account issues agent cards; each card carries one policy; each policy produces decisions; each decision holds its evidence. Depth beyond level 3 is a detail sheet, never a new tab.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;font:400 12px Inter,sans-serif">
+<sc-for list="{{ tree }}" as="t" hint-placeholder-count="12">
+<div style="display:flex;align-items:center;gap:10px;padding-left:{{ t.pad }}">
+<div style="width:{{ t.dot }};height:{{ t.dot }};border-radius:2px;background:{{ t.color }};flex:none"></div>
+<div style="font:{{ t.font }} Inter,sans-serif">{{ t.label }}</div>
+<div style="flex:1;height:1px;background:#eceae5"></div>
+<div style="font:400 10px 'IBM Plex Mono',monospace;color:#a9a7a0">{{ t.src }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:600 13px Inter,sans-serif">3 · Sequence — the order information arrives in</div>
+<div style="font:400 12px/1.6 Inter,sans-serif;color:#66665f;max-width:760px">Two tracks. The <b>setup track</b> is user-initiated and linear. The <b>decision track</b> is agent-initiated and interrupt-driven — it can start at any moment and always terminates in the log.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ tracks }}" as="tr" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 10px 'IBM Plex Mono',monospace;color:#77776f;letter-spacing:.06em">{{ tr.name }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:0;align-items:stretch">
+<sc-for list="{{ tr.steps }}" as="st" hint-placeholder-count="6">
+<div style="display:flex;align-items:stretch">
+<div style="width:174px;border:1.5px solid {{ st.border }};border-radius:9px;padding:10px;display:flex;flex-direction:column;gap:4px;background:{{ st.bg }}">
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#9a9a92">{{ st.n }}</div>
+<div style="font:600 11.5px/1.35 Inter,sans-serif">{{ st.title }}</div>
+<div style="font:400 10.5px/1.4 Inter,sans-serif;color:#66665f">{{ st.body }}</div>
+</div>
+<div style="width:26px;display:flex;align-items:center;justify-content:center;font:400 13px Inter,sans-serif;color:#9a9a92">→</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="border-top:1px solid #e2e0da;padding-top:12px;font:400 11.5px/1.7 Inter,sans-serif;color:#66665f">Cross-links: any decision in the log opens its evidence (level 3) and offers one recovery action that re-enters the setup track at step 2. The freeze control is reachable from every node in both tracks — it is the only global action.</div>
+</div>
+
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:600 13px Inter,sans-serif">4 · Big-picture storyboard — Maya delegates a purchase</div>
+<div style="font:400 12px/1.6 Inter,sans-serif;color:#66665f;max-width:760px">Six frames, whole experience, context included.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ bigStory }}" as="f" hint-placeholder-count="6">
+<div style="flex:1 1 200px;min-width:200px;max-width:250px;display:flex;flex-direction:column;gap:8px">
+<div style="aspect-ratio:4/3;border:1.5px solid #1a1a1a;border-radius:9px;background:repeating-linear-gradient(45deg,#f6f5f2 0 8px,#eeece7 8px 16px);display:flex;align-items:flex-end;padding:10px;position:relative">
+<div style="position:absolute;top:8px;left:9px;font:500 9px 'IBM Plex Mono',monospace;color:#77776f">{{ f.n }}</div>
+<div style="font:500 11px/1.4 Inter,sans-serif;color:#44443f;background:rgba(255,255,255,.85);border-radius:5px;padding:5px 7px">{{ f.sketch }}</div>
+</div>
+<div style="font:600 11.5px Inter,sans-serif">{{ f.title }}</div>
+<div style="font:400 11px/1.5 Inter,sans-serif;color:#66665f">{{ f.body }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:600 13px Inter,sans-serif">5 · Close-up storyboard — the step-up moment, frame by frame</div>
+<div style="font:400 12px/1.6 Inter,sans-serif;color:#66665f;max-width:760px">Six frames inside the product only. This is the interaction the whole trust layer is judged on.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ closeStory }}" as="f" hint-placeholder-count="6">
+<div style="flex:1 1 200px;min-width:200px;max-width:250px;display:flex;flex-direction:column;gap:8px">
+<div style="aspect-ratio:4/3;border:1.5px solid #1a1a1a;border-radius:9px;background:#fff;padding:9px;display:flex;flex-direction:column;gap:5px;position:relative">
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#9a9a92">{{ f.n }}</div>
+<sc-for list="{{ f.bars }}" as="b" hint-placeholder-count="4">
+<div style="height:{{ b.h }};width:{{ b.w }};border-radius:3px;background:{{ b.c }}"></div>
+</sc-for>
+</div>
+<div style="font:600 11.5px Inter,sans-serif">{{ f.title }}</div>
+<div style="font:400 11px/1.5 Inter,sans-serif;color:#66665f">{{ f.body }}</div>
+</div>
+</sc-for>
+</div>
+<div style="border-top:1px solid #e2e0da;padding-top:12px;font:400 11.5px/1.7 Inter,sans-serif;color:#66665f">Timing: notification within 2 s of the agent's attempt; the request expires after 5 min and falls back to the policy's uncertain-case default (ask → decline). Screen-reader users get the same content as one aria-live announcement: decision needed, amount, merchant, reason, two actions.</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() {
+    const row = (lvl, label, src) => ({
+      pad: (lvl * 26) + 'px',
+      dot: lvl === 0 ? '11px' : lvl === 1 ? '9px' : '7px',
+      color: lvl === 0 ? '#1a1a1a' : lvl === 1 ? '#6e6e66' : '#b4b2ab',
+      font: lvl === 0 ? '600 13px' : lvl === 1 ? '500 12px' : '400 11.5px',
+      label, src
+    });
+    const step = (n, title, body, accent) => ({
+      n, title, body,
+      border: accent ? '#1a1a1a' : '#c9c7c0',
+      bg: accent ? '#f4f3f0' : '#fff'
+    });
+    const bar = (w, h, c) => ({ w, h, c });
+    return {
+      groups: [
+        { name: 'Control', code: 'IA-01', purpose: 'Everything that defines what the agent may do.', items: ['Policies list', 'Policy editor (natural language + structured)', 'Permission confirmation', 'Agent cards & limits'] },
+        { name: 'Oversight', code: 'IA-02', purpose: 'Everything that shows what the agent did.', items: ['Live mission status', 'Decision log', 'Decision detail & evidence', 'Monthly report'] },
+        { name: 'Intervention', code: 'IA-03', purpose: 'Moments the system hands control back.', items: ['Step-up request (push, sheet, full screen)', 'Uncertain-case question', 'Recovery action after a decline'] },
+        { name: 'Safety', code: 'IA-04', purpose: 'The stop. Global, always one tap away.', items: ['Freeze all spending', 'Revoke a single card', 'Block a merchant', 'Pause 24 h'] }
+      ],
+      tree: [
+        row(0, 'Customer', 'customers'),
+        row(1, 'Account — issuer ceilings the user can only tighten', 'accounts'),
+        row(2, 'Agent card (virtual, scoped, expiring)', 'cards'),
+        row(2, 'Policy / authority — one per active leash', 'scenario_authorities'),
+        row(2, 'Spend window — rolling daily & monthly state', 'spend_in_period_before_chf'),
+        row(1, 'Decision', 'purchase_attempts'),
+        row(2, 'Outcome — approve / decline / step_up', 'authority_status'),
+        row(2, 'Basket — items, delivery, total in CHF', 'purchase_attempt_items'),
+        row(2, 'Evidence — merchant, velocity, duplicates, text flags', 'merchants + history'),
+        row(2, 'Quarantined text — never reaches the engine', 'purchase_description'),
+        row(1, 'History — settled record, reporting source', 'authorization_history')
+      ],
+      tracks: [
+        { name: 'SETUP TRACK — user initiated, linear, ≤ 2 minutes', steps: [
+          step('01', 'Open control layer', 'Sees status and current limits first, before anything else.', true),
+          step('02', 'State the rule', 'Plain language, or structured controls for the same fields.'),
+          step('03', 'Read the parse', 'System shows what it understood and what it is unsure about.', true),
+          step('04', 'Confirm permissions', 'Executable list. Scope, window, and uncertain-case default.'),
+          step('05', 'Leash is live', 'Card minted, authority written, agent notified it is constrained.', true)
+        ] },
+        { name: 'DECISION TRACK — agent initiated, interrupt-driven, seconds', steps: [
+          step('01', 'Agent attempts', 'Payload arrives at the control layer; card token never exposed.', true),
+          step('02', 'Evaluate', 'Rules + rolling state + untrusted-text quarantine.'),
+          step('03', 'Approve', 'Silent. Appears in the log only.'),
+          step('03', 'Decline', 'Notified with the reason and one recovery action.'),
+          step('03', 'Ask you', 'Timed request, two choices, evidence above the buttons.', true),
+          step('04', 'Log & explain', 'Every outcome lands in the same auditable record.')
+        ] }
+      ],
+      bigStory: [
+        { n: 'FRAME 1', sketch: 'person on a tram, phone in hand', title: 'The errand', body: 'Maya needs black running shoes before the weekend and has nine minutes on the tram.' },
+        { n: 'FRAME 2', sketch: 'typing one sentence into the app', title: 'She writes a rule', body: '“Up to CHF 200, CHF 15 flex if rated above 4.5, official retailers only.”' },
+        { n: 'FRAME 3', sketch: 'phone in pocket, agent working', title: 'She stops watching', body: 'The agent shops. Two attempts are declined without her ever seeing them.' },
+        { n: 'FRAME 4', sketch: 'notification lighting up the lock screen', title: 'One interruption', body: 'CHF 208 — eight francs over. The request explains itself in one line.' },
+        { n: 'FRAME 5', sketch: 'thumb on the approve button', title: 'Six seconds', body: 'She approves from the lock screen. The token is minted for that merchant, that amount, once.' },
+        { n: 'FRAME 6', sketch: 'evening, reading the trail at home', title: 'She checks the trail', body: 'Five events, plain language, including the merchant page that tried to raise her limit.' }
+      ],
+      closeStory: [
+        { n: 'FRAME 1', title: 'Attempt intercepted', body: 'Agent submits CHF 208. Nothing is charged yet; no card data leaves the layer.', bars: [bar('55%', '9px', '#1a1a1a'), bar('100%', '34px', '#eceae5'), bar('72%', '7px', '#dcdad4')] },
+        { n: 'FRAME 2', title: 'Notification arrives', body: 'Amount, merchant, and the delta over cap are in the first line — decidable without opening.', bars: [bar('100%', '22px', '#1a1a1a'), bar('90%', '7px', '#dcdad4'), bar('60%', '7px', '#dcdad4'), bar('100%', '26px', '#eceae5')] },
+        { n: 'FRAME 3', title: 'Evidence first', body: 'What passed, what failed, what was ignored — above the buttons, never behind a link.', bars: [bar('44%', '9px', '#1a1a1a'), bar('100%', '7px', '#dcdad4'), bar('96%', '7px', '#dcdad4'), bar('80%', '7px', '#dcdad4'), bar('66%', '7px', '#b4b2ab')] },
+        { n: 'FRAME 4', title: 'Two choices, one destructive', body: 'Approve and reject are equal weight; revoke sits apart so it is never hit by accident.', bars: [bar('100%', '30px', '#1a1a1a'), bar('100%', '26px', '#eceae5'), bar('100%', '1px', '#fff'), bar('64%', '22px', '#eceae5')] },
+        { n: 'FRAME 5', title: 'Confirm with biometrics', body: 'Face ID gates the approval, so a shoulder-surfer with the phone cannot spend.', bars: [bar('34%', '34px', '#eceae5'), bar('70%', '7px', '#dcdad4'), bar('50%', '7px', '#dcdad4')] },
+        { n: 'FRAME 6', title: 'Logged and closed', body: 'Outcome, reason, and evidence are written once and shown identically everywhere after.', bars: [bar('100%', '7px', '#dcdad4'), bar('100%', '7px', '#dcdad4'), bar('100%', '7px', '#dcdad4'), bar('42%', '9px', '#1a1a1a')] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#F2F1EE;font-family:Inter,system-ui,sans-serif}a{color:#8A1FA8}a:hover{color:#6A1783}</style></helmet>
+
+<div style="padding:34px 36px 52px;display:flex;flex-direction:column;gap:22px;max-width:1320px">
+
+<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline">
+<div style="font:700 19px Inter,sans-serif;color:#14151A">Visual system — Wallet Control</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#7C7C74">logo · typography · color · buttons · icons</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font:600 13px Inter,sans-serif;color:#14151A">Logo</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:800px">A closed bracket around a single point. The bracket is containment — a boundary the agent cannot cross; the point is the transaction held inside it. It reads as a card edge, a shield, and a pair of brackets from code, which is the three things this product is at once. Geometric, no gradient, no mascot: a payments mark has to survive being embossed, faxed, and printed at 8mm.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:stretch">
+<div style="flex:1 1 300px;min-width:290px;border:1px solid #EFEEEA;border-radius:12px;padding:26px;display:flex;align-items:center;justify-content:center;background:#fff">
+<div style="display:flex;align-items:center;gap:14px">
+<div style="width:52px;height:52px;position:relative;flex:none">
+<div style="position:absolute;inset:0;border:4px solid #14151A;border-radius:14px"></div>
+<div style="position:absolute;left:0;top:14px;width:14px;height:24px;background:#fff"></div>
+<div style="position:absolute;right:0;top:14px;width:14px;height:24px;background:#fff"></div>
+<div style="position:absolute;left:19px;top:19px;width:14px;height:14px;border-radius:50%;background:#2E7D45"></div>
+</div>
+<div style="flex:none;display:flex;flex-direction:column;gap:2px">
+<div style="font:700 21px Inter,sans-serif;color:#14151A;letter-spacing:-.025em;white-space:nowrap">Wallet Control</div>
+<div style="font:500 10px Inter,sans-serif;color:#7C7C74;letter-spacing:.14em;white-space:nowrap">AGENT ON THE LEASH</div>
+</div>
+</div>
+</div>
+<div style="flex:1 1 220px;min-width:210px;border:1px solid #EFEEEA;border-radius:12px;padding:26px;display:flex;align-items:center;justify-content:center;background:#14151A">
+<div style="display:flex;align-items:center;gap:14px">
+<div style="width:52px;height:52px;position:relative;flex:none">
+<div style="position:absolute;inset:0;border:4px solid #fff;border-radius:14px"></div>
+<div style="position:absolute;left:0;top:14px;width:14px;height:24px;background:#14151A"></div>
+<div style="position:absolute;right:0;top:14px;width:14px;height:24px;background:#14151A"></div>
+<div style="position:absolute;left:19px;top:19px;width:14px;height:14px;border-radius:50%;background:#7BC48F"></div>
+</div>
+<div style="flex:none;font:700 19px Inter,sans-serif;color:#fff;letter-spacing:-.025em;white-space:nowrap">Wallet Control</div>
+</div>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<sc-for list="{{ logoUses }}" as="l" hint-placeholder-count="5">
+<div style="flex:1 1 170px;min-width:160px;border:1px solid #EFEEEA;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;background:{{ l.bg }}">
+<div style="height:60px;display:flex;align-items:center;justify-content:center">
+<div style="width:{{ l.size }};height:{{ l.size }};position:relative">
+<div style="position:absolute;inset:0;border:{{ l.stroke }} solid {{ l.ink }};border-radius:{{ l.radius }}"></div>
+<div style="position:absolute;left:0;top:{{ l.gapTop }};width:{{ l.gapW }};height:{{ l.gapH }};background:{{ l.bg }}"></div>
+<div style="position:absolute;right:0;top:{{ l.gapTop }};width:{{ l.gapW }};height:{{ l.gapH }};background:{{ l.bg }}"></div>
+<div style="position:absolute;left:{{ l.dotPos }};top:{{ l.dotPos }};width:{{ l.dot }};height:{{ l.dot }};border-radius:50%;background:{{ l.accent }}"></div>
+</div>
+</div>
+<div style="font:600 11px Inter,sans-serif;color:{{ l.labelInk }}">{{ l.name }}</div>
+<div style="font:400 10px/1.5 Inter,sans-serif;color:{{ l.subInk }}">{{ l.note }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;border-top:1px solid #EFEEEA;padding-top:18px;font:400 11px/1.65 Inter,sans-serif;color:#7C7C74">
+<div style="flex:1 1 220px"><b style="color:#14151A">Clear space</b><br>Half the mark's height on all four sides. Nothing enters it, including the wordmark's own descenders.</div>
+<div style="flex:1 1 220px"><b style="color:#14151A">Minimum size</b><br>Mark 16px on screen, 8mm in print. Below that the bracket gaps close — use the solid variant.</div>
+<div style="flex:1 1 220px"><b style="color:#14151A">Never</b><br>No rotation, no gradient fill, no outline on the dot, no second accent colour, no drop shadow, never re-coloured to red.</div>
+<div style="flex:1 1 220px"><b style="color:#14151A">Accent meaning</b><br>The dot is green when a leash is active, grey when none is, red only in the frozen state — the logo is itself a status indicator.</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font:600 13px Inter,sans-serif;color:#14151A">Typography — Inter</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:800px">One family, four weights, with IBM Plex Mono reserved for machine-generated identifiers. Inter's tall x-height and unambiguous 1/l/I and 0/O keep card digits and amounts legible at 11px on a phone in daylight. The tone is deliberately plain: this interface asks people to authorise money, and personality in the typeface would read as sales.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:13px">
+<sc-for list="{{ type }}" as="t" hint-placeholder-count="8">
+<div style="display:flex;gap:22px;align-items:baseline;border-bottom:1px solid #EFEEEA;padding-bottom:12px;flex-wrap:wrap">
+<div style="width:128px;flex:none;font:500 10px 'IBM Plex Mono',monospace;color:#9A9A92">{{ t.name }}</div>
+<div style="flex:1;min-width:230px;font:{{ t.font }};color:#14151A">{{ t.sample }}</div>
+<div style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9A92">{{ t.spec }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:18px;border-top:1px solid #EFEEEA;padding-top:16px">
+<div style="flex:1 1 280px"><div style="font:600 11.5px Inter,sans-serif;margin-bottom:6px">Tabular figures</div><div style="font:600 24px Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.015em">CHF 208.00 · 215.00 · 4417</div><div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74;margin-top:5px">Every amount and identifier uses tabular-nums so digits hold their column as live values update.</div></div>
+<div style="flex:1 1 280px"><div style="font:600 11.5px Inter,sans-serif;margin-bottom:6px">Machine text — IBM Plex Mono</div><div style="font:400 13px 'IBM Plex Mono',monospace">mandate_id M-4417 · span 212–268</div><div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74;margin-top:5px">Only identifiers and raw system data. The switch in typeface tells the user these words came from the system, not from us.</div></div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font:600 13px Inter,sans-serif;color:#14151A">Color palette</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:800px">Three hues carry the whole decision model and nothing else may use them: <b>green allowed</b>, <b>red stopped</b>, <b>violet your turn</b>. Because the palette is semantic rather than decorative, a user learns the system by colour in a single session. Warm neutrals do ninety percent of the work, and a saturated fill appears on at most one element per screen.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-for list="{{ swatches }}" as="s" hint-placeholder-count="12">
+<div style="flex:1 1 180px;min-width:172px;border:1px solid #EFEEEA;border-radius:12px;overflow:hidden">
+<div style="height:76px;background:{{ s.hex }};border-bottom:1px solid rgba(0,0,0,.06)"></div>
+<div style="padding:13px;display:flex;flex-direction:column;gap:5px">
+<div style="font:600 11.5px Inter,sans-serif;color:#14151A">{{ s.token }}</div>
+<div style="font:500 11px 'IBM Plex Mono',monospace;color:#55554F">{{ s.hex }}</div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">{{ s.use }}</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#B4B3AC">{{ s.contrast }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="border-top:1px solid #EFEEEA;padding-top:16px;font:400 11px/1.7 Inter,sans-serif;color:#7C7C74">Colour never carries meaning alone — every green, red, and violet state is accompanied by a word and a shape, so the system works for the eight percent of men with colour-vision deficiency and in any monochrome print of the audit trail.</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font:600 13px Inter,sans-serif;color:#14151A">Buttons</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:800px">Five variants across six states. Fill weight equals consequence: solid dark for navigation, solid green only for an approval that moves money, outline for the equally-valid refusal, outlined red for destruction. Minimum target 48px on any decision action, and a destructive button never sits adjacent to the primary one.</div>
+</div>
+<div style="overflow-x:auto">
+<div style="display:flex;flex-direction:column;gap:13px;min-width:860px">
+<div style="display:flex;gap:12px"><div style="width:120px;flex:none"></div>
+<sc-for list="{{ stateNames }}" as="sn" hint-placeholder-count="6">
+<div style="flex:1;font:500 9.5px 'IBM Plex Mono',monospace;color:#9A9A92">{{ sn }}</div>
+</sc-for>
+</div>
+<sc-for list="{{ buttons }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;gap:12px;align-items:center">
+<div style="width:120px;flex:none;font:600 11.5px Inter,sans-serif;color:#14151A">{{ b.variant }}</div>
+<sc-for list="{{ b.cells }}" as="c" hint-placeholder-count="6">
+<div style="flex:1;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif;background:{{ c.bg }};color:{{ c.fg }};border:{{ c.border }};box-shadow:{{ c.shadow }};opacity:{{ c.opacity }}">{{ c.label }}</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:20px;border-top:1px solid #EFEEEA;padding-top:16px;font:400 11px/1.65 Inter,sans-serif;color:#7C7C74">
+<div style="flex:1 1 240px"><b style="color:#14151A">Sizes</b><br>lg 52 · md 44 · sm 36. Decision actions are always lg.</div>
+<div style="flex:1 1 240px"><b style="color:#14151A">Focus</b><br>3px violet ring, 2px offset, never removed — visible on white, dark, and green grounds.</div>
+<div style="flex:1 1 240px"><b style="color:#14151A">Separation</b><br>Destructive actions sit below a divider with 12px clearance, or move into a sheet.</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font:600 13px Inter,sans-serif;color:#14151A">Icon set</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:800px">Twenty icons on a 24px grid with a 2px stroke, square caps, and 3px corner radius — drawn from the same geometry as the logo so the bracket motif recurs throughout the product. Banking conventions are kept intact (a card is a card, a shield is a shield); only the leash mark is invented, because nothing standard means “a boundary an agent operates inside”.</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px">
+<sc-for list="{{ icons }}" as="ic" hint-placeholder-count="20">
+<div style="flex:1 1 118px;min-width:112px;border:1px solid #EFEEEA;border-radius:12px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px;background:#FAFAF8">
+<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center">{{ ic.svg }}</div>
+<div style="font:500 10px Inter,sans-serif;color:#55554F;text-align:center">{{ ic.name }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px;border-top:1px solid #EFEEEA;padding-top:18px">
+<div style="flex:1 1 200px;border:1px solid #EFEEEA;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 11.5px Inter,sans-serif;color:#14151A">Decision icons, in colour</div>
+<div style="display:flex;gap:14px;align-items:center">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">{{ iconApproveColor }}<div style="font:500 9px Inter,sans-serif;color:#1F5C33">allowed</div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">{{ iconDeclineColor }}<div style="font:500 9px Inter,sans-serif;color:#8E1729">stopped</div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">{{ iconAskColor }}<div style="font:500 9px Inter,sans-serif;color:#6A1783">your turn</div></div>
+</div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">Each shape differs as well as each colour — check, cross, and question are distinguishable in greyscale.</div>
+</div>
+<div style="flex:1 1 200px;border:1px solid #EFEEEA;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 11.5px Inter,sans-serif;color:#14151A">Sizes</div>
+<div style="display:flex;gap:16px;align-items:flex-end">{{ sizeDemo }}</div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">16 inline · 20 list rows · 24 default · 32 empty states. Stroke stays 2px at every size; it is not scaled.</div>
+</div>
+<div style="flex:1 1 200px;border:1px solid #EFEEEA;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 11.5px Inter,sans-serif;color:#14151A">Rules</div>
+<div style="font:400 10.5px/1.6 Inter,sans-serif;color:#7C7C74">No filled shapes except the decision dots. No perspective, no rounded “friendly” terminals, no icon used decoratively beside a heading. Every icon in the product either labels a destination or precedes an action.</div>
+</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() {
+    const R = React.createElement;
+    const svg = (children, size, stroke) => R('svg', {
+      width: size || 28, height: size || 28, viewBox: '0 0 24 24', fill: 'none',
+      stroke: stroke || '#14151A', strokeWidth: 2, strokeLinecap: 'square', strokeLinejoin: 'miter'
+    }, children);
+    const p = (d, extra) => R('path', Object.assign({ d, key: d }, extra || {}));
+    const rect = (x, y, w, h, rx, extra) => R('rect', Object.assign({ x, y, width: w, height: h, rx, key: `${x}${y}${w}${h}` }, extra || {}));
+    const circ = (cx, cy, r, extra) => R('circle', Object.assign({ cx, cy, r, key: `c${cx}${cy}${r}` }, extra || {}));
+    const line = (x1, y1, x2, y2) => R('line', { x1, y1, x2, y2, key: `l${x1}${y1}${x2}${y2}` });
+
+    // shared glyph definitions — bracket motif from the logo
+    const glyphs = {
+      leash: [rect(3, 6, 18, 12, 4), circ(12, 12, 2.2, { fill: '#14151A', stroke: 'none' })],
+      card: [rect(2.5, 5.5, 19, 13, 2.5), line(2.5, 10, 21.5, 10)],
+      virtualCard: [rect(2.5, 5.5, 19, 13, 2.5), line(2.5, 10, 21.5, 10), p('M7 14.5h4')],
+      shield: [p('M12 3l7 3v5.5c0 4-3 7-7 9.5-4-2.5-7-5.5-7-9.5V6l7-3z')],
+      lock: [rect(4.5, 10.5, 15, 10, 2), p('M8 10.5V7.5a4 4 0 018 0v3')],
+      limit: [line(4, 16, 20, 16), p('M4 16l5-5 4 3 7-7'), line(20, 7, 20, 11)],
+      policy: [rect(4.5, 3, 15, 18, 2), line(8, 8, 16, 8), line(8, 12, 16, 12), line(8, 16, 13, 16)],
+      approve: [circ(12, 12, 8.5), p('M8.5 12.2l2.6 2.6 4.6-5')],
+      decline: [circ(12, 12, 8.5), p('M9 9l6 6M15 9l-6 6')],
+      ask: [circ(12, 12, 8.5), p('M9.6 9.6a2.5 2.5 0 114.4 1.6c-.7.9-2 1.1-2 2.4'), line(12, 16.6, 12, 16.9)],
+      freeze: [rect(4, 4, 16, 16, 3), rect(9, 9, 6, 6, 1)],
+      revoke: [circ(12, 12, 8.5), line(6.5, 6.5, 17.5, 17.5)],
+      log: [rect(4.5, 3, 15, 18, 2), line(8, 8, 16, 8), line(8, 12, 14, 12), circ(15.5, 16, 2)],
+      merchant: [p('M4 9l2-4h12l2 4'), rect(4, 9, 16, 11, 1.5), line(10, 20, 10, 14), line(14, 20, 14, 14)],
+      flag: [line(6, 3, 6, 21), p('M6 4h11l-2.5 4L17 12H6')],
+      timer: [circ(12, 12, 8.5), p('M12 7.5V12l3 2')],
+      report: [line(4, 20, 20, 20), rect(6, 12, 3.5, 8, .5), rect(11.5, 8, 3.5, 12, .5), rect(17, 14, 3.5, 6, .5)],
+      home: [p('M4 10.5L12 4l8 6.5V20H4z')],
+      agent: [rect(5, 7, 14, 11, 3), circ(9.5, 12, 1.2, { fill: '#14151A', stroke: 'none' }), circ(14.5, 12, 1.2, { fill: '#14151A', stroke: 'none' }), line(12, 4, 12, 7)],
+      receipt: [p('M6 3h12v18l-3-2-3 2-3-2-3 2z'), line(9.5, 8, 14.5, 8), line(9.5, 12, 14.5, 12)],
+      biometric: [p('M12 3.2c-4.3 0-7.2 3-7.2 7.3v4.2'), p('M19.2 14.7v-4.2c0-4.3-2.9-7.3-7.2-7.3'), p('M8.4 10.6a3.6 3.6 0 017.2 0v6.2'), p('M8.4 14.4v2.4'), p('M12 10.4v7.4')]
+    };
+    const names = [
+      ['leash', 'Leash (custom)'], ['card', 'Card'], ['virtualCard', 'Virtual card'], ['shield', 'Protected'],
+      ['lock', 'Secured'], ['limit', 'Limit'], ['policy', 'Policy'], ['approve', 'Approved'],
+      ['decline', 'Declined'], ['ask', 'Your turn'], ['freeze', 'Freeze'], ['revoke', 'Revoke'],
+      ['log', 'Audit log'], ['merchant', 'Merchant'], ['flag', 'Flagged text'], ['timer', 'Expires'],
+      ['report', 'Report'], ['home', 'Home'], ['agent', 'Agent'], ['biometric', 'Biometric']
+    ];
+
+    const logoVariant = (name, note, size, stroke, radius, gapTop, gapW, gapH, dot, dotPos, bg, ink, accent, labelInk, subInk) =>
+      ({ name, note, size, stroke, radius, gapTop, gapW, gapH, dot, dotPos, bg, ink, accent, labelInk, subInk });
+
+    const btn = (bg, fg, border, shadow, opacity, label) => ({ bg, fg, border, shadow: shadow || 'none', opacity: opacity || '1', label });
+    const N = { ink: '#14151A' };
+
+    return {
+      logoUses: [
+        logoVariant('App icon', 'Dark ground, 20% inset', '40px', '3.5px', '11px', '11px', '11px', '18px', '11px', '14.5px', '#14151A', '#fff', '#7BC48F', '#fff', '#9FA0A8'),
+        logoVariant('On light', 'Default placement', '40px', '3.5px', '11px', '11px', '11px', '18px', '11px', '14.5px', '#fff', '#14151A', '#2E7D45', '#14151A', '#7C7C74'),
+        logoVariant('Active leash', 'Green dot, agent running', '40px', '3.5px', '11px', '11px', '11px', '18px', '11px', '14.5px', '#FAFAF8', '#14151A', '#2E7D45', '#14151A', '#7C7C74'),
+        logoVariant('Frozen', 'Red dot, spending stopped', '40px', '3.5px', '11px', '11px', '11px', '18px', '11px', '14.5px', '#FAFAF8', '#14151A', '#C0203A', '#14151A', '#7C7C74'),
+        logoVariant('16px minimum', 'Gaps close, mark stays legible', '20px', '2.5px', '6px', '6px', '5px', '8px', '6px', '7px', '#FAFAF8', '#14151A', '#2E7D45', '#14151A', '#7C7C74')
+      ],
+      type: [
+        { name: 'display/amount', font: '700 36px/1.08 Inter,sans-serif;letter-spacing:-.025em;font-variant-numeric:tabular-nums', sample: 'CHF 208.00', spec: '36 / 39 · 700 · -2.5%' },
+        { name: 'title/screen', font: '700 23px/1.24 Inter,sans-serif;letter-spacing:-.012em', sample: 'Approve this purchase?', spec: '23 / 29 · 700' },
+        { name: 'title/card', font: '600 16px/1.35 Inter,sans-serif', sample: 'Running shoes guardrails', spec: '16 / 22 · 600' },
+        { name: 'body/default', font: '400 14px/1.55 Inter,sans-serif', sample: 'Eight francs over your cap, inside the ceiling you authorised.', spec: '14 / 22 · 400' },
+        { name: 'body/strong', font: '600 14px/1.55 Inter,sans-serif', sample: 'Merchant text was quarantined', spec: '14 / 22 · 600' },
+        { name: 'label/small', font: '500 12px/1.45 Inter,sans-serif', sample: 'Auto-approve limit', spec: '12 / 17 · 500' },
+        { name: 'overline', font: '600 11px/1.3 Inter,sans-serif;letter-spacing:.075em', sample: 'ACTIVE POLICIES', spec: '11 · 600 · +7.5%' },
+        { name: 'mono/data', font: "400 12px/1.4 'IBM Plex Mono',monospace", sample: 'mandate_id M-4417', spec: '12 · 400' }
+      ],
+      swatches: [
+        { token: 'allowed', hex: '#2E7D45', use: 'Approved decisions, healthy budget, active leash', contrast: '5.9:1 on white' },
+        { token: 'allowed/tint', hex: '#E6F2E8', use: 'Chip and card grounds for approved states', contrast: 'surface' },
+        { token: 'stopped', hex: '#C0203A', use: 'Declines, revocation, quarantined text', contrast: '6.6:1 on white' },
+        { token: 'stopped/tint', hex: '#F9E9EB', use: 'Decline banners and evidence blocks', contrast: 'surface' },
+        { token: 'your-turn', hex: '#8A1FA8', use: 'Step-up requests and focus rings only', contrast: '7.4:1 on white' },
+        { token: 'your-turn/tint', hex: '#F3E6F7', use: 'Step-up cards and unsure-case blocks', contrast: 'surface' },
+        { token: 'ink', hex: '#14151A', use: 'All primary text, dark cards, default button fill', contrast: '16.1:1 on white' },
+        { token: 'ink/muted', hex: '#7C7C74', use: 'Secondary text, metadata, disabled labels', contrast: '4.6:1 on white' },
+        { token: 'line', hex: '#DCDBD5', use: 'Dividers, input borders, chart baselines', contrast: 'non-text' },
+        { token: 'canvas', hex: '#F2F1EE', use: 'App background and grouping bands', contrast: 'surface' },
+        { token: 'surface', hex: '#FFFFFF', use: 'Cards, sheets, and every content container', contrast: 'surface' },
+        { token: 'on-dark', hex: '#7BC48F', use: 'Accent and progress on the ink ground only', contrast: '6.8:1 on ink' }
+      ],
+      stateNames: ['default', 'hover', 'pressed', 'focus', 'disabled', 'loading'],
+      buttons: [
+        { variant: 'Primary', cells: [
+          btn(N.ink, '#fff', 'none', null, null, 'Continue'),
+          btn('#2A2B31', '#fff', 'none', null, null, 'Continue'),
+          btn('#000', '#fff', 'none', 'inset 0 2px 4px rgba(0,0,0,.4)', null, 'Continue'),
+          btn(N.ink, '#fff', '3px solid #8A1FA8', null, null, 'Continue'),
+          btn('#DCDBD5', '#8E8E87', 'none', null, null, 'Continue'),
+          btn(N.ink, '#fff', 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Approve', cells: [
+          btn('#2E7D45', '#fff', 'none', null, null, 'Approve'),
+          btn('#26693A', '#fff', 'none', null, null, 'Approve'),
+          btn('#1F5C33', '#fff', 'none', 'inset 0 2px 4px rgba(0,0,0,.3)', null, 'Approve'),
+          btn('#2E7D45', '#fff', '3px solid #8A1FA8', null, null, 'Approve'),
+          btn('#DCDBD5', '#8E8E87', 'none', null, null, 'Approve'),
+          btn('#2E7D45', '#fff', 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Secondary', cells: [
+          btn('#fff', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#F2F1EE', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#E4E3DE', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#fff', N.ink, '3px solid #8A1FA8', null, null, 'Reject'),
+          btn('#fff', '#B4B3AC', '1.5px solid #DCDBD5', null, null, 'Reject'),
+          btn('#fff', N.ink, '1.5px solid #14151A', null, '.75', '· · ·')
+        ] },
+        { variant: 'Ghost', cells: [
+          btn('transparent', N.ink, 'none', null, null, 'Edit rules'),
+          btn('#F2F1EE', N.ink, 'none', null, null, 'Edit rules'),
+          btn('#E4E3DE', N.ink, 'none', null, null, 'Edit rules'),
+          btn('transparent', N.ink, '3px solid #8A1FA8', null, null, 'Edit rules'),
+          btn('transparent', '#B4B3AC', 'none', null, null, 'Edit rules'),
+          btn('transparent', N.ink, 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Destructive', cells: [
+          btn('#fff', '#C0203A', '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn('#FBEDEC', '#C0203A', '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn('#C0203A', '#fff', '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn('#fff', '#C0203A', '3px solid #8A1FA8', null, null, 'Cut the leash'),
+          btn('#fff', '#D9A8B1', '1.5px solid #EBD2D7', null, null, 'Cut the leash'),
+          btn('#fff', '#C0203A', '1.5px solid #C0203A', null, '.75', '· · ·')
+        ] }
+      ],
+      icons: names.map(([k, label]) => ({ name: label, svg: svg(glyphs[k], 28) })),
+      iconApproveColor: svg(glyphs.approve, 30, '#2E7D45'),
+      iconDeclineColor: svg(glyphs.decline, 30, '#C0203A'),
+      iconAskColor: svg(glyphs.ask, 30, '#8A1FA8'),
+      sizeDemo: R('div', { style: { display: 'flex', gap: '16px', alignItems: 'flex-end' } }, [
+        svg(glyphs.shield, 16), svg(glyphs.shield, 20), svg(glyphs.shield, 24), svg(glyphs.shield, 32)
+      ].map((el, i) => R('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' } },
+        [el, R('div', { key: 'l', style: { font: '400 9px Inter,sans-serif', color: '#9A9A92' } }, [16, 20, 24, 32][i])]
+      )))
+    };
+  }
+}
+</script>
+</body>
+</html>

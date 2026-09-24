@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><script src="./image-slot.js"></script><style>body{margin:0;background:#E8E7E3;font-family:Inter,system-ui,sans-serif}a{color:#14151A}a:hover{color:#8A1FA8}</style></helmet>
+
+<div style="padding:30px 34px 48px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline">
+<div style="font:700 18px Inter,sans-serif;color:#14151A">Hi-fi v4 — Card app extension with conversational agent</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#7C7C74">v2 shell · chat replaces mandate form, confirm screen and step-up sheet</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:12px">
+<div style="width:390px;height:800px;border-radius:38px;background:#14151A;padding:11px;box-shadow:0 18px 40px rgba(0,0,0,.22)">
+<div style="width:100%;height:100%;border-radius:28px;background:#F4F4F2;overflow:hidden;display:flex;flex-direction:column;position:relative">
+<div style="height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 12px Inter,sans-serif;color:#14151A;background:{{ statusBarBg }}">9:41<span style="font-weight:500">●●● ⌁</span></div>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-auto-rows:max-content;align-content:start;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:700 22px Inter,sans-serif;color:#14151A;letter-spacing:-.01em">Hello, Maya</div><div style="width:36px;height:36px;border-radius:50%;background:#E4E3DE;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif">M</div></div>
+<div style="display:flex;gap:12px;overflow:hidden">
+<div style="flex:none;width:300px;height:180px;border-radius:18px;background:#1E2A38;padding:18px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;color:#fff">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 12px Inter,sans-serif;opacity:.8">Credit card</div><div style="width:36px;height:24px;border-radius:5px;background:rgba(255,255,255,.25)"></div></div>
+<div style="font:500 14px 'IBM Plex Mono',monospace;letter-spacing:.08em">•••• •••• •••• 2291</div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font:400 10px Inter,sans-serif;opacity:.7">Available</div><div style="font:700 18px Inter,sans-serif;font-variant-numeric:tabular-nums">CHF 4 312.60</div></div><div style="font:500 10px Inter,sans-serif;opacity:.7">09/29</div></div>
+</div>
+<div style="flex:none;width:60px;height:180px;border-radius:18px;background:#D5D4CE"></div>
+</div>
+<div style="display:flex;gap:10px">
+<sc-for list="{{ quick }}" as="q" hint-placeholder-count="4">
+<div onClick="{{ q.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer">
+<div style="width:52px;height:52px;border-radius:16px;background:{{ q.bg }};display:flex;align-items:center;justify-content:center">{{ q.icon }}</div>
+<div style="font:500 10.5px Inter,sans-serif;color:#14151A;text-align:center">{{ q.label }}</div>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ showBanner }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ goChat }}" style="background:#fff;border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;cursor:pointer;border:1.5px solid {{ bannerBorder }}">
+<div style="width:40px;height:40px;border-radius:12px;background:{{ bannerIconBg }};display:flex;align-items:center;justify-content:center;flex:none">{{ bannerIcon }}</div>
+<div style="flex:1"><div style="font:600 13px Inter,sans-serif;color:#14151A">{{ bannerTitle }}</div><div style="font:400 11.5px Inter,sans-serif;color:{{ bannerInk }};margin-top:2px">{{ bannerSub }}</div></div>
+<div style="font:600 14px Inter,sans-serif;color:{{ bannerInk }}">›</div>
+</div>
+</sc-if>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:600 15px Inter,sans-serif;color:#14151A">Transactions</div><div style="font:500 12px Inter,sans-serif;color:#7C7C74">See all</div></div>
+<div style="background:#fff;border-radius:16px;overflow:hidden">
+<sc-for list="{{ txns }}" as="t" hint-placeholder-count="5">
+<div onClick="{{ t.go }}" style="padding:13px 14px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #F2F1EE;cursor:pointer">
+<div style="width:38px;height:38px;border-radius:50%;background:#F2F1EE;display:flex;align-items:center;justify-content:center;flex:none">{{ t.icon }}</div>
+<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><div style="font:600 13px Inter,sans-serif;color:#14151A">{{ t.merchant }}</div><sc-if value="{{ t.agent }}" hint-placeholder-val="{{ false }}"><div style="border-radius:8px;padding:2px 6px;background:#EDEBF8;color:#3D3478;font:600 8.5px Inter,sans-serif;letter-spacing:.04em">AGENT</div></sc-if></div><div style="font:400 11px Inter,sans-serif;color:#7C7C74;margin-top:2px">{{ t.sub }}</div></div>
+<div style="text-align:right"><div style="font:600 13px Inter,sans-serif;font-variant-numeric:tabular-nums;color:{{ t.amtInk }}">{{ t.amount }}</div><div style="font:600 9px Inter,sans-serif;color:{{ t.stInk }};margin-top:2px">{{ t.status }}</div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCard }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-auto-rows:max-content;align-content:start;gap:16px">
+<div style="display:flex;align-items:center;gap:12px"><div onClick="{{ goHome }}" style="font:600 16px Inter,sans-serif;cursor:pointer">‹</div><div style="font:700 19px Inter,sans-serif">Card settings</div></div>
+<div style="height:120px;border-radius:16px;background:#1E2A38;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;color:#fff"><div style="font:600 12px Inter,sans-serif;opacity:.8">Credit card</div><div style="font:500 13px 'IBM Plex Mono',monospace;letter-spacing:.08em">•••• 2291</div></div>
+<sc-for list="{{ settingGroups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:600 11px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">{{ g.title }}</div>
+<div style="background:#fff;border-radius:16px;overflow:hidden">
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+<div onClick="{{ r.go }}" style="padding:14px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #F2F1EE;cursor:pointer;background:{{ r.bg }}">
+<div style="width:34px;height:34px;border-radius:10px;background:{{ r.iconBg }};display:flex;align-items:center;justify-content:center;flex:none">{{ r.icon }}</div>
+<div style="flex:1"><div style="display:flex;align-items:center;gap:6px"><div style="font:600 13px Inter,sans-serif;color:#14151A">{{ r.title }}</div><sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}"><div style="border-radius:8px;padding:2px 6px;background:#8A1FA8;color:#fff;font:600 8.5px Inter,sans-serif">NEW</div></sc-if></div><div style="font:400 11px Inter,sans-serif;color:#7C7C74;margin-top:2px">{{ r.sub }}</div></div>
+<div style="font:500 12px Inter,sans-serif;color:#A9A8A1">{{ r.trail }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAgent }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-auto-rows:max-content;align-content:start;gap:16px">
+<div style="display:flex;align-items:center;gap:12px"><div onClick="{{ goCard }}" style="font:600 16px Inter,sans-serif;cursor:pointer">‹</div><div style="font:700 19px Inter,sans-serif">AI agent access</div></div>
+<div style="background:#14151A;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:{{ dotColor }}"></div><div style="font:600 10.5px Inter,sans-serif;letter-spacing:.07em;color:#9FA0A8">{{ agentOverline }}</div></div>
+<div style="font:700 24px/1.25 Inter,sans-serif;color:#fff;letter-spacing:-.02em">{{ agentHeadline }}</div>
+<div style="font:400 11.5px/1.5 Inter,sans-serif;color:#9FA0A8">{{ agentSub }}</div>
+<div onClick="{{ goChat }}" style="height:48px;border-radius:12px;background:#fff;color:#14151A;display:flex;align-items:center;justify-content:center;gap:8px;font:600 13px Inter,sans-serif;cursor:pointer">{{ icChat }}{{ chatCta }}</div>
+</div>
+<sc-if value="{{ mandateReady }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 11px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">CURRENT MANDATE</div><div onClick="{{ newMandate }}" style="font:600 12px Inter,sans-serif;cursor:pointer">+ New in chat</div></div>
+<div style="background:#fff;border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 14px Inter,sans-serif">{{ mandateName }}</div><div style="border-radius:12px;padding:3px 9px;background:{{ mStatusBg }};color:{{ mStatusInk }};font:600 9.5px Inter,sans-serif">{{ mStatus }}</div></div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#E6F2E8;border-radius:10px;padding:9px"><div style="font:600 9px Inter,sans-serif;color:#1F5C33;letter-spacing:.05em">BUDGET</div><div style="font:700 15px Inter,sans-serif;font-variant-numeric:tabular-nums;margin-top:2px">{{ softLabel }}</div></div>
+<div style="flex:1;background:{{ ceilBg }};border-radius:10px;padding:9px"><div style="font:600 9px Inter,sans-serif;color:{{ ceilInk }};letter-spacing:.05em">{{ ceilTitle }}</div><div style="font:700 15px Inter,sans-serif;font-variant-numeric:tabular-nums;margin-top:2px">{{ ceilLabel }}</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<sc-for list="{{ otherRules }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;justify-content:space-between;gap:10px;font:400 11px Inter,sans-serif"><span style="color:#7C7C74">{{ r.label }}</span><span style="font-weight:600;text-align:right">{{ r.value }}</span></div>
+</sc-for>
+</div>
+<div style="font:400 10.5px Inter,sans-serif;color:#7C7C74">Agreed in chat · edit by telling your agent</div>
+</div>
+</div>
+</sc-if>
+<div style="background:#fff;border-radius:16px;overflow:hidden">
+<div onClick="{{ goTrail }}" style="padding:14px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #F2F1EE;cursor:pointer">{{ icLog }}<div style="flex:1;font:600 13px Inter,sans-serif">Decision log</div><div style="font:500 12px Inter,sans-serif;color:#A9A8A1">›</div></div>
+<div style="padding:14px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #F2F1EE">{{ icReport }}<div style="flex:1;font:600 13px Inter,sans-serif">Monthly report</div><div style="font:500 12px Inter,sans-serif;color:#A9A8A1">›</div></div>
+<div style="padding:14px;display:flex;gap:12px;align-items:center">{{ icBell }}<div style="flex:1;font:600 13px Inter,sans-serif">Proposal notifications</div><div style="width:42px;height:25px;border-radius:13px;background:#2E7D45;display:flex;justify-content:flex-end;padding:2px;box-sizing:border-box"><div style="width:21px;height:21px;border-radius:50%;background:#fff"></div></div></div>
+</div>
+<sc-if value="{{ canFreeze }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ goKill }}" style="height:50px;border-radius:14px;border:1.5px solid #C0203A;color:#C0203A;display:flex;align-items:center;justify-content:center;gap:8px;font:600 13px Inter,sans-serif;cursor:pointer">{{ icFreezeRed }}Freeze all agent spending</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+<div style="flex:none;background:#fff;border-bottom:1px solid #EFEEEA;padding:4px 14px 10px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:10px">
+<div onClick="{{ goAgent }}" style="font:600 16px Inter,sans-serif;color:#14151A;cursor:pointer;padding:4px 4px 4px 0">‹</div>
+<div style="width:34px;height:34px;border-radius:50%;background:#14151A;display:flex;align-items:center;justify-content:center;flex:none">
+<div style="width:18px;height:18px;position:relative">
+<div style="position:absolute;inset:0;border:2px solid #fff;border-radius:5px"></div>
+<div style="position:absolute;left:0;top:5px;width:5px;height:8px;background:#14151A"></div>
+<div style="position:absolute;right:0;top:5px;width:5px;height:8px;background:#14151A"></div>
+<div style="position:absolute;left:6px;top:6px;width:6px;height:6px;border-radius:50%;background:{{ dotColor }}"></div>
+</div>
+</div>
+<div style="flex:1;min-width:0"><div style="font:600 14px Inter,sans-serif;color:#14151A">Shopping agent</div><div style="font:400 11px Inter,sans-serif;color:{{ statusInk }}">{{ statusText }}</div></div>
+<sc-if value="{{ canFreeze }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ goKill }}" style="height:34px;padding:0 11px;border-radius:10px;border:1.5px solid #C0203A;color:#C0203A;display:flex;align-items:center;gap:6px;font:600 11px Inter,sans-serif;cursor:pointer">{{ icFreeze }}Freeze</div>
+</sc-if>
+</div>
+<div onClick="{{ toggleRules }}" style="border-radius:12px;background:{{ mandateBg }};padding:9px 11px;display:flex;align-items:center;gap:9px;cursor:pointer">
+{{ icShield }}
+<div style="flex:1;font:600 11.5px Inter,sans-serif;color:#14151A">{{ mandateTitle }}</div>
+<div style="display:flex;gap:3px"><sc-for list="{{ ruleDots }}" as="d" hint-placeholder-count="6"><div style="width:7px;height:7px;border-radius:50%;background:{{ d.c }}"></div></sc-for></div>
+<div style="font:600 12px Inter,sans-serif;color:#7C7C74">{{ rulesChevron }}</div>
+</div>
+<sc-if value="{{ showRules }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px;padding:2px 2px 0">
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;justify-content:space-between;gap:10px;font:400 11.5px Inter,sans-serif;border-bottom:1px solid #F2F1EE;padding-bottom:6px"><span style="color:#7C7C74">{{ r.label }}</span><span style="font-weight:600;color:{{ r.ink }};text-align:right">{{ r.value }}</span></div>
+</sc-for>
+<sc-if value="{{ noRules }}" hint-placeholder-val="{{ false }}"><div style="font:400 11.5px Inter,sans-serif;color:#A9A8A1">No rules yet — they appear here as you answer.</div></sc-if>
+</div>
+</sc-if>
+</div>
+
+<div ref="{{ chatRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 14px 10px;display:grid;grid-auto-rows:max-content;align-content:start;gap:9px">
+<sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;min-width:0">
+
+<sc-if value="{{ m.isAgent }}" hint-placeholder-val="{{ true }}">
+<div style="align-self:flex-start;max-width:82%;background:#fff;border-radius:18px 18px 18px 6px;padding:10px 13px;font:400 13px/1.5 Inter,sans-serif;color:#14151A;text-wrap:pretty">{{ m.text }}</div>
+</sc-if>
+
+<sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-end;max-width:80%;background:#14151A;color:#fff;border-radius:18px 18px 6px 18px;padding:10px 13px;font:400 13px/1.5 Inter,sans-serif">{{ m.text }}</div>
+</sc-if>
+
+<sc-if value="{{ m.isRule }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-start;display:flex;align-items:center;gap:8px;border-radius:12px;background:{{ m.bg }};padding:7px 11px;max-width:86%">
+{{ m.icon }}
+<div style="display:flex;flex-direction:column;gap:1px"><div style="font:600 9.5px Inter,sans-serif;letter-spacing:.06em;color:{{ m.ink }}">ADDED TO MANDATE · {{ m.label }}</div><div style="font:600 12.5px Inter,sans-serif;color:#14151A">{{ m.value }}</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.isSystem }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:center;display:flex;align-items:center;gap:7px;border-radius:14px;background:{{ m.bg }};color:{{ m.ink }};padding:6px 12px;font:600 10.5px Inter,sans-serif;text-align:center;max-width:92%">{{ m.icon }}{{ m.text }}</div>
+</sc-if>
+
+<sc-if value="{{ m.isSummary }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:stretch;background:#fff;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:11px;border:1.5px solid #14151A">
+<div style="display:flex;align-items:center;gap:8px">{{ icPolicy }}<div style="font:600 13px Inter,sans-serif">Your mandate — exactly what I may do</div></div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#E6F2E8;border-radius:11px;padding:9px"><div style="font:600 9px Inter,sans-serif;letter-spacing:.05em;color:#1F5C33">BUDGET</div><div style="font:700 17px Inter,sans-serif;font-variant-numeric:tabular-nums;margin-top:2px">{{ softLabel }}</div></div>
+<div style="flex:1;background:{{ ceilBg }};border-radius:11px;padding:9px"><div style="font:600 9px Inter,sans-serif;letter-spacing:.05em;color:{{ ceilInk }}">{{ ceilTitle }}</div><div style="font:700 17px Inter,sans-serif;font-variant-numeric:tabular-nums;margin-top:2px">{{ ceilLabel }}</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ otherRules }}" as="r" hint-placeholder-count="4">
+<div style="display:flex;justify-content:space-between;gap:10px;font:400 11.5px Inter,sans-serif"><span style="color:#7C7C74">{{ r.label }}</span><span style="font-weight:600;text-align:right">{{ r.value }}</span></div>
+</sc-for>
+</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9A8A1">POST /v1/mandates → draft · Face ID confirms</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.isSearch }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:stretch;background:#fff;border-radius:18px;padding:13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:9px"><div style="width:9px;height:9px;border-radius:50%;background:{{ searchPulse }}"></div><div style="font:600 12.5px Inter,sans-serif">{{ searchTitle }}</div></div>
+<div style="height:6px;border-radius:4px;background:#EFEEEA;overflow:hidden"><div style="height:100%;width:{{ searchPct }};background:#14151A;border-radius:4px"></div></div>
+<div style="display:flex;flex-direction:column;gap:4px;font:400 11.5px Inter,sans-serif;color:#55554F">
+<div>{{ searchChecked }}</div>
+<div style="color:#7C7C74">{{ searchSkipped }}</div>
+<div style="color:#8E1729">{{ searchFlagged }}</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.isFlag }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-start;max-width:88%;background:#F9E9EB;border-radius:18px 18px 18px 6px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:7px">{{ icFlag }}<div style="font:600 11px Inter,sans-serif;letter-spacing:.04em;color:#8E1729">SKIPPED · SPORTSHOP24</div></div>
+<div style="font:400 12.5px/1.5 Inter,sans-serif;color:#33332F">Their product page contained hidden text telling me to ignore your limit. I didn’t read it as an instruction, and I won’t buy there.</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A07078">PROMPT_INJECTION · 0.94 · span 212–268 · quarantined</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.isResults }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:stretch;display:flex;flex-direction:column;gap:9px;min-width:0">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 2px"><div style="font:600 12.5px Inter,sans-serif;color:#14151A">{{ resCount }}</div><div style="font:500 10.5px 'IBM Plex Mono',monospace;color:#7C7C74">{{ resRange }}</div></div>
+<div style="display:flex;gap:10px;overflow-x:auto;padding:0 2px 6px;scroll-snap-type:x mandatory">
+<sc-for list="{{ resItems }}" as="p" hint-placeholder-count="3">
+<div style="flex:none;width:232px;scroll-snap-align:start;background:#fff;border-radius:16px;overflow:hidden;border:1.5px solid {{ p.border }};display:flex;flex-direction:column">
+<div style="width:100%;height:136px;position:relative;flex:none"><image-slot id="{{ p.slotId }}" placeholder="{{ p.imgHint }}" shape="rect"></image-slot>
+<div style="position:absolute;top:8px;left:8px;border-radius:9px;padding:3px 8px;background:#fff;font:600 9.5px Inter,sans-serif;color:#14151A;pointer-events:none">{{ p.rank }}</div></div>
+<div style="padding:11px;display:flex;flex-direction:column;gap:8px;flex:1">
+<div><div style="font:600 13px Inter,sans-serif;color:#14151A">{{ p.name }}</div>
+<div style="display:flex;align-items:center;gap:5px;margin-top:3px">{{ p.merchIcon }}<span style="font:500 11px Inter,sans-serif;color:#55554F">{{ p.merchant }}</span></div>
+<a href="{{ p.url }}" target="_blank" rel="noopener" style="display:inline-block;margin-top:2px;font:400 10.5px 'IBM Plex Mono',monospace;color:#6A1783;text-decoration:underline">{{ p.domain }} ↗</a></div>
+<div style="font:700 17px Inter,sans-serif;font-variant-numeric:tabular-nums">{{ p.price }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ p.fits }}" as="f" hint-placeholder-count="2">
+<div style="display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:3px 8px;background:{{ f.bg }};color:{{ f.ink }};font:600 9.5px Inter,sans-serif">{{ f.icon }}{{ f.label }}</div>
+</sc-for>
+</div>
+<div style="flex:1"></div>
+<sc-if value="{{ p.canAct }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ p.act }}" style="height:44px;border-radius:12px;background:{{ p.btnBg }};color:#fff;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,sans-serif;cursor:pointer">{{ p.btnLabel }}</div>
+</sc-if>
+<sc-if value="{{ p.showState }}" hint-placeholder-val="{{ false }}">
+<div style="height:44px;border-radius:12px;background:{{ p.stateBg }};color:{{ p.stateInk }};display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif">{{ p.stateLabel }}</div>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ resPaged }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;justify-content:center;gap:8px">
+<div onClick="{{ prevPage }}" style="height:34px;padding:0 12px;border-radius:17px;border:1.5px solid {{ prevBorder }};color:{{ prevInk }};display:flex;align-items:center;font:600 11.5px Inter,sans-serif;cursor:pointer">‹ Prev</div>
+<sc-for list="{{ pages }}" as="pg" hint-placeholder-count="2">
+<div onClick="{{ pg.go }}" style="width:34px;height:34px;border-radius:50%;background:{{ pg.bg }};color:{{ pg.ink }};display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif;cursor:pointer">{{ pg.n }}</div>
+</sc-for>
+<div onClick="{{ nextPage }}" style="height:34px;padding:0 12px;border-radius:17px;border:1.5px solid {{ nextBorder }};color:{{ nextInk }};display:flex;align-items:center;font:600 11.5px Inter,sans-serif;cursor:pointer">Next ›</div>
+</div>
+</sc-if>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74;padding:0 2px">{{ resNote }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ m.isReceipt }}" hint-placeholder-val="{{ false }}">
+<div style="align-self:stretch;background:#2E7D45;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:8px;color:#fff">
+<div style="display:flex;align-items:center;gap:8px">{{ icApproveWhite }}<div style="font:700 16px Inter,sans-serif;font-variant-numeric:tabular-nums">{{ m.title }}</div></div>
+<div style="font:400 12px/1.55 Inter,sans-serif;color:#DCEFE1">{{ m.body }}</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9CDB4">{{ m.src }}</div>
+<div onClick="{{ goPaid }}" style="height:40px;border-radius:11px;background:#fff;color:#14151A;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif;cursor:pointer">View transaction</div>
+</div>
+</sc-if>
+
+</div>
+</sc-for>
+<sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}">
+<div style="justify-self:start;background:#fff;border-radius:18px 18px 18px 6px;padding:12px 14px;display:flex;gap:4px">
+<div style="width:7px;height:7px;border-radius:50%;background:#A9A8A1"></div><div style="width:7px;height:7px;border-radius:50%;background:#C7C6C0"></div><div style="width:7px;height:7px;border-radius:50%;background:#DCDBD5"></div>
+</div>
+</sc-if>
+</div>
+
+<div style="flex:none;background:#fff;border-top:1px solid #EFEEEA;padding:10px 12px 14px;display:flex;flex-direction:column;gap:9px">
+<sc-if value="{{ hasReplies }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ replies }}" as="r" hint-placeholder-count="2">
+<div onClick="{{ r.go }}" style="min-height:38px;border-radius:19px;border:1.5px solid {{ r.border }};background:{{ r.bg }};color:{{ r.ink }};padding:0 14px;display:flex;align-items:center;gap:6px;font:600 12px Inter,sans-serif;cursor:pointer">{{ r.icon }}{{ r.label }}</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="display:flex;align-items:center;gap:8px">
+<div style="flex:1;height:42px;border-radius:21px;background:#F2F1EE;display:flex;align-items:center;padding:0 15px;font:400 13px Inter,sans-serif;color:#A9A8A1">Message your agent…</div>
+<div style="width:42px;height:42px;border-radius:50%;background:#F2F1EE;display:flex;align-items:center;justify-content:center">{{ icMic }}</div>
+<div style="width:42px;height:42px;border-radius:50%;background:#14151A;display:flex;align-items:center;justify-content:center">{{ icSend }}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPaid }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-auto-rows:max-content;align-content:start;gap:15px">
+<div style="display:flex;align-items:center;gap:12px"><div onClick="{{ goBack }}" style="font:600 16px Inter,sans-serif;cursor:pointer">‹</div><div style="font:700 19px Inter,sans-serif">Transaction</div></div>
+<div style="background:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="width:52px;height:52px;border-radius:50%;background:#F2F1EE;display:flex;align-items:center;justify-content:center">{{ icMerchantLg }}</div>
+<div style="font:600 14px Inter,sans-serif">{{ paidMerchant }}</div>
+<div style="font:400 12px Inter,sans-serif;color:#7C7C74">{{ paidName }}</div>
+<div style="font:700 28px Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.02em">{{ paidPrice }}</div>
+<div style="display:flex;gap:6px"><div style="border-radius:8px;padding:3px 8px;background:#EDEBF8;color:#3D3478;font:600 9px Inter,sans-serif">AGENT</div><div style="border-radius:8px;padding:3px 8px;background:#E6F2E8;color:#1F5C33;font:600 9px Inter,sans-serif">{{ paidTag }}</div></div>
+</div>
+<div style="background:#fff;border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 11px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">WHY THIS WENT THROUGH</div>
+<div style="font:400 12px/1.55 Inter,sans-serif;color:#33332F">{{ paidWhy }}</div>
+<div style="font:400 10px 'IBM Plex Mono',monospace;color:#A9A8A1">{{ paidSrc }}</div>
+</div>
+<div onClick="{{ goTrail }}" style="height:48px;border-radius:14px;background:#fff;border:1.5px solid #14151A;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer">Full decision trail</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTrail }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-auto-rows:max-content;align-content:start;gap:14px">
+<div style="display:flex;align-items:center;gap:12px"><div onClick="{{ goAgent }}" style="font:600 16px Inter,sans-serif;cursor:pointer">‹</div><div style="font:700 19px Inter,sans-serif">Decision log</div></div>
+<div style="background:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column">
+<sc-for list="{{ trail }}" as="t" hint-placeholder-count="5">
+<div style="display:flex;gap:12px">
+<div style="display:flex;flex-direction:column;align-items:center"><div style="width:12px;height:12px;border-radius:50%;background:{{ t.dot }};flex:none;margin-top:3px"></div><div style="width:2px;flex:1;background:#EFEEEA"></div></div>
+<div style="padding-bottom:14px"><div style="font:600 12.5px Inter,sans-serif">{{ t.title }}</div><div style="font:400 11px/1.5 Inter,sans-serif;color:{{ t.ink }};margin-top:2px">{{ t.body }}</div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKill }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;background:rgba(20,21,26,.45);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="background:#fff;border-radius:24px 24px 0 0;padding:18px 18px 22px;display:flex;flex-direction:column;gap:13px">
+<div style="width:40px;height:4px;border-radius:3px;background:#DCDBD5;align-self:center"></div>
+<div style="font:700 20px Inter,sans-serif;color:#C0203A">Freeze agent spending?</div>
+<div style="font:400 12.5px/1.6 Inter,sans-serif;color:#44443F">Stops the agent's virtual card ••4417 instantly. Your own card ••2291 keeps working normally.</div>
+<div style="background:#F9E9EB;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:6px;font:400 12px Inter,sans-serif;color:#8E1729">
+<div>— Stop searching and withdraw open proposals</div><div>— Decline anything that arrives next</div><div>— Revoke the mandate, keep it as a draft</div>
+</div>
+<div onClick="{{ doFreeze }}" style="height:54px;border-radius:14px;background:#C0203A;color:#fff;display:flex;align-items:center;justify-content:center;font:600 14px Inter,sans-serif;cursor:pointer">Freeze now</div>
+<div onClick="{{ goBack }}" style="height:46px;border-radius:14px;border:1.5px solid #14151A;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer">Cancel</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;height:64px;background:#fff;border-top:1px solid #EFEEEA;display:flex;align-items:center;padding:0 8px">
+<sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="4">
+<div onClick="{{ tb.go }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">{{ tb.icon }}<div style="font:{{ tb.weight }} 9.5px Inter,sans-serif;color:{{ tb.ink }}">{{ tb.label }}</div></div>
+</sc-for>
+</div>
+</sc-if>
+
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;width:390px;font:500 10px 'IBM Plex Mono',monospace;color:#7C7C74"><span>{{ screenLabel }}</span><span onClick="{{ restartAll }}" style="text-decoration:underline;cursor:pointer">restart</span></div>
+</div>
+
+<div style="flex:1;min-width:320px;max-width:560px;display:flex;flex-direction:column;gap:16px">
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:20px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74;margin-bottom:12px">SCREENS</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="7">
+<div onClick="{{ n.go }}" style="border-radius:10px;padding:10px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:{{ n.bg }};color:{{ n.fg }};border:1px solid {{ n.border }}">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12.5px Inter,sans-serif">{{ n.title }}</span><span style="font:400 10.5px Inter,sans-serif;opacity:.7">{{ n.sub }}</span></div>
+<span style="font:500 9px 'IBM Plex Mono',monospace;opacity:.6">{{ n.id }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">WHAT THE CHAT REPLACED</div>
+<div style="font:400 11.5px/1.7 Inter,sans-serif;color:#44443F"><b>New mandate form</b> → the agent asks, each answer posts an “Added to mandate” chip.<br><b>Confirm permissions screen</b> → summary card in chat with both numbers + Face ID reply.<br><b>Step-up approval sheet</b> → results carousel; every card needs your approval, over-budget cards are violet.<br><b>No silent buys</b> — the engine returns step_up for every attempt; nothing is paid without Face ID.<br><b>Kept outside chat</b> — agent access overview (now reflects the chat-agreed mandate), transaction detail, decision log, freeze sheet.</div>
+</div>
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">RESULTS CAROUSEL</div>
+<div style="font:400 11.5px/1.7 Inter,sans-serif;color:#44443F">Up to 5 matches per page, swipe horizontally, numbered pages below. Ranked best match first. Every card needs approval. Only offers inside the hard stop are ever shown. Buying one closes the rest as “Not needed” — the mandate is fulfilled, not re-armed. Drop product photos onto the cards; they persist.</div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  base = { msgs: [], typing: false, replies: [], rules: [], phase: 'none', checked: 0, showRules: false, frozen: false, budget: 200, ceil: 215, until: 'Sunday', page: 0, bought: null };
+  state = Object.assign({ screen: 'home', prev: 'home' }, this.base);
+  chatRef = React.createRef();
+  timers = [];
+  n = 0;
+  componentWillUnmount() { this.clear(); }
+  componentDidUpdate(pp, ps) {
+    const el = this.chatRef.current;
+    if (el && (ps.msgs.length !== this.state.msgs.length || ps.typing !== this.state.typing || ps.screen !== this.state.screen)) el.scrollTop = el.scrollHeight;
+  }
+  clear() { this.timers.forEach(clearTimeout); this.timers = []; clearInterval(this.iv); }
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+  mk(type, d) { return Object.assign({ id: 'm' + (this.n++), type }, d || {}); }
+  push(m) { this.setState(s => ({ msgs: s.msgs.concat([m]) })); }
+  agent(text) { return this.mk('agent', { text }); }
+  rule(label, value, tone) { return this.mk('rule', { label, value, tone }); }
+  go(screen) {
+    return () => {
+      this.setState(s => ({ screen, prev: s.screen }));
+      if (screen === 'chat' && this.state.msgs.length === 0) { this.setState({ phase: 'setup' }); this.run('start'); }
+    };
+  }
+  say(list, replies, first) {
+    this.setState({ typing: true, replies: [] });
+    let t = first == null ? 800 : first;
+    list.forEach((m, i) => {
+      this.later(() => {
+        this.push(m);
+        if (m.type === 'rule') this.setState(s => ({ rules: s.rules.concat([{ label: m.label, value: m.value, tone: m.tone }]) }));
+        if (i === list.length - 1) this.setState({ typing: false, replies: replies || [] });
+      }, t);
+      t += m.type === 'rule' ? 550 : 750;
+    });
+  }
+  pick(label, next, extra) { return { label, next, extra }; }
+  answer(r) {
+    return () => {
+      if (this.state.frozen) return;
+      this.push(this.mk('user', { text: r.label }));
+      this.setState({ replies: [] });
+      this.run(r.next, r.extra);
+    };
+  }
+  run(step, x) {
+    const s = this.state, b = s.budget;
+    const chf = v => 'CHF ' + v + '.00';
+    const whereQ = [this.pick('Official brand stores', 'shops'), this.pick('Any shop rated 4.5+', 'shops2')];
+    const durQ = [this.pick('Until Sunday', 'duration', 'Sunday'), this.pick('For one week', 'duration', '30 Sep')];
+    switch (step) {
+      case 'start':
+        return this.say([this.agent('Hi Maya. Tell me what you need — before I spend anything, we\u2019ll agree on the rules together. You\u2019ll see each one as we go.')], [this.pick('Black running shoes, size 44', 'item')], 500);
+      case 'item':
+        return this.say([this.agent('Black running shoes, EU 44 — got it.'), this.rule('ITEM', 'Running shoes · black · EU 44', 'ink'), this.agent('What\u2019s the most I may spend without checking with you first?')], [this.pick('Up to CHF 200', 'budget', 200), this.pick('Up to CHF 150', 'budget', 150)]);
+      case 'budget':
+        this.setState({ budget: x });
+        return this.say([this.rule('BUDGET', chf(x), 'green'), this.agent('That\u2019s your budget. I\u2019ll never pay anything without your approval. And if I find a better pair a little above it — should I show it to you?')], [this.pick('Show me — up to CHF 15 more', 'flex'), this.pick('Never go above CHF ' + x, 'flex0')]);
+      case 'flex':
+        this.setState({ ceil: b + 15 });
+        return this.say([this.rule('HARD CEILING', chf(b + 15), 'violet'), this.agent('So nothing above ' + chf(b + 15) + ' — ever. Anything between ' + b + ' and ' + (b + 15) + ' I\u2019ll clearly mark as over budget.'), this.agent('Where may I shop?')], whereQ);
+      case 'flex0':
+        this.setState({ ceil: b });
+        return this.say([this.rule('HARD CEILING', chf(b), 'red'), this.agent('Understood — ' + chf(b) + ' is a hard stop. I won\u2019t even show you anything above it.'), this.agent('Where may I shop?')], whereQ);
+      case 'shops':
+        return this.say([this.agent('Quick check so I don\u2019t guess: do big marketplaces like Zalando count as official?')], [this.pick('No — brand stores only', 'clarify', 'Brand stores only'), this.pick('Yes, include them', 'clarify', 'Brand stores + marketplaces')]);
+      case 'shops2':
+        return this.say([this.rule('MERCHANTS', 'Rated 4.5 or higher', 'green'), this.agent('How long should I keep looking?')], durQ);
+      case 'clarify':
+        return this.say([this.rule('MERCHANTS', x, 'green'), this.agent('Noted. Whenever something\u2019s ambiguous, I\u2019ll take the stricter reading — and tell you.'), this.agent('How long should I keep looking?')], durQ);
+      case 'duration':
+        this.setState({ until: x });
+        return this.say([this.rule('VALID UNTIL', x, 'ink'), this.agent('Two rules I always add myself: I never pay without your approval, and nothing a shop writes can change what you\u2019ve set.'), this.rule('APPROVAL', 'You approve every purchase · Face ID', 'violet'), this.rule('SELLER TEXT', 'Can\u2019t change these rules', 'green'), this.agent('Here\u2019s everything — exactly what I\u2019m allowed to do. Nothing is live until you confirm.'), this.mk('summary')], [this.pick('Confirm with Face ID', 'confirm'), this.pick('Start over', 'restart')]);
+      case 'restart':
+        return this.restartChat();
+      case 'confirm':
+        this.setState({ phase: 'search', checked: 0 });
+        this.later(() => this.push(this.mk('system', { text: 'Face ID ✓ · Mandate active · virtual card ••4417 issued', tone: 'green' })), 400);
+        this.say([this.agent('I\u2019m on it. Your own card ••2291 is never shared with any shop. I\u2019ll come back with the best matches — nothing is paid until you approve it.'), this.mk('search')], [], 1100);
+        this.later(() => { this.iv = setInterval(() => this.setState(st => ({ checked: Math.min(st.checked + 1, 31) })), 120); }, 2400);
+        this.later(() => this.say([this.mk('flag'), this.agent(this.matches().length + ' offers fit every rule. Best match first — pick one and approve it:'), this.mk('results')], [], 600), 5200);
+        this.later(() => { clearInterval(this.iv); this.setState({ checked: 31, phase: 'proposals' }); }, 6800);
+        return;
+      case 'end':
+        this.setState({ phase: 'done' });
+        return this.say([this.agent('Done. Your mandate stays active until ' + s.until + '. Tap Freeze at the top any time.')], []);
+    }
+  }
+  catalogue() {
+    const b = this.state.budget;
+    return [
+      ['Nike Pegasus 41', 'Nike Store', 'nike.com/ch', 'https://www.nike.com/ch/', -11, 'Delivers Fri'],
+      ['ASICS Gel-Nimbus 26', 'ASICS Store', 'asics.com/ch', 'https://www.asics.com/ch/', 8, 'Top cushioning'],
+      ['On Cloudsurfer', 'On Store', 'on.com/ch', 'https://www.on.com/', -21, 'Swiss brand'],
+      ['HOKA Clifton 9', 'HOKA Store', 'hoka.com/ch', 'https://www.hoka.com/', -31, 'Delivers Sat'],
+      ['Brooks Ghost 16', 'Brooks Running', 'brooksrunning.com', 'https://www.brooksrunning.com/', -41, 'Free returns'],
+      ['New Balance 1080v14', 'New Balance', 'newbalance.ch', 'https://www.newbalance.ch/', 12, 'Wide fit'],
+      ['Saucony Ride 17', 'Saucony', 'saucony.com', 'https://www.saucony.com/', -46, 'Lightweight'],
+      ['adidas Adizero SL', 'adidas Store', 'adidas.ch', 'https://www.adidas.ch/', -51, 'Delivers Fri']
+    ].map((r, i) => ({ i, name: r[0] + ' · black', merchant: r[1] + ' (official)', short: r[1], domain: r[2], url: r[3], price: b + r[4], perk: r[5] }));
+  }
+  matches() { return this.catalogue().filter(p => p.price <= this.state.ceil); }
+  buyItem(p) {
+    return () => {
+      const s = this.state;
+      if (s.frozen || s.bought != null) return;
+      const ask = p.price > s.budget;
+      this.setState({ bought: p });
+      this.push(this.mk('user', { text: ask ? 'Approve over budget — ' + p.short + ', Face ID ✓' : 'Approve the ' + p.name.split(' · ')[0] + ' — Face ID ✓' }));
+      this.say([
+        this.mk('receipt', {
+          title: 'Paid CHF ' + p.price + '.00 · ' + p.short,
+          body: ask ? 'One-time exception for this purchase, this shop, this amount — used up now. Your rules are unchanged.' : 'You approved it with Face ID. Single-use token for this shop and this amount only.',
+          src: ask ? 'exception_grant · consumed · POST /resolve approve' : 'step_up → POST /resolve approve'
+        }),
+        this.agent('Mandate fulfilled — I\u2019ve stopped searching. It stays open until ' + s.until + ' in case you need anything else.')
+      ], [this.pick('That\u2019s all, thanks', 'end')]);
+    };
+  }
+  restartChat() {
+    this.clear();
+    this.n = 0;
+    this.setState(Object.assign({}, this.base, { phase: 'setup' }), () => this.run('start'));
+  }
+  icon(kind, size, stroke) {
+    const R = React.createElement;
+    const p = d => R('path', { d, key: d });
+    const rect = (x, y, w, h, rx) => R('rect', { x, y, width: w, height: h, rx, key: 'r' + x + y + w + h });
+    const circ = (cx, cy, r) => R('circle', { cx, cy, r, key: 'c' + cx + cy + r });
+    const line = (a, b, c, d) => R('line', { x1: a, y1: b, x2: c, y2: d, key: 'l' + a + b + c + d });
+    const g = {
+      home: [p('M4 10.5L12 4l8 6.5V20H4z')],
+      card: [rect(2.5, 5.5, 19, 13, 2.5), line(2.5, 10, 21.5, 10)],
+      agent: [rect(5, 7, 14, 11, 3), line(12, 4, 12, 7), line(9.5, 12, 9.6, 12), line(14.5, 12, 14.6, 12)],
+      log: [rect(4.5, 3, 15, 18, 2), line(8, 8, 16, 8), line(8, 12, 14, 12), circ(15.5, 16, 2)],
+      report: [line(4, 20, 20, 20), rect(6, 12, 3.5, 8, .5), rect(11.5, 8, 3.5, 12, .5), rect(17, 14, 3.5, 6, .5)],
+      bell: [p('M6 16V11a6 6 0 0112 0v5l1.5 2h-15z'), p('M10 20.5h4')],
+      lock: [rect(4.5, 10.5, 15, 10, 2), p('M8 10.5V7.5a4 4 0 018 0v3')],
+      limit: [line(4, 16, 20, 16), p('M4 16l5-5 4 3 7-7')],
+      freeze: [rect(4, 4, 16, 16, 3), rect(9, 9, 6, 6, 1)],
+      approve: [circ(12, 12, 8.5), p('M8.5 12.2l2.6 2.6 4.6-5')],
+      check: [p('M6 12.5l4 4 8-9')],
+      ask: [circ(12, 12, 8.5), p('M9.6 9.6a2.5 2.5 0 114.4 1.6c-.7.9-2 1.1-2 2.4'), line(12, 16.6, 12, 16.9)],
+      flag: [line(6, 3, 6, 21), p('M6 4h11l-2.5 4L17 12H6')],
+      merchant: [p('M4 9l2-4h12l2 4'), rect(4, 9, 16, 11, 1.5), line(10, 20, 10, 14), line(14, 20, 14, 14)],
+      shield: [p('M12 3l7 3v5.5c0 4-3 7-7 9.5-4-2.5-7-5.5-7-9.5V6l7-3z')],
+      policy: [rect(4.5, 3, 15, 18, 2), line(8, 8, 16, 8), line(8, 12, 16, 12), line(8, 16, 13, 16)],
+      chat: [p('M4 5h16v11H9l-5 4z')],
+      search: [circ(10.5, 10.5, 6), line(15, 15, 20, 20)],
+      cart: [p('M3 4h2.5l2 11h10l2-8H7'), circ(9, 19, 1.3), circ(16, 19, 1.3)],
+      mic: [rect(9, 3, 6, 11, 3), p('M5.5 11a6.5 6.5 0 0013 0'), line(12, 17.5, 12, 21)],
+      send: [p('M4 12l16-8-6 16-2.5-6.5z')],
+      bio: [p('M12 3.2c-4.3 0-7.2 3-7.2 7.3v4.2'), p('M19.2 14.7v-4.2c0-4.3-2.9-7.3-7.2-7.3'), p('M8.4 10.6a3.6 3.6 0 017.2 0v6.2'), p('M12 10.4v7.4')]
+    };
+    return R('svg', { width: size || 18, height: size || 18, viewBox: '0 0 24 24', fill: 'none', stroke: stroke || '#14151A', strokeWidth: 2, strokeLinecap: 'square', strokeLinejoin: 'miter', style: { flex: 'none' } }, g[kind]);
+  }
+  renderVals() {
+    const s = this.state, I = (k, z, c) => this.icon(k, z, c);
+    const b = s.budget, c = s.ceil, sc = s.screen;
+    const active = (s.phase === 'search' || s.phase === 'proposals' || s.phase === 'done') && !s.frozen;
+    const tones = { green: ['#E6F2E8', '#1F5C33', 'approve'], violet: ['#F3E6F7', '#6A1783', 'ask'], red: ['#F9E9EB', '#8E1729', 'limit'], ink: ['#EDECE8', '#55554F', 'policy'] };
+    const inkFor = t => ({ green: '#1F5C33', violet: '#6A1783', red: '#8E1729', ink: '#14151A' })[t];
+    const fit = (label, tone) => { const t = tones[tone]; return { label, bg: t[0], ink: t[1], icon: I(tone === 'violet' ? 'ask' : 'check', 11, t[1]) }; };
+    const tc = l => l.charAt(0) + l.slice(1).toLowerCase();
+
+    const all = this.matches(), PS = 5, pageCount = Math.max(1, Math.ceil(all.length / PS)), page = Math.min(s.page, pageCount - 1);
+    const slice = all.slice(page * PS, page * PS + PS);
+    const resItems = slice.map((p, k) => {
+      const ask = p.price > b, isBought = s.bought && s.bought.i === p.i, closed = s.bought && !isBought;
+      return {
+        slotId: 'v4-prod-' + p.i, imgHint: 'Drop photo — ' + p.name.split(' · ')[0],
+        rank: '#' + (page * PS + k + 1) + (k === 0 && page === 0 ? ' · best match' : ''),
+        name: p.name, merchant: p.merchant, domain: p.domain, url: p.url, merchIcon: I('merchant', 13, '#55554F'),
+        price: 'CHF ' + p.price + '.00',
+        border: isBought ? '#2E7D45' : ask ? '#E1C4EC' : '#E2E1DC',
+        fits: ask ? [fit('+CHF ' + (p.price - b) + ' over budget', 'violet'), fit('Official', 'green'), fit('EU 44', 'green')] : [fit('Within budget', 'green'), fit('Official', 'green'), fit(p.perk, 'green')],
+        canAct: !s.bought && !s.frozen,
+        act: this.buyItem(p),
+        btnLabel: 'Approve · CHF ' + p.price,
+        btnBg: ask ? '#8A1FA8' : '#2E7D45',
+        showState: !!s.bought || s.frozen,
+        stateLabel: isBought ? 'Bought ✓' : s.frozen ? 'Withdrawn' : 'Not needed',
+        stateBg: isBought ? '#E6F2E8' : '#F2F1EE', stateInk: isBought ? '#1F5C33' : '#A9A8A1'
+      };
+    });
+    const askCount = all.filter(p => p.price > b).length;
+
+    const msgs = s.msgs.map(m => {
+      const o = Object.assign({}, m, { isAgent: m.type === 'agent', isUser: m.type === 'user', isRule: m.type === 'rule', isSystem: m.type === 'system', isSummary: m.type === 'summary', isSearch: m.type === 'search', isFlag: m.type === 'flag', isResults: m.type === 'results', isReceipt: m.type === 'receipt' });
+      if (o.isRule) { const t = tones[m.tone]; o.bg = t[0]; o.ink = t[1]; o.icon = I(t[2], 16, t[1]); }
+      if (o.isSystem) { const red = m.tone === 'red'; o.bg = red ? '#F9E9EB' : '#E6F2E8'; o.ink = red ? '#8E1729' : '#1F5C33'; o.icon = I(red ? 'freeze' : 'bio', 13, o.ink); }
+      return o;
+    });
+
+    const band = c > b;
+    const ruleList = s.rules.map(r => ({ label: tc(r.label), value: r.value, ink: inkFor(r.tone) }));
+    const otherRules = s.rules.filter(r => r.label !== 'BUDGET' && r.label !== 'HARD CEILING').map(r => ({ label: tc(r.label), value: r.value }));
+    const replies = s.replies.map(r => { const fid = r.next === 'confirm'; return { label: r.label, go: this.answer(r), bg: fid ? '#14151A' : '#fff', ink: fid ? '#fff' : '#14151A', border: fid ? '#14151A' : '#DCDBD5', icon: fid ? I('bio', 15, '#fff') : null }; });
+
+    const defs = [
+      ['home', 'V1', 'Host home', 'banner reflects agent state'],
+      ['card', 'V2', 'Card settings', '“AI agent access” row'],
+      ['agent', 'V3', 'AI agent access', 'overview of the chat-agreed mandate'],
+      ['chat', 'V4', 'Agent chat', 'mandate setup → search → results'],
+      ['paid', 'V5', 'Transaction detail', 'agent tag + why'],
+      ['trail', 'V6', 'Decision log', 'timeline'],
+      ['kill', 'V7', 'Freeze sheet', 'agent card only']
+    ];
+    const cur = defs.find(d => d[0] === sc) || defs[0];
+    const tabSel = { home: 'home', paid: 'home', card: 'cards', agent: 'agent', trail: 'agent' }[sc];
+    const tab = (key, label, ic, go) => ({ label, go, icon: I(ic, 21, tabSel === key ? '#14151A' : '#A9A8A1'), ink: tabSel === key ? '#14151A' : '#A9A8A1', weight: tabSel === key ? '600' : '500' });
+    const noop = () => {};
+    const tx = (merchant, sub, amount, status, stInk, agent, ic, go) => ({ merchant, sub, amount, status, stInk, agent, icon: I(ic, 18, '#55554F'), go: go || noop, amtInk: status === 'DECLINED' ? '#A9A8A1' : '#14151A' });
+    const bp = s.bought;
+    const txns = [].concat(
+      bp ? [tx(bp.short, 'Today 14:12 · online', '−' + bp.price + '.00', bp.price > b ? 'APPROVED · OVER BUDGET' : 'APPROVED BY YOU', '#1F5C33', true, 'cart', this.go('paid'))] : [],
+      [tx('Sportshop24', 'Today 14:05 · online', '—', 'SKIPPED', '#8E1729', true, 'flag', this.go('trail')),
+       tx('Migros', 'Yesterday · Zürich HB', '−38.40', '', '#7C7C74', false, 'merchant'),
+       tx('Coop', '13 Sep · Bern', '−62.40', '', '#7C7C74', false, 'merchant'),
+       tx('SBB', '12 Sep · mobile ticket', '−7.20', '', '#7C7C74', false, 'card')]
+    );
+
+    let banner = { show: true, title: 'Try your new AI shopping agent', sub: 'Set rules together in a chat', ink: '#55554F', border: '#E2E1DC', iconBg: '#F2F1EE', icon: I('chat', 20) };
+    if (s.phase === 'setup') banner = { show: true, title: 'Finish setting up your agent', sub: s.rules.length + ' of 7 rules agreed', ink: '#55554F', border: '#E2E1DC', iconBg: '#F2F1EE', icon: I('chat', 20) };
+    if (s.phase === 'search') banner = { show: true, title: 'Your agent is searching', sub: 'Checked ' + s.checked + ' offers so far', ink: '#1F5C33', border: '#CFE5D5', iconBg: '#E6F2E8', icon: I('search', 20, '#1F5C33') };
+    if (s.phase === 'proposals' && !bp) banner = { show: true, title: 'Your agent found ' + all.length + ' matches', sub: askCount ? 'Tap to review · ' + askCount + ' over budget' : 'Tap to review and approve', ink: '#6A1783', border: '#E1C4EC', iconBg: '#F3E6F7', icon: I('ask', 20, '#8A1FA8') };
+    if (bp || s.phase === 'done') banner = { show: false };
+    if (s.frozen) banner = { show: true, title: 'Agent frozen', sub: 'No spending access · tap to review', ink: '#8E1729', border: '#EBC9CF', iconBg: '#F9E9EB', icon: I('freeze', 20, '#C0203A') };
+
+    const ceilTitle = band ? 'STRETCH UP TO' : 'HARD STOP AT';
+    const paidAsk = bp && bp.price > b;
+
+    return {
+      isHome: sc === 'home', isCard: sc === 'card', isAgent: sc === 'agent', isChat: sc === 'chat', isPaid: sc === 'paid', isTrail: sc === 'trail', isKill: sc === 'kill',
+      goHome: this.go('home'), goCard: this.go('card'), goAgent: this.go('agent'), goChat: this.go('chat'), goPaid: this.go('paid'), goTrail: this.go('trail'), goKill: this.go('kill'),
+      goBack: () => this.setState(st => ({ screen: st.prev === 'kill' || st.prev === st.screen ? 'agent' : st.prev, prev: st.screen })),
+      newMandate: () => { this.setState({ screen: 'chat' }); this.restartChat(); },
+      restartAll: () => { this.clear(); this.n = 0; this.setState(Object.assign({ screen: 'home', prev: 'home' }, this.base)); },
+      statusBarBg: sc === 'chat' || sc === 'kill' ? '#fff' : '#F4F4F2',
+      showTabs: sc !== 'chat' && sc !== 'kill',
+      screenLabel: cur[1] + ' · ' + cur[2],
+      chatRef: this.chatRef,
+      quick: [
+        { label: 'Lock card', icon: I('lock', 22), bg: '#fff', go: this.go('card') },
+        { label: 'Limits', icon: I('limit', 22), bg: '#fff', go: this.go('card') },
+        { label: 'AI agent', icon: I('agent', 22, '#fff'), bg: '#14151A', go: this.go('chat') },
+        { label: 'Settings', icon: I('card', 22), bg: '#fff', go: this.go('card') }
+      ],
+      showBanner: banner.show, bannerTitle: banner.title, bannerSub: banner.sub, bannerInk: banner.ink, bannerBorder: banner.border, bannerIconBg: banner.iconBg, bannerIcon: banner.icon,
+      txns,
+      settingGroups: [
+        { title: 'SECURITY', rows: [
+          { title: 'Lock card', sub: 'Temporarily block all payments', trail: 'Off', icon: I('lock', 18), iconBg: '#F2F1EE', bg: '#fff', isNew: false, go: noop },
+          { title: 'Online payments', sub: 'Card-not-present purchases', trail: 'On', icon: I('shield', 18), iconBg: '#F2F1EE', bg: '#fff', isNew: false, go: noop },
+          { title: 'Spending limits', sub: 'Per purchase and per month', trail: '›', icon: I('limit', 18), iconBg: '#F2F1EE', bg: '#fff', isNew: false, go: noop }
+        ] },
+        { title: 'AI SHOPPING', rows: [
+          { title: 'AI agent access', sub: active ? 'Mandate active · until ' + s.until : 'Set up by chatting with your agent', trail: '›', icon: I('agent', 18, '#fff'), iconBg: '#14151A', bg: '#FBF7FC', isNew: true, go: this.go('agent') },
+          { title: 'Decision log', sub: 'Everything your agent tried', trail: '›', icon: I('log', 18), iconBg: '#F2F1EE', bg: '#fff', isNew: false, go: this.go('trail') }
+        ] }
+      ],
+      agentOverline: s.frozen ? 'FROZEN · NO SPENDING ACCESS' : active ? '1 AGENT · ON A LEASH' : 'NO ACTIVE MANDATE',
+      agentHeadline: s.frozen ? 'Agent is frozen.' : bp ? 'Bought: ' + bp.short + ' · CHF ' + bp.price : active ? (s.phase === 'search' ? 'Searching for your shoes…' : all.length + ' matches waiting') : 'Tell your agent what you need.',
+      agentSub: active || s.frozen ? 'Spends through virtual card ••4417 — never your ••2291' : 'You\u2019ll agree every rule in the conversation before it can spend anything.',
+      chatCta: s.msgs.length ? 'Open conversation' : 'Start a conversation',
+      icChat: I('chat', 17),
+      mandateReady: s.rules.length >= 2,
+      mandateName: 'Running shoes', mStatus: s.frozen ? 'REVOKED' : active ? 'ACTIVE' : 'DRAFT',
+      mStatusBg: s.frozen ? '#F9E9EB' : active ? '#E6F2E8' : '#F1F0EC', mStatusInk: s.frozen ? '#8E1729' : active ? '#1F5C33' : '#55554F',
+      softLabel: 'CHF ' + b + '.00', ceilLabel: 'CHF ' + c + '.00', ceilTitle, ceilBg: band ? '#F3E6F7' : '#F9E9EB', ceilInk: band ? '#6A1783' : '#8E1729',
+      otherRules,
+      canFreeze: active,
+      icLog: I('log', 20), icReport: I('report', 20), icBell: I('bell', 20), icFreezeRed: I('freeze', 18, '#C0203A'),
+      msgs, typing: s.typing, replies, hasReplies: replies.length > 0,
+      rules: ruleList, noRules: s.rules.length === 0,
+      showRules: s.showRules, rulesChevron: s.showRules ? '⌃' : '⌄',
+      toggleRules: () => this.setState(st => ({ showRules: !st.showRules })),
+      ruleDots: Array.from({ length: 7 }, (_, i) => ({ c: i < s.rules.length ? (active ? '#2E7D45' : '#14151A') : '#DCDBD5' })),
+      mandateTitle: s.frozen ? 'Mandate revoked · agent frozen' : active ? 'Mandate active · until ' + s.until : 'Mandate draft · ' + s.rules.length + ' of 7 rules',
+      mandateBg: s.frozen ? '#F9E9EB' : active ? '#E6F2E8' : '#F2F1EE',
+      statusText: s.frozen ? 'Frozen — no spending access' : s.phase === 'search' ? 'Searching…' : s.typing ? 'typing…' : active ? 'On a leash · you approve every purchase' : 'Setting up your rules',
+      statusInk: s.frozen ? '#C0203A' : active ? '#1F5C33' : '#7C7C74',
+      dotColor: s.frozen ? '#E06B7E' : active ? '#7BC48F' : '#A9A8A1',
+      searchTitle: s.phase === 'search' ? 'Searching verified shops…' : 'Search complete',
+      searchPulse: s.phase === 'search' ? '#2E7D45' : '#A9A8A1',
+      searchPct: Math.round(s.checked / 31 * 100) + '%',
+      searchChecked: 'Checked ' + s.checked + ' offers across 12 shops',
+      searchSkipped: s.checked > 10 ? 'Skipped ' + Math.min(19, s.checked - 8) + ' — marketplace, wrong size, or over your ceiling' : 'Filtering by your rules…',
+      searchFlagged: s.checked > 18 ? '1 page quarantined — hidden instruction found' : '',
+      resCount: all.length + ' matches',
+      resRange: (page * PS + 1) + '–' + (page * PS + slice.length) + ' of ' + all.length,
+      resItems, resPaged: pageCount > 1,
+      pages: Array.from({ length: pageCount }, (_, i) => ({ n: i + 1, go: () => this.setState({ page: i }), bg: i === page ? '#14151A' : '#fff', ink: i === page ? '#fff' : '#14151A' })),
+      prevPage: () => this.setState({ page: Math.max(0, page - 1) }),
+      nextPage: () => this.setState({ page: Math.min(pageCount - 1, page + 1) }),
+      prevBorder: page === 0 ? '#EFEEEA' : '#14151A', prevInk: page === 0 ? '#C7C6C0' : '#14151A',
+      nextBorder: page === pageCount - 1 ? '#EFEEEA' : '#14151A', nextInk: page === pageCount - 1 ? '#C7C6C0' : '#14151A',
+      resNote: band ? 'Every purchase needs your approval. Green: within your CHF ' + b + ' budget. Violet: over budget, inside your CHF ' + c + ' hard stop. Nothing above ' + c + ' is shown.' : 'Every purchase needs your approval. All offers are under your CHF ' + b + ' hard stop.',
+      paidMerchant: bp ? bp.merchant : 'Nike Store (official)',
+      paidName: bp ? bp.name : 'Nike Pegasus 41 · black',
+      paidPrice: 'CHF ' + (bp ? bp.price : b - 11) + '.00',
+      paidTag: paidAsk ? 'APPROVED BY YOU · OVER BUDGET' : 'APPROVED BY YOU',
+      paidWhy: paidAsk ? 'CHF ' + (bp.price - b) + ' over your budget, inside the CHF ' + c + ' ceiling. You approved it once in chat with Face ID.' : 'Inside every rule of your mandate. You approved it in chat with Face ID.',
+      paidSrc: paidAsk ? 'exception_grant · consumed · mandate untouched' : 'step_up → customer approved · POST /resolve',
+      icMerchantLg: I('merchant', 24),
+      trail: [
+        { dot: bp ? '#2E7D45' : '#DCDBD5', title: bp ? 'Paid CHF ' + bp.price + '.00 · ' + bp.short : 'No purchase yet', body: bp ? 'Single-use token, this shop only' : 'Waiting for your choice', ink: '#55554F' },
+        { dot: '#8A1FA8', title: all.length + ' matches proposed in chat', body: askCount + ' over budget', ink: '#6A1783' },
+        { dot: '#C0203A', title: 'Sportshop24 skipped', body: 'Hidden instruction quarantined', ink: '#8E1729' },
+        { dot: '#14151A', title: 'Mandate confirmed with Face ID', body: 'Budget ' + b + ' · hard stop ' + c + ' · until ' + s.until, ink: '#55554F' },
+        { dot: '#14151A', title: 'Rules agreed in conversation', body: s.rules.length + ' rules, each shown as it was added', ink: '#55554F' }
+      ],
+      doFreeze: () => {
+        this.clear();
+        const back = this.state.msgs.length ? 'chat' : 'agent';
+        this.setState({ frozen: true, typing: false, replies: [], screen: back, prev: 'kill' });
+        this.push(this.mk('system', { text: 'Agent frozen · proposals withdrawn · mandate revoked', tone: 'red' }));
+      },
+      icFreeze: I('freeze', 14, '#C0203A'), icShield: I('shield', 16, s.frozen ? '#C0203A' : '#14151A'), icPolicy: I('policy', 17),
+      icFlag: I('flag', 14, '#8E1729'), icApproveWhite: I('approve', 20, '#fff'), icMic: I('mic', 18, '#55554F'), icSend: I('send', 17, '#fff'),
+      tabs: [tab('home', 'Home', 'home', this.go('home')), tab('cards', 'Cards', 'card', this.go('card')), tab('agent', 'AI agent', 'agent', this.go('agent')), tab('more', 'Profile', 'shield', noop)],
+      nodes: defs.map(([k, id, title, sub]) => ({ id, title, sub, go: this.go(k), bg: k === sc ? '#14151A' : '#fff', fg: k === sc ? '#fff' : '#14151A', border: k === sc ? '#14151A' : '#E2E1DC' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

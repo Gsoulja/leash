@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#f2f1ee;font-family:Inter,system-ui,sans-serif}a{color:#8A1FA8}a:hover{color:#6a1783}</style></helmet>
+
+<div style="padding:30px 34px 48px;display:flex;flex-direction:column;gap:22px;max-width:1300px">
+
+<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline">
+<div style="font:700 18px Inter,sans-serif;color:#14151A">Sticker sheet — Agent on the Leash</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#7C7C74">typography · color · buttons · icons · states &amp; variants</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">TYPOGRAPHY — INTER</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:780px">One family, four weights. Inter is a neutral grotesque with tall x-height and unambiguous figures — money, limits, and card digits stay legible at 11px on a phone in sunlight. Tone: precise and calm, never playful; this screen decides whether money moves.</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ type }}" as="t" hint-placeholder-count="8">
+<div style="display:flex;gap:22px;align-items:baseline;border-bottom:1px solid #EFEEEA;padding-bottom:11px;flex-wrap:wrap">
+<div style="width:132px;flex:none;font:500 10px 'IBM Plex Mono',monospace;color:#9A9A92">{{ t.name }}</div>
+<div style="flex:1;min-width:240px;font:{{ t.font }};color:#14151A">{{ t.sample }}</div>
+<div style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9A92">{{ t.spec }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid #EFEEEA;padding-top:14px">
+<div style="flex:1 1 300px"><div style="font:600 11.5px Inter,sans-serif;margin-bottom:5px">Numerals</div><div style="font:500 22px Inter,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em">CHF 208.00 · 4417 · 4.9 / 5.0</div><div style="font:400 10.5px Inter,sans-serif;color:#7C7C74;margin-top:4px">tabular-nums everywhere money or IDs appear, so digits don't jitter as values update</div></div>
+<div style="flex:1 1 300px"><div style="font:600 11.5px Inter,sans-serif;margin-bottom:5px">Machine text — IBM Plex Mono</div><div style="font:400 12px 'IBM Plex Mono',monospace">auth_id 8f21…c3 · authority_id A-0192</div><div style="font:400 10.5px Inter,sans-serif;color:#7C7C74;margin-top:4px">only for identifiers and raw data — signals “this came from the system, not from us”</div></div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">COLOR</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:780px">Three hues carry the entire decision model, and nothing else uses them: <b>green = allowed</b>, <b>red = stopped</b>, <b>violet = your turn</b>. Because the palette is semantic, a user learns the system by color alone in one session. Neutrals do all the ordinary work; saturated fills appear on at most one element per screen.</div>
+<div style="display:flex;flex-wrap:wrap;gap:24px">
+<sc-for list="{{ ramps }}" as="r" hint-placeholder-count="3">
+<div style="flex:1 1 300px;min-width:280px;display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px Inter,sans-serif">{{ r.name }}</div>
+<div style="font:400 11px/1.5 Inter,sans-serif;color:#7C7C74">{{ r.meaning }}</div>
+<div style="display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid #E2E1DC">
+<sc-for list="{{ r.stops }}" as="s" hint-placeholder-count="5">
+<div style="flex:1;height:60px;background:{{ s.hex }}"></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:0">
+<sc-for list="{{ r.stops }}" as="s" hint-placeholder-count="5">
+<div style="flex:1;font:400 8.5px 'IBM Plex Mono',monospace;color:#9A9A92;text-align:center">{{ s.label }}</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;border-top:1px solid #EFEEEA;padding-top:16px">
+<sc-for list="{{ semantics }}" as="sm" hint-placeholder-count="6">
+<div style="flex:1 1 200px;min-width:190px;border:1px solid #E2E1DC;border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:7px">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:16px;height:16px;border-radius:4px;background:{{ sm.hex }};border:1px solid rgba(0,0,0,.08)"></div><div style="font:600 11.5px Inter,sans-serif">{{ sm.token }}</div></div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">{{ sm.use }}</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9A8A1">{{ sm.hex }} · {{ sm.contrast }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">BUTTONS — VARIANTS × STATES</div>
+<div style="font:400 12px/1.7 Inter,sans-serif;color:#55554F;max-width:780px">Component: <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Button</span> · properties: variant (primary / secondary / ghost / destructive / approve), state (default / hover / pressed / focus / disabled / loading), size (lg 52 · md 44 · sm 36). Minimum target 48×48 for every decision action.</div>
+<div style="overflow-x:auto">
+<div style="display:flex;flex-direction:column;gap:12px;min-width:820px">
+<div style="display:flex;gap:12px"><div style="width:120px;flex:none"></div>
+<sc-for list="{{ stateNames }}" as="sn" hint-placeholder-count="6">
+<div style="flex:1;font:500 9.5px 'IBM Plex Mono',monospace;color:#9A9A92">{{ sn }}</div>
+</sc-for>
+</div>
+<sc-for list="{{ buttons }}" as="b" hint-placeholder-count="5">
+<div style="display:flex;gap:12px;align-items:center">
+<div style="width:120px;flex:none;font:600 11.5px Inter,sans-serif">{{ b.variant }}</div>
+<sc-for list="{{ b.cells }}" as="c" hint-placeholder-count="6">
+<div style="flex:1;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif;background:{{ c.bg }};color:{{ c.fg }};border:{{ c.border }};box-shadow:{{ c.shadow }};opacity:{{ c.opacity }}">{{ c.label }}</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="font:400 11px/1.6 Inter,sans-serif;color:#7C7C74;border-top:1px solid #EFEEEA;padding-top:12px">Focus is a 3px violet ring offset 2px — visible on every background, never removed. Destructive actions never sit adjacent to the primary action; they are separated by 12px and a divider, or moved to a sheet.</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">ICONS · CHIPS · CONTROLS</div>
+<div style="display:flex;flex-wrap:wrap;gap:26px">
+<div style="flex:1 1 280px;display:flex;flex-direction:column;gap:11px">
+<div style="font:600 11.5px Inter,sans-serif">Status chips — variant property</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ chips }}" as="ch" hint-placeholder-count="6">
+<div style="display:inline-flex;align-items:center;gap:6px;border-radius:14px;padding:5px 11px;background:{{ ch.bg }};color:{{ ch.fg }};font:600 10.5px Inter,sans-serif"><div style="width:7px;height:7px;border-radius:50%;background:{{ ch.dot }}"></div>{{ ch.label }}</div>
+</sc-for>
+</div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">Tinted background + full-strength text keeps every chip above 4.5:1. The dot repeats the meaning without relying on hue alone.</div>
+</div>
+<div style="flex:1 1 280px;display:flex;flex-direction:column;gap:11px">
+<div style="font:600 11.5px Inter,sans-serif">Icon set — 24px grid, 2px stroke</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+<sc-for list="{{ icons }}" as="ic" hint-placeholder-count="8">
+<div style="width:64px;display:flex;flex-direction:column;align-items:center;gap:5px">
+<div style="width:44px;height:44px;border:1px solid #E2E1DC;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#FAFAF8"><div style="width:{{ ic.w }};height:{{ ic.h }};border:2px solid #14151A;border-radius:{{ ic.r }};background:{{ ic.fill }}"></div></div>
+<div style="font:400 8.5px Inter,sans-serif;color:#9A9A92;text-align:center">{{ ic.name }}</div>
+</div>
+</sc-for>
+</div>
+<div style="font:400 10.5px/1.5 Inter,sans-serif;color:#7C7C74">Placeholders on the Material 24dp grid — swap for Material Symbols in Figma; only the leash glyph is custom.</div>
+</div>
+<div style="flex:1 1 280px;display:flex;flex-direction:column;gap:11px">
+<div style="font:600 11.5px Inter,sans-serif">Inputs &amp; switches</div>
+<div style="border:1.5px solid #14151A;border-radius:10px;padding:11px;font:400 12px Inter,sans-serif;color:#14151A">CHF 200<span style="color:#A9A8A1">.00</span></div>
+<div style="border:1.5px solid #E2E1DC;border-radius:10px;padding:11px;font:400 12px Inter,sans-serif;color:#A9A8A1">Describe what the agent may buy…</div>
+<div style="border:1.5px solid #C0203A;border-radius:10px;padding:11px;font:400 12px Inter,sans-serif;color:#C0203A">Over your account ceiling</div>
+<div style="display:flex;gap:16px;align-items:center;margin-top:2px">
+<div style="width:46px;height:27px;border-radius:14px;background:#2E7D45;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><div style="width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+<div style="width:46px;height:27px;border-radius:14px;background:#DCDBD5;display:flex;align-items:center;padding:0 3px"><div style="width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+<div style="font:400 10.5px Inter,sans-serif;color:#7C7C74">on / off</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+<div style="height:8px;border-radius:5px;background:#EFEEEA;position:relative"><div style="width:58%;height:100%;border-radius:5px;background:#14151A"></div><div style="position:absolute;left:55%;top:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #14151A"></div></div>
+<div style="font:400 10.5px Inter,sans-serif;color:#7C7C74">Limit slider — value always shown as text beside it, never inferred from position</div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E2E1DC;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.07em;color:#7C7C74">COMPOSED COMPONENTS</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<div style="flex:1 1 280px;min-width:260px;border:1px solid #E2E1DC;border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:9px;background:#FAFAF8">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 13px Inter,sans-serif">Running shoes</div><div style="display:inline-flex;align-items:center;gap:6px;border-radius:14px;padding:4px 10px;background:#E6F2E8;color:#1F5C33;font:600 10px Inter,sans-serif"><div style="width:6px;height:6px;border-radius:50%;background:#2E7D45"></div>LIVE</div></div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#7C7C74">•••• 4417 · expires in 3 d</div>
+<div style="height:8px;border-radius:5px;background:#EFEEEA;overflow:hidden"><div style="width:58%;height:100%;background:#2E7D45"></div></div>
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,sans-serif;color:#55554F"><span>CHF 116 spent</span><span>CHF 84 left</span></div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9A8A1">PolicyCard · states: live / paused / expired / revoked</div>
+</div>
+<div style="flex:1 1 280px;min-width:260px;border:1px solid #E2E1DC;border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between"><div style="font:600 12.5px Inter,sans-serif">Nike Store</div><div style="font:600 12.5px Inter,sans-serif;font-variant-numeric:tabular-nums">CHF 208.00</div></div>
+<div style="font:400 11px Inter,sans-serif;color:#7C7C74">16 Sep 14:08 · online · CH</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<span style="border-radius:12px;padding:3px 9px;background:#F3E6F7;color:#6A1783;font:600 9.5px Inter,sans-serif">ASKED YOU</span>
+<span style="border-radius:12px;padding:3px 9px;background:#F1F0EC;color:#55554F;font:600 9.5px Inter,sans-serif">+8 OVER CAP</span>
+</div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9A8A1">DecisionRow · states: approved / declined / step_up / pending</div>
+</div>
+<div style="flex:1 1 280px;min-width:260px;border:1px solid #E2E1DC;border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:9px">
+<div style="font:600 12.5px Inter,sans-serif">Evidence item</div>
+<div style="display:flex;gap:9px"><div style="width:7px;border-radius:4px;background:#2E7D45;flex:none"></div><div style="font:400 11px/1.5 Inter,sans-serif;color:#33332F">Merchant verified — 12 prior purchases, official retailer</div></div>
+<div style="display:flex;gap:9px"><div style="width:7px;border-radius:4px;background:#C0203A;flex:none"></div><div style="font:400 11px/1.5 Inter,sans-serif;color:#33332F">Merchant text contained an instruction — quarantined</div></div>
+<div style="font:400 9.5px 'IBM Plex Mono',monospace;color:#A9A8A1">EvidenceItem · states: pass / fail / flagged / unknown</div>
+</div>
+</div>
+<div style="border-top:1px solid #EFEEEA;padding-top:14px;display:flex;flex-wrap:wrap;gap:22px;font:400 11px/1.6 Inter,sans-serif;color:#7C7C74">
+<div style="flex:1 1 200px"><b style="color:#14151A">Spacing</b><br>4 / 8 / 12 / 16 / 24 / 32 — 8pt base, 16px screen gutter</div>
+<div style="flex:1 1 200px"><b style="color:#14151A">Radius</b><br>6 chips · 10 controls · 12 cards · 20 sheets</div>
+<div style="flex:1 1 200px"><b style="color:#14151A">Elevation</b><br>flat by default · sheets 0 8px 24px rgba(0,0,0,.12) only</div>
+<div style="flex:1 1 200px"><b style="color:#14151A">Motion</b><br>200 ms ease-out navigation · 120 ms state · no motion on decision screens</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() {
+    const N = { ink: '#14151A', body: '#33332F', mute: '#7C7C74' };
+    const green = '#2E7D45', red = '#C0203A', violet = '#8A1FA8';
+    const btn = (bg, fg, border, shadow, opacity, label) => ({ bg, fg, border, shadow: shadow || 'none', opacity: opacity || '1', label });
+    return {
+      type: [
+        { name: 'display/amount', font: '700 34px/1.1 Inter,sans-serif;letter-spacing:-.02em', sample: 'CHF 208.00', spec: '34 / 37 · 700 · -2%' },
+        { name: 'title/screen', font: '700 22px/1.25 Inter,sans-serif;letter-spacing:-.01em', sample: 'Approve this purchase?', spec: '22 / 28 · 700' },
+        { name: 'title/card', font: '600 16px/1.35 Inter,sans-serif', sample: 'Running shoes guardrails', spec: '16 / 22 · 600' },
+        { name: 'body/default', font: '400 14px/1.55 Inter,sans-serif', sample: 'Eight francs over your cap, inside the flex you allowed.', spec: '14 / 22 · 400' },
+        { name: 'body/strong', font: '600 14px/1.55 Inter,sans-serif', sample: 'Merchant text was ignored', spec: '14 / 22 · 600' },
+        { name: 'label/small', font: '500 12px/1.45 Inter,sans-serif', sample: 'Auto-approve limit', spec: '12 / 17 · 500' },
+        { name: 'overline', font: '600 11px/1.3 Inter,sans-serif;letter-spacing:.07em', sample: 'ACTIVE POLICIES', spec: '11 · 600 · +7%' },
+        { name: 'mono/data', font: "400 12px/1.4 'IBM Plex Mono',monospace", sample: 'authority_id A-0192', spec: '12 · 400' }
+      ],
+      ramps: [
+        { name: 'Primary', meaning: 'The three decision hues. Nothing decorative may use them.', stops: [
+          { hex: '#E6F2E8', label: '50' }, { hex: '#8FC79C', label: '200' }, { hex: '#2E7D45', label: '500' }, { hex: '#C0203A', label: 'stop' }, { hex: '#8A1FA8', label: 'ask' }
+        ] },
+        { name: 'Secondary', meaning: 'Tints for fills, charts, and chip backgrounds — never for text.', stops: [
+          { hex: '#D8F0D2', label: 'g-100' }, { hex: '#F7DEDC', label: 'r-100' }, { hex: '#F3E6F7', label: 'v-100' }, { hex: '#EFE7D9', label: 'sand' }, { hex: '#DCE7EF', label: 'mist' }
+        ] },
+        { name: 'Grayscale', meaning: 'Carries 90% of every screen. Warm-neutral, never pure black.', stops: [
+          { hex: '#FFFFFF', label: '0' }, { hex: '#F2F1EE', label: '50' }, { hex: '#DCDBD5', label: '200' }, { hex: '#7C7C74', label: '500' }, { hex: '#14151A', label: '900' }
+        ] }
+      ],
+      semantics: [
+        { token: 'allowed', hex: green, use: 'Approved decisions, healthy budget, active leash', contrast: '5.9:1 on white' },
+        { token: 'stopped', hex: red, use: 'Declines, revocation, quarantined merchant text', contrast: '6.6:1 on white' },
+        { token: 'your-turn', hex: violet, use: 'Step-up requests and focus rings only', contrast: '7.4:1 on white' },
+        { token: 'ink', hex: N.ink, use: 'All primary text and the default button fill', contrast: '16:1 on white' },
+        { token: 'mute', hex: N.mute, use: 'Secondary text, metadata, disabled labels', contrast: '4.6:1 on white' },
+        { token: 'canvas', hex: '#F2F1EE', use: 'App background, grouping bands, empty states', contrast: 'surface' }
+      ],
+      stateNames: ['default', 'hover', 'pressed', 'focus', 'disabled', 'loading'],
+      buttons: [
+        { variant: 'Primary', cells: [
+          btn(N.ink, '#fff', 'none', null, null, 'Continue'),
+          btn('#2A2B31', '#fff', 'none', null, null, 'Continue'),
+          btn('#000', '#fff', 'none', 'inset 0 2px 4px rgba(0,0,0,.4)', null, 'Continue'),
+          btn(N.ink, '#fff', '3px solid #8A1FA8', null, null, 'Continue'),
+          btn('#DCDBD5', '#8E8E87', 'none', null, null, 'Continue'),
+          btn(N.ink, '#fff', 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Approve', cells: [
+          btn(green, '#fff', 'none', null, null, 'Approve'),
+          btn('#26693A', '#fff', 'none', null, null, 'Approve'),
+          btn('#1F5C33', '#fff', 'none', 'inset 0 2px 4px rgba(0,0,0,.3)', null, 'Approve'),
+          btn(green, '#fff', '3px solid #8A1FA8', null, null, 'Approve'),
+          btn('#DCDBD5', '#8E8E87', 'none', null, null, 'Approve'),
+          btn(green, '#fff', 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Secondary', cells: [
+          btn('#fff', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#F2F1EE', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#E4E3DE', N.ink, '1.5px solid #14151A', null, null, 'Reject'),
+          btn('#fff', N.ink, '3px solid #8A1FA8', null, null, 'Reject'),
+          btn('#fff', '#B4B3AC', '1.5px solid #DCDBD5', null, null, 'Reject'),
+          btn('#fff', N.ink, '1.5px solid #14151A', null, '.75', '· · ·')
+        ] },
+        { variant: 'Ghost', cells: [
+          btn('transparent', N.ink, 'none', null, null, 'Edit rules'),
+          btn('#F2F1EE', N.ink, 'none', null, null, 'Edit rules'),
+          btn('#E4E3DE', N.ink, 'none', null, null, 'Edit rules'),
+          btn('transparent', N.ink, '3px solid #8A1FA8', null, null, 'Edit rules'),
+          btn('transparent', '#B4B3AC', 'none', null, null, 'Edit rules'),
+          btn('transparent', N.ink, 'none', null, '.75', '· · ·')
+        ] },
+        { variant: 'Destructive', cells: [
+          btn('#fff', red, '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn('#FBEDEC', red, '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn(red, '#fff', '1.5px solid #C0203A', null, null, 'Cut the leash'),
+          btn('#fff', red, '3px solid #8A1FA8', null, null, 'Cut the leash'),
+          btn('#fff', '#D9A8B1', '1.5px solid #EBD2D7', null, null, 'Cut the leash'),
+          btn('#fff', red, '1.5px solid #C0203A', null, '.75', '· · ·')
+        ] }
+      ],
+      chips: [
+        { label: 'APPROVED', bg: '#E6F2E8', fg: '#1F5C33', dot: green },
+        { label: 'DECLINED', bg: '#F9E9EB', fg: '#8E1729', dot: red },
+        { label: 'ASKED YOU', bg: '#F3E6F7', fg: '#6A1783', dot: violet },
+        { label: 'PENDING', bg: '#F1F0EC', fg: '#55554F', dot: '#9A9A92' },
+        { label: 'TEXT FLAGGED', bg: '#F9E9EB', fg: '#8E1729', dot: red },
+        { label: 'EXPIRED', bg: '#F1F0EC', fg: '#7C7C74', dot: '#C7C6C0' }
+      ],
+      icons: [
+        { name: 'home', w: '16px', h: '16px', r: '3px', fill: 'transparent' },
+        { name: 'leash', w: '18px', h: '9px', r: '9px', fill: 'transparent' },
+        { name: 'card', w: '20px', h: '14px', r: '3px', fill: 'transparent' },
+        { name: 'shield', w: '15px', h: '17px', r: '3px 3px 8px 8px', fill: 'transparent' },
+        { name: 'approve', w: '16px', h: '16px', r: '50%', fill: '#2E7D45' },
+        { name: 'decline', w: '16px', h: '16px', r: '50%', fill: '#C0203A' },
+        { name: 'ask', w: '16px', h: '16px', r: '50%', fill: '#8A1FA8' },
+        { name: 'log', w: '14px', h: '18px', r: '2px', fill: 'transparent' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

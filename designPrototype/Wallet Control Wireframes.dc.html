@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>body{margin:0;background:#f0eee9;font-family:'IBM Plex Mono',ui-monospace,monospace}a{color:#2a78d6}a:hover{color:#1a5aa8}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'IBM Plex Mono',monospace;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 'IBM Plex Mono',monospace;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 'IBM Plex Mono',monospace;color:rgba(0,0,0,.5)}</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Agent on a Leash — wallet control layer · lo-fi mobile wireframes · 4 directions</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Guardrail Dashboard — structured policy first (Alex, the Guardrails Maximizer)</div>
+<div class="dv-card" style="padding:22px 20px 18px">
+<div style="display:flex;gap:18px;align-items:flex-start;overflow-x:auto">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="width:22px;height:18px;border:1.5px solid #1a1a1a;border-radius:3px"></div>
+<div style="font:700 12.5px Inter,system-ui,sans-serif">Wallet Control</div>
+<div style="width:22px;height:18px;border:1.5px solid #1a1a1a;border-radius:3px"></div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:7px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:10px;height:10px;border-radius:50%;background:#1a1a1a"></div><div style="font:700 13.5px Inter,system-ui,sans-serif">Status: PROTECTED</div></div>
+<div style="font:400 12.5px Inter,system-ui,sans-serif;color:#444">Auto-approve today &nbsp;CHF 84 / 200</div>
+<div style="height:9px;border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden"><div style="width:42%;height:100%;background:#1a1a1a"></div></div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">accounts.monthly_limit_chf · purchase_attempts.spend_in_period_before_chf</div>
+<div style="height:44px;border:2px solid #c8503c;border-radius:9px;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif;color:#c8503c">⚠ FREEZE ALL AGENT SPENDING</div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:600 11px Inter,system-ui,sans-serif">ACTIVE POLICIES</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#2a78d6">+ New</div></div>
+<div style="border:1.5px dashed #999;border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:4px">
+<div style="font:600 12.5px Inter,system-ui,sans-serif">#1 Running shoes guardrails</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">cap CHF 200 · flex +15 · whitelist only</div>
+<div style="display:flex;gap:5px"><span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:1px 6px">ACTIVE</span><span style="font:500 8px 'IBM Plex Mono',monospace;color:#777">valid_until 30 Sep</span></div>
+</div>
+<div style="border:1.5px dashed #999;border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:4px">
+<div style="font:600 12.5px Inter,system-ui,sans-serif">#2 Grocery auto-approve</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">cap CHF 80 · Coop, Migros only</div>
+</div>
+<div style="font:600 11px Inter,system-ui,sans-serif;margin-top:2px">RECENT DECISIONS</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:4px"><span style="font:400 11.5px Inter,system-ui,sans-serif">Nike Store · CHF 189</span><span style="font:500 8px 'IBM Plex Mono',monospace">APPROVED</span></div>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:4px"><span style="font:400 11.5px Inter,system-ui,sans-serif">Unknown shop · CHF 45</span><span style="font:500 8px 'IBM Plex Mono',monospace;color:#c8503c">DECLINED</span></div>
+<div style="display:flex;justify-content:space-between"><span style="font:400 11.5px Inter,system-ui,sans-serif">Zalando · CHF 208</span><span style="font:500 8px 'IBM Plex Mono',monospace;color:#2a78d6">ASK YOU</span></div>
+</div>
+<div style="display:flex;gap:6px;margin-top:4px;border-top:1.5px solid #1a1a1a;padding-top:7px">
+<div style="flex:1;text-align:center;font:600 11px Inter,system-ui,sans-serif">Home</div><div style="flex:1;text-align:center;font:400 11px Inter,system-ui,sans-serif;color:#888">Policies</div><div style="flex:1;text-align:center;font:400 11px Inter,system-ui,sans-serif;color:#888">Log</div><div style="flex:1;text-align:center;font:400 11px Inter,system-ui,sans-serif;color:#888">Cards</div>
+</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S1 · Dashboard</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;align-items:center;gap:8px"><div style="font:600 11px Inter,system-ui,sans-serif">&lt; Back</div><div style="font:700 11px Inter,system-ui,sans-serif">New policy</div></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">1 · WHICH CARD DOES THE AGENT GET?</div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:8px;display:flex;justify-content:space-between;align-items:center">
+<div><div style="font:600 12.5px Inter,system-ui,sans-serif">Virtual card ••4417</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">agent-only · no real PAN shown</div></div>
+<div style="width:16px;height:16px;border:2px solid #1a1a1a;border-radius:50%;background:#1a1a1a"></div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">cards.virtual_card · cards.online_enabled · cards.international_enabled</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">2 · LIMITS</div>
+<div style="border:1.5px dashed #999;border-radius:9px;padding:9px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif">Hard cap / transaction<span style="font-weight:700">CHF 200</span></div>
+<div style="height:8px;border:1.5px solid #1a1a1a;border-radius:5px;position:relative"><div style="position:absolute;left:55%;top:-5px;width:16px;height:16px;border:2px solid #1a1a1a;border-radius:50%;background:#fff"></div></div>
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif">Monthly cap<span style="font-weight:700">CHF 900</span></div>
+<div style="height:8px;border:1.5px solid #1a1a1a;border-radius:5px;position:relative"><div style="position:absolute;left:35%;top:-5px;width:16px;height:16px;border:2px solid #1a1a1a;border-radius:50%;background:#fff"></div></div>
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif">Flex margin (ask me)<span style="font-weight:700">+CHF 15</span></div>
+<div style="height:8px;border:1.5px solid #1a1a1a;border-radius:5px;position:relative"><div style="position:absolute;left:18%;top:-5px;width:16px;height:16px;border:2px solid #1a1a1a;border-radius:50%;background:#fff"></div></div>
+</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">3 · MERCHANTS</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border:2px solid #1a1a1a;border-radius:50%;background:#1a1a1a"></div><div style="font:400 11px Inter,system-ui,sans-serif">Whitelist only (4 merchants)</div></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border:2px solid #1a1a1a;border-radius:50%"></div><div style="font:400 11px Inter,system-ui,sans-serif">Any merchant, CH + EU only</div></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border:2px solid #1a1a1a;border-radius:50%"></div><div style="font:400 11px Inter,system-ui,sans-serif">Categories: block gambling, crypto</div></div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">merchants.merchant_mcc · merchant_country · recurring_capable</div>
+<div style="height:44px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif;color:#fff">Review permissions →</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S2 · Structured policy builder</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;align-items:center;gap:8px"><div style="font:600 11px Inter,system-ui,sans-serif">&lt; Edit</div><div style="font:700 11px Inter,system-ui,sans-serif">Confirm permissions</div></div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#555">This is exactly what the agent may do. Nothing else.</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:9px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:7px"><div style="font:700 11px Inter,system-ui,sans-serif">✓</div><div style="font:400 11px Inter,system-ui,sans-serif">Max auto-approve <b>CHF 200</b> per transaction</div></div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="display:flex;gap:7px"><div style="font:700 11px Inter,system-ui,sans-serif">✓</div><div style="font:400 11px Inter,system-ui,sans-serif">Soft limit <b>+CHF 15</b> → ask me, 1 tap</div></div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="display:flex;gap:7px"><div style="font:700 11px Inter,system-ui,sans-serif">✓</div><div style="font:400 11px Inter,system-ui,sans-serif">Merchants: whitelist <b>OR</b> trust ≥ 4.5</div></div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="display:flex;gap:7px"><div style="font:700 11px Inter,system-ui,sans-serif">✓</div><div style="font:400 11px Inter,system-ui,sans-serif">Window: <b>14 – 30 Sep</b>, then auto-expires</div></div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="display:flex;gap:7px"><div style="font:700 11px Inter,system-ui,sans-serif">✓</div><div style="font:400 11px Inter,system-ui,sans-serif">Injection shield: agent text can never change these rules</div></div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">writes → scenario_authorities (valid_from, valid_until, initial_status)</div>
+<div style="border:1.5px dashed #c8503c;border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:3px">
+<div style="font:600 11px Inter,system-ui,sans-serif;color:#c8503c">Uncertain cases</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#444">If a rule can't be evaluated with confidence → <b>ask me</b> (default) / decline</div>
+</div>
+<div style="height:44px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif;color:#fff">Save &amp; activate</div>
+<div style="height:38px;border:1.5px solid #999;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif;color:#555">Save as draft</div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#888;text-align:center">Read aloud by screen reader on save (aria-live)</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S3 · Executable permission sheet</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="border:2px solid #c8503c;border-radius:9px;padding:6px 8px;font:700 12.5px Inter,system-ui,sans-serif;color:#c8503c">⚠ Approval requested · 04:52 left</div>
+<div style="display:flex;gap:9px;align-items:center">
+<div style="width:64px;height:64px;border:1.5px solid #999;border-radius:8px;background:repeating-linear-gradient(45deg,#f2f0ec 0 6px,#e6e3dd 6px 12px);display:flex;align-items:center;justify-content:center;font:500 7px 'IBM Plex Mono',monospace;color:#888;text-align:center">item<br>image</div>
+<div style="flex:1"><div style="font:600 11.5px Inter,system-ui,sans-serif">Nike Air Zoom Pegasus</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">Official Nike Store · trust 4.9</div></div>
+</div>
+<div style="border:1.5px dashed #999;border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif">Item<span>CHF 199.00</span></div>
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif">Delivery<span>CHF 9.00</span></div>
+<div style="display:flex;justify-content:space-between;font:700 11.5px Inter,system-ui,sans-serif;border-top:1.5px solid #1a1a1a;padding-top:5px">Total<span>CHF 208.00</span></div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">purchase_attempt_items · delivery_fee · billing_amount_chf</div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:5px">
+<div style="font:600 11px Inter,system-ui,sans-serif">Why you're being asked</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#333">• +CHF 8 over your CHF 200 cap</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#333">• Within your +15 flex margin</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#333">• Merchant known, 12 past purchases</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#c8503c">• Merchant text contained an instruction — ignored, not shown to the engine</div>
+</div>
+<div style="height:48px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 13.5px Inter,system-ui,sans-serif;color:#fff">Approve +CHF 8</div>
+<div style="height:48px;border:2px solid #1a1a1a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11.5px Inter,system-ui,sans-serif">Reject this purchase</div>
+<div style="height:44px;border:2px solid #c8503c;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif;color:#c8503c">Block merchant &amp; revoke</div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#888;text-align:center">All targets ≥ 48dp · Face ID confirm on approve</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S4 · Step-up approval</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;align-items:center;gap:8px"><div style="font:600 11px Inter,system-ui,sans-serif">&lt; Log</div><div style="font:700 11px Inter,system-ui,sans-serif">Decision detail</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:8px"><div style="font:700 11.5px Inter,system-ui,sans-serif">DECLINED · CHF 45.00</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">14 Sep, 21:04 · auth_id 8f21…c3</div></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">EVIDENCE CONSIDERED</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px"><div style="font:400 11.5px Inter,system-ui,sans-serif"><b>Merchant</b> — unknown, first seen, country ≠ policy list</div><div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6">merchants.merchant_country · availability</div></div>
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px"><div style="font:400 11.5px Inter,system-ui,sans-serif"><b>Velocity</b> — 4 attempts in 10 min</div><div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6">purchase_attempts.recent_attempt_count_10m</div></div>
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px"><div style="font:400 11.5px Inter,system-ui,sans-serif"><b>Duplicate</b> — same basket as auth 7c11, already declined</div><div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6">related_authorization_id / status</div></div>
+<div style="border:1.5px dashed #c8503c;border-radius:8px;padding:7px"><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#c8503c"><b>Untrusted text</b> — merchant description asked to "ignore limits". Quarantined.</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#2a78d6;text-decoration:underline">View raw text (sandboxed)</div></div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:8px"><div style="font:600 11px Inter,system-ui,sans-serif">Rule that fired</div><div style="font:400 11.5px Inter,system-ui,sans-serif">Policy #1 → “whitelist only”. Confidence: high.</div></div>
+<div style="height:44px;border:1.5px solid #999;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Allow this merchant once</div>
+<div style="height:44px;border:1.5px solid #999;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Export decision (PDF)</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S5 · Audit / transparency</div>
+</div>
+
+</div>
+<div style="margin-top:14px;font:400 10px/1.6 'IBM Plex Mono',monospace;color:#777;max-width:1000px">Strength: highest legibility of the control surface — every permission is a discrete, auditable object. Cost: setup is 3 screens deep, which Maya-type users skim.</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Leash — natural-language policy, live parse, one-tap step-up (Maya, the Frictionless Delegator)</div>
+<div class="dv-card" style="padding:22px 20px 18px">
+<div style="display:flex;gap:18px;align-items:flex-start;overflow-x:auto">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 12.5px Inter,system-ui,sans-serif">The leash</div>
+<div style="border:2px solid #1a1a1a;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center">
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#555">Agent can spend right now</div>
+<div style="font:700 24px Inter,system-ui,sans-serif">CHF 116</div>
+<div style="width:100%;height:12px;border:2px solid #1a1a1a;border-radius:7px;overflow:hidden"><div style="width:42%;height:100%;background:repeating-linear-gradient(45deg,#1a1a1a 0 4px,#444 4px 8px)"></div></div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#777">of CHF 200 daily · resets 00:00</div>
+</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;height:48px;border:2px solid #1a1a1a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Shorten</div>
+<div style="flex:1;height:48px;border:2px solid #c8503c;border-radius:9px;display:flex;align-items:center;justify-content:center;font:700 12.5px Inter,system-ui,sans-serif;color:#c8503c">Cut the leash</div>
+</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">YOUR RULES, IN YOUR WORDS</div>
+<div style="border:1.5px dashed #999;border-radius:10px;padding:9px"><div style="font:400 12.5px/1.45 Inter,system-ui,sans-serif">“Buy running shoes up to CHF 200. CHF 15 flex if the shop is rated over 4.5. Official retailers only.”</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#2a78d6;margin-top:5px">Tap to edit · 4 rules active</div></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">LIVE NOW</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:9px;display:flex;flex-direction:column;gap:5px">
+<div style="font:600 12.5px Inter,system-ui,sans-serif">Shopping: black running shoes</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap">
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:2px 6px">3 checked</span>
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:2px 6px">1 declined</span>
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #2a78d6;color:#2a78d6;border-radius:9px;padding:2px 6px">1 waiting for you</span>
+</div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">purchase_attempts (live) grouped by scenario_id / authority_id</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S1 · Leash home</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 11px Inter,system-ui,sans-serif">Write the rules</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:9px;min-height:96px"><div style="font:400 12.5px/1.5 Inter,system-ui,sans-serif">Buy running shoes up to CHF 200. Allow CHF 15 extra if rated above 4.5. Official retailers only. Never subscriptions.<span style="border-left:2px solid #2a78d6;margin-left:2px">&nbsp;</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">WE READ THAT AS →</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#2a78d6">updates as you type</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span style="font:600 11px Inter,system-ui,sans-serif;border:2px solid #1a1a1a;border-radius:16px;padding:3px 9px">cap = CHF 200 ✎</span>
+<span style="font:600 11px Inter,system-ui,sans-serif;border:2px solid #1a1a1a;border-radius:16px;padding:3px 9px">flex = +15 ✎</span>
+<span style="font:600 11px Inter,system-ui,sans-serif;border:2px solid #1a1a1a;border-radius:16px;padding:3px 9px">trust ≥ 4.5 ✎</span>
+<span style="font:600 11px Inter,system-ui,sans-serif;border:2px solid #1a1a1a;border-radius:16px;padding:3px 9px">category = footwear ✎</span>
+<span style="font:600 11px Inter,system-ui,sans-serif;border:2px solid #1a1a1a;border-radius:16px;padding:3px 9px">recurring = never ✎</span>
+</div>
+<div style="border:1.5px dashed #c8503c;border-radius:9px;padding:8px"><div style="font:600 11px Inter,system-ui,sans-serif;color:#c8503c">1 thing we're unsure about</div><div style="font:400 11.5px Inter,system-ui,sans-serif">“Official retailers” — did you mean brand stores only, or also large marketplaces?</div><div style="display:flex;gap:6px;margin-top:6px"><div style="flex:1;height:34px;border:1.5px solid #1a1a1a;border-radius:7px;display:flex;align-items:center;justify-content:center;font:600 11.5px Inter,system-ui,sans-serif">Brand only</div><div style="flex:1;height:34px;border:1.5px solid #1a1a1a;border-radius:7px;display:flex;align-items:center;justify-content:center;font:600 11.5px Inter,system-ui,sans-serif">+ Marketplaces</div></div></div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">unparsed phrase → never silently dropped; defaults to stricter option</div>
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif"><span>Missing? Show all controls</span><span style="font-weight:700">⌄</span></div>
+<div style="height:48px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif;color:#fff">Put the agent on this leash</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S2 · NL editor + live parse</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#2a2a2a;padding:11px 11px 13px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#bbb">9:41<span>▮▮▮ ⌁</span></div>
+<div style="text-align:center;font:400 11.5px Inter,system-ui,sans-serif;color:#bbb">Lock screen · Tue 16 Sep</div>
+<div style="text-align:center;font:700 30px Inter,system-ui,sans-serif;color:#fff">9:41</div>
+<div style="background:#fff;border-radius:14px;padding:11px;display:flex;flex-direction:column;gap:7px;margin-top:10px">
+<div style="font:500 8px 'IBM Plex Mono',monospace;color:#888">VISECA ONE · now</div>
+<div style="font:700 13.5px Inter,system-ui,sans-serif">Approve CHF 208? (+8 over cap)</div>
+<div style="display:flex;gap:8px;align-items:center">
+<div style="width:44px;height:44px;border:1.5px solid #ccc;border-radius:7px;background:repeating-linear-gradient(45deg,#f2f0ec 0 5px,#e6e3dd 5px 10px)"></div>
+<div style="font:400 11.5px/1.45 Inter,system-ui,sans-serif">Nike Pegasus · Official Nike Store · trust 4.9 — within your +15 flex</div>
+</div>
+<div style="display:flex;gap:7px">
+<div style="flex:1;height:44px;border:2px solid #1a1a1a;border-radius:8px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 12.5px Inter,system-ui,sans-serif">Approve</div>
+<div style="flex:1;height:44px;border:2px solid #1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Reject</div>
+</div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#2a78d6;text-align:center">Open for full detail · expires in 5 min</div>
+</div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#999;text-align:center;margin-top:6px">Voice: “Hey Siri, approve the Viseca request”</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S3 · Push / 1-tap step-up</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 11px Inter,system-ui,sans-serif">What the agent did</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#666">Mission: black running shoes · 14:02 – 14:09</div>
+<div style="display:flex;flex-direction:column;gap:0">
+<div style="display:flex;gap:9px"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:13px;height:13px;border:2px solid #1a1a1a;border-radius:50%"></div><div style="width:2px;flex:1;background:#ccc"></div></div><div style="padding-bottom:12px"><div style="font:600 11px Inter,system-ui,sans-serif">14:02 · Sportshop24 — CHF 179</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#c8503c">DECLINED — merchant not verified</div></div></div>
+<div style="display:flex;gap:9px"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:13px;height:13px;border:2px solid #1a1a1a;border-radius:50%"></div><div style="width:2px;flex:1;background:#ccc"></div></div><div style="padding-bottom:12px"><div style="font:600 11px Inter,system-ui,sans-serif">14:04 · Sportshop24 — retry</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#c8503c">DECLINED — same basket, no re-ask</div><div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6">dedupe via related_authorization_id</div></div></div>
+<div style="display:flex;gap:9px"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:13px;height:13px;border:2px solid #c8503c;border-radius:50%;background:#c8503c"></div><div style="width:2px;flex:1;background:#ccc"></div></div><div style="padding-bottom:12px"><div style="font:600 11px Inter,system-ui,sans-serif">14:06 · Merchant page text</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#c8503c">INJECTION BLOCKED — “ignore the CHF limit” stripped</div></div></div>
+<div style="display:flex;gap:9px"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:13px;height:13px;border:2px solid #2a78d6;border-radius:50%;background:#2a78d6"></div><div style="width:2px;flex:1;background:#ccc"></div></div><div style="padding-bottom:12px"><div style="font:600 11px Inter,system-ui,sans-serif">14:08 · Nike Store — CHF 208</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#2a78d6">ASKED YOU → approved in 6s</div></div></div>
+<div style="display:flex;gap:9px"><div style="width:13px;height:13px;border:2px solid #1a1a1a;border-radius:50%;background:#1a1a1a"></div><div><div style="font:600 11px Inter,system-ui,sans-serif">14:09 · Paid CHF 208</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">single-use token, nike.com only</div></div></div>
+</div>
+<div style="height:44px;border:1.5px solid #999;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Share this trail</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S4 · Mission trail</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 11px Inter,system-ui,sans-serif;color:#c8503c">Cut the leash?</div>
+<div style="font:400 12.5px/1.5 Inter,system-ui,sans-serif">The agent loses all spending access immediately. Nothing pending goes through.</div>
+<div style="border:1.5px dashed #999;border-radius:9px;padding:9px;display:flex;flex-direction:column;gap:6px">
+<div style="font:600 11px Inter,system-ui,sans-serif">This will:</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif">• revoke the virtual card ••4417</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif">• cancel 1 pending request (CHF 208)</div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif">• keep your real card untouched</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px"><div style="width:17px;height:17px;border:2px solid #1a1a1a;border-radius:4px"></div><div style="font:400 11px Inter,system-ui,sans-serif">Also block Sportshop24 forever</div></div>
+<div style="height:52px;border:2px solid #c8503c;border-radius:9px;background:#c8503c;display:flex;align-items:center;justify-content:center;font:700 13.5px Inter,system-ui,sans-serif;color:#fff">Slide to cut →</div>
+<div style="height:44px;border:1.5px solid #999;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Just pause for 24h</div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#888;text-align:center">Reachable from every screen + notification</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S5 · Revoke / kill switch</div>
+</div>
+
+</div>
+<div style="margin-top:14px;font:400 10px/1.6 'IBM Plex Mono',monospace;color:#777;max-width:1000px">Strength: 20-second setup, and the parse-preview makes the NL→rule translation itself the trust moment. Cost: needs a visible fallback whenever parsing is uncertain — handled here by the “1 thing we're unsure about” block.</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Mission Cards — one virtual card per errand, budget burns down in real time</div>
+<div class="dv-card" style="padding:22px 20px 18px">
+<div style="display:flex;gap:18px;align-items:flex-start;overflow-x:auto">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 12.5px Inter,system-ui,sans-serif">Agent cards</div><div style="font:400 11.5px Inter,system-ui,sans-serif;color:#2a78d6">Real cards ›</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:7px;background:repeating-linear-gradient(135deg,#fafaf8 0 10px,#f2f0ec 10px 20px)">
+<div style="display:flex;justify-content:space-between"><div style="font:600 12.5px Inter,system-ui,sans-serif">Running shoes</div><span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:1px 6px;background:#fff">LIVE</span></div>
+<div style="font:500 11px 'IBM Plex Mono',monospace;color:#555">•••• •••• •••• 4417</div>
+<div style="height:10px;border:1.5px solid #1a1a1a;border-radius:6px;overflow:hidden;background:#fff"><div style="width:58%;height:100%;background:#1a1a1a"></div></div>
+<div style="display:flex;justify-content:space-between;font:400 11.5px Inter,system-ui,sans-serif"><span>CHF 116 spent</span><span>CHF 84 left · expires in 3d</span></div>
+</div>
+<div style="border:1.5px dashed #999;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between"><div style="font:600 12.5px Inter,system-ui,sans-serif">Weekly groceries</div><span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #999;color:#666;border-radius:9px;padding:1px 6px">PAUSED</span></div>
+<div style="font:400 11.5px Inter,system-ui,sans-serif;color:#555">CHF 80/wk · Coop, Migros · recurring ok</div>
+</div>
+<div style="height:46px;border:2px dashed #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif">+ New mission card</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">NEEDS YOU (1)</div>
+<div style="border:2px solid #2a78d6;border-radius:10px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif;color:#2a78d6">CHF 208 at Nike Store</div><div style="font:400 11.5px Inter,system-ui,sans-serif">+8 over cap · tap to decide · 4:52</div></div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">cards ↔ accounts ↔ scenario_authorities (one authority per mission card)</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S1 · Card wallet</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 11px Inter,system-ui,sans-serif">New mission card</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">WHAT IS IT FOR?</div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px;font:400 12.5px Inter,system-ui,sans-serif">Black running shoes, size 44</div>
+<div style="display:flex;gap:7px;flex-wrap:wrap"><span style="font:600 11px Inter,system-ui,sans-serif;border:1.5px solid #999;border-radius:15px;padding:3px 9px">Shoes</span><span style="font:600 11px Inter,system-ui,sans-serif;border:1.5px solid #999;border-radius:15px;padding:3px 9px">Travel</span><span style="font:600 11px Inter,system-ui,sans-serif;border:1.5px solid #999;border-radius:15px;padding:3px 9px">Groceries</span><span style="font:600 11px Inter,system-ui,sans-serif;border:1.5px solid #999;border-radius:15px;padding:3px 9px">Subscriptions</span></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">BUDGET ON THIS CARD</div>
+<div style="display:flex;gap:8px;align-items:center"><div style="flex:1;border:2px solid #1a1a1a;border-radius:9px;padding:9px;font:700 11px Inter,system-ui,sans-serif">CHF 200</div><div style="flex:1;border:1.5px dashed #999;border-radius:9px;padding:9px;font:400 11px Inter,system-ui,sans-serif">flex +15 → ask</div></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">HOW LONG?</div>
+<div style="display:flex;gap:7px"><div style="flex:1;height:38px;border:2px solid #1a1a1a;border-radius:8px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">72 h</div><div style="flex:1;height:38px;border:1.5px solid #999;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">1 week</div><div style="flex:1;height:38px;border:1.5px solid #999;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">Until used</div></div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">WHERE</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:400 11px Inter,system-ui,sans-serif">Online purchases</div><div style="width:38px;height:22px;border:2px solid #1a1a1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;padding:0 2px"><div style="width:16px;height:16px;border-radius:50%;background:#1a1a1a"></div></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:400 11px Inter,system-ui,sans-serif">Outside Switzerland</div><div style="width:38px;height:22px;border:2px solid #999;border-radius:12px;display:flex;align-items:center;padding:0 2px"><div style="width:16px;height:16px;border-radius:50%;background:#bbb"></div></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:400 11px Inter,system-ui,sans-serif">Recurring charges</div><div style="width:38px;height:22px;border:2px solid #999;border-radius:12px;display:flex;align-items:center;padding:0 2px"><div style="width:16px;height:16px;border-radius:50%;background:#bbb"></div></div></div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">maps 1:1 to cards.online_enabled / international_enabled / recurring</div>
+<div style="height:48px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 11.5px Inter,system-ui,sans-serif;color:#fff">Mint card &amp; hand to agent</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S2 · Mint a mission card</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="display:flex;align-items:center;gap:8px"><div style="font:600 11px Inter,system-ui,sans-serif">&lt;</div><div style="font:700 11px Inter,system-ui,sans-serif">Running shoes card</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif"><span>Budget burn</span><span style="font-weight:700">CHF 116 / 200</span></div>
+<div style="height:34px;border:1.5px solid #1a1a1a;border-radius:6px;display:flex;overflow:hidden"><div style="width:40%;background:#1a1a1a"></div><div style="width:18%;background:#888"></div><div style="flex:1;background:repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)"></div></div>
+<div style="display:flex;gap:10px;font:400 11px 'IBM Plex Mono',monospace;color:#666"><span>■ settled</span><span>■ pending</span><span>□ free</span></div>
+</div>
+<div style="font:600 11.5px Inter,system-ui,sans-serif;color:#555">ATTEMPTS ON THIS CARD</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px;display:flex;justify-content:space-between"><div><div style="font:600 11px Inter,system-ui,sans-serif">Nike Store</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">14:08 · CHF 208 · online</div></div><span style="font:500 8px 'IBM Plex Mono',monospace;color:#2a78d6">STEP-UP</span></div>
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px;display:flex;justify-content:space-between"><div><div style="font:600 11px Inter,system-ui,sans-serif">Sportshop24</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">14:02 · CHF 179 · online</div></div><span style="font:500 8px 'IBM Plex Mono',monospace;color:#c8503c">DECLINE</span></div>
+<div style="border:1.5px dashed #999;border-radius:8px;padding:7px;display:flex;justify-content:space-between"><div><div style="font:600 11px Inter,system-ui,sans-serif">Ochsner Sport</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">13:40 · CHF 116 · online</div></div><span style="font:500 8px 'IBM Plex Mono',monospace">APPROVE</span></div>
+</div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">authorization_history filtered by card_id · status · billing_amount_chf</div>
+<div style="display:flex;gap:7px"><div style="flex:1;height:44px;border:1.5px solid #1a1a1a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">Tighten</div><div style="flex:1;height:44px;border:1.5px solid #1a1a1a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">Top up</div><div style="flex:1;height:44px;border:2px solid #c8503c;border-radius:9px;display:flex;align-items:center;justify-content:center;font:700 11px Inter,system-ui,sans-serif;color:#c8503c">Kill</div></div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S3 · Live card monitor</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#f4f2ee;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px;justify-content:flex-end">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="flex:1"></div>
+<div style="background:#fff;border:2px solid #1a1a1a;border-radius:16px 16px 12px 12px;padding:12px;display:flex;flex-direction:column;gap:9px">
+<div style="width:44px;height:4px;background:#ccc;border-radius:3px;align-self:center"></div>
+<div style="font:700 11px Inter,system-ui,sans-serif">Decide in one tap</div>
+<div style="display:flex;justify-content:space-between;align-items:center;border:1.5px dashed #999;border-radius:9px;padding:8px"><div><div style="font:600 12.5px Inter,system-ui,sans-serif">Nike Air Zoom Pegasus</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">Official Nike Store · CH</div></div><div style="font:700 11px Inter,system-ui,sans-serif">208</div></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:2px 6px">+8 over cap</span>
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:2px 6px">within flex</span>
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #1a1a1a;border-radius:9px;padding:2px 6px">merchant ok</span>
+<span style="font:500 8px 'IBM Plex Mono',monospace;border:1px solid #c8503c;color:#c8503c;border-radius:9px;padding:2px 6px">1 text flag</span>
+</div>
+<div style="font:400 11.5px/1.45 Inter,system-ui,sans-serif;color:#444">Everything matched except the price. The seller's page tried to raise your limit — we ignored it.</div>
+<div style="height:50px;border:2px solid #1a1a1a;border-radius:9px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font:700 13.5px Inter,system-ui,sans-serif;color:#fff">Approve CHF 208</div>
+<div style="display:flex;gap:7px"><div style="flex:1;height:46px;border:2px solid #1a1a1a;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif">Reject</div><div style="flex:1;height:46px;border:2px solid #c8503c;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,system-ui,sans-serif;color:#c8503c">Kill card</div></div>
+<div style="font:400 11px Inter,system-ui,sans-serif;color:#888;text-align:center">Approving raises this card's cap once — not your policy</div>
+</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S4 · Step-up bottom sheet</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:7px">
+<div style="width:300px;border:2px solid #1a1a1a;border-radius:18px;background:#fff;padding:11px 11px 13px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;justify-content:space-between;font:500 8px 'IBM Plex Mono',monospace;color:#999">9:41<span>▮▮▮ ⌁</span></div>
+<div style="font:700 11px Inter,system-ui,sans-serif">Month in review</div>
+<div style="border:2px solid #1a1a1a;border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;font:400 11px Inter,system-ui,sans-serif"><span>Agent spend</span><span style="font-weight:700">CHF 612 / 900</span></div>
+<div style="display:flex;align-items:flex-end;gap:5px;height:66px">
+<div style="flex:1;height:30%;border:1.5px solid #1a1a1a;background:#e8e6e0"></div>
+<div style="flex:1;height:55%;border:1.5px solid #1a1a1a;background:#e8e6e0"></div>
+<div style="flex:1;height:42%;border:1.5px solid #1a1a1a;background:#e8e6e0"></div>
+<div style="flex:1;height:78%;border:1.5px solid #1a1a1a;background:#1a1a1a"></div>
+<div style="flex:1;height:36%;border:1.5px solid #1a1a1a;background:#e8e6e0"></div>
+<div style="flex:1;height:60%;border:1.5px solid #1a1a1a;background:#e8e6e0"></div>
+</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#777">weeks · dark = week you were asked most</div>
+</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;border:1.5px dashed #999;border-radius:9px;padding:8px;text-align:center"><div style="font:700 12.5px Inter,system-ui,sans-serif">38</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">approved</div></div>
+<div style="flex:1;border:1.5px dashed #999;border-radius:9px;padding:8px;text-align:center"><div style="font:700 12.5px Inter,system-ui,sans-serif">5</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">declined</div></div>
+<div style="flex:1;border:1.5px dashed #999;border-radius:9px;padding:8px;text-align:center"><div style="font:700 12.5px Inter,system-ui,sans-serif">3</div><div style="font:400 11px Inter,system-ui,sans-serif;color:#666">asked you</div></div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:9px"><div style="font:600 11px Inter,system-ui,sans-serif">Suggestion</div><div style="font:400 11.5px Inter,system-ui,sans-serif">You approved every +CHF 10 overage this month. Raise the flex margin to +20?</div><div style="display:flex;gap:7px;margin-top:7px"><div style="flex:1;height:36px;border:1.5px solid #1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif">Raise it</div><div style="flex:1;height:36px;border:1.5px solid #999;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 11px Inter,system-ui,sans-serif;color:#666">Keep strict</div></div></div>
+<div style="font:400 8px 'IBM Plex Mono',monospace;color:#2a78d6;border:1px dashed #9cc0e8;border-radius:4px;padding:2px 4px">aggregated from authorization_history + customers.budget_style</div>
+</div>
+<div style="font:500 9px 'IBM Plex Mono',monospace;color:#888;text-align:center">S5 · Reporting &amp; policy learning</div>
+</div>
+
+</div>
+<div style="margin-top:14px;font:400 10px/1.6 'IBM Plex Mono',monospace;color:#777;max-width:1000px">Strength: the card is the leash — revocation is a concept users already own, and the data model maps to it almost 1:1. Cost: policies scoped per-card, so global rules need a separate “applies to all cards” layer.</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Data board — which Viseca entity feeds which screen (reference, not a screen)</div>
+<div class="dv-card" style="padding:22px 20px 18px;width:660px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font:700 12.5px Inter,system-ui,sans-serif">viseca.drawio → wireframe surfaces</div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">customers · accounts</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">per_transaction_limit_chf, monthly_limit_chf, base_currency → hard ceilings the user's policy can only tighten, never exceed. budget_style seeds the default template (strict / balanced / relaxed).</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">cards</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">virtual_card, online_enabled, international_enabled, card_purpose, status, expires_on → the toggles on the mission-card screen; status drives the kill switch.</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">scenario_authorities</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">authority_id, valid_from / valid_until, initial_status → the policy object itself: one authority per active leash, revocation = status change, expiry = auto-off.</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">purchase_attempts (+ items)</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">amount, billing_amount_chf, items_subtotal, delivery_fee, spend_in_period_before_chf, recent_attempt_count_10m, related_authorization_id, purchase_description → the step-up screen's price breakdown, the rolling-limit bar, retry/duplicate suppression. purchase_description and item_details are <b>untrusted</b>: rendered in a quarantine block, never fed to the decision engine.</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">merchants</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">merchant_category, merchant_mcc, merchant_country, recurring_capable, availability → whitelist / category blocks / geo rules and the “merchant ok” evidence chip.</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">authorization_history</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">status, initiator_type, approved_spend_before_chf, approved_merchant_transaction_count_before, last_approved_at → the log, the merchant-familiarity signal (“12 past purchases”), and the monthly report.</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:600 12.5px Inter,system-ui,sans-serif">scenario_catalogue · fx_rates</div><div style="font:400 10px/1.6 'IBM Plex Mono',monospace;color:#555">control_question / control_theme → demo scenario picker for the judging walkthrough. fx_rates → “CHF 208 (EUR 219)” conversion line on any non-CHF attempt.</div></div>
+</div>
+<div style="border-top:1.5px dashed #999;padding-top:10px;font:400 10px/1.7 'IBM Plex Mono',monospace;color:#555">Three decisions render identically across all directions: <b>APPROVE</b> = silent, log only · <b>DECLINE</b> = notification + reason + one recovery action · <b>STEP_UP</b> = timed, two-choice, evidence-first. Never more than two primary buttons in a step-up.</div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "combine <a class="dv-oid" href="#1b">1b</a>'s NL editor with <a class="dv-oid" href="#1c">1c</a>'s mission cards" · "expand <a class="dv-oid" href="#1a">1a</a> into a clickable flow" · "show the decline + recovery path in more depth"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}"></script>
+</body>
+</html>

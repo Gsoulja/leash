@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#eceae5;font-family:Inter,system-ui,sans-serif}a{color:#5b5b55}a:hover{color:#1a1a1a}</style></helmet>
+
+<div style="padding:28px 32px 40px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline">
+<div style="font:700 17px Inter,sans-serif;color:#1a1a1a">Low-fidelity prototype — Agent on the Leash</div>
+<div style="font:400 11px 'IBM Plex Mono',monospace;color:#77776f">clickable · mobile 360×760 · grayscale only</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px">
+<div style="width:360px;height:760px;border:2px solid #1a1a1a;border-radius:26px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.1)">
+<div style="display:flex;justify-content:space-between;font:500 9px 'IBM Plex Mono',monospace;color:#9a9a92;flex:none">9:41<span>▮▮▮ ⌁</span></div>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:11px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="width:26px;height:20px;border:1.5px solid #1a1a1a;border-radius:3px"></div>
+<div style="font:700 15px Inter,sans-serif">Wallet control</div>
+<div style="width:26px;height:20px;border:1.5px solid #1a1a1a;border-radius:3px"></div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:9px;height:9px;border-radius:50%;background:#1a1a1a"></div><div style="font:600 13px Inter,sans-serif">Agent is on a leash</div></div>
+<div style="font:400 11.5px Inter,sans-serif;color:#55554f">Can spend CHF 84 more today</div>
+<div style="height:8px;border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden"><div style="width:58%;height:100%;background:#1a1a1a"></div></div>
+<div onClick="{{ goKill }}" style="height:48px;border:2px solid #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer;background:#f2f1ee">Freeze all agent spending</div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 11px Inter,sans-serif;letter-spacing:.06em;color:#77776f">ACTIVE POLICIES</div><div onClick="{{ goPolicy }}" style="font:600 11.5px Inter,sans-serif;cursor:pointer;text-decoration:underline">+ New</div></div>
+<div onClick="{{ goParsed }}" style="border:1.5px dashed #9a9a92;border-radius:10px;padding:10px;cursor:pointer">
+<div style="font:600 12.5px Inter,sans-serif">Running shoes guardrails</div>
+<div style="font:400 11px Inter,sans-serif;color:#66665f;margin-top:2px">cap CHF 200 · flex +15 · whitelist</div>
+</div>
+<div style="border:1.5px dashed #9a9a92;border-radius:10px;padding:10px">
+<div style="font:600 12.5px Inter,sans-serif">Weekly groceries</div>
+<div style="font:400 11px Inter,sans-serif;color:#66665f;margin-top:2px">cap CHF 80 · Coop, Migros</div>
+</div>
+<div onClick="{{ goStepUp }}" style="border:2px solid #1a1a1a;border-radius:10px;padding:10px;cursor:pointer;background:#f2f1ee">
+<div style="font:600 12.5px Inter,sans-serif">1 request needs you</div>
+<div style="font:400 11px Inter,sans-serif;color:#55554f;margin-top:2px">CHF 208 at Nike Store · 4:52 left</div>
+</div>
+<div style="font:600 11px Inter,sans-serif;letter-spacing:.06em;color:#77776f">RECENT DECISIONS</div>
+<div onClick="{{ goDetail }}" style="display:flex;flex-direction:column;gap:7px;cursor:pointer">
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #e2e0da;padding-bottom:6px"><span style="font:400 11.5px Inter,sans-serif">Nike Store · CHF 189</span><span style="font:500 9px 'IBM Plex Mono',monospace">APPROVED</span></div>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #e2e0da;padding-bottom:6px"><span style="font:400 11.5px Inter,sans-serif">Unknown shop · CHF 45</span><span style="font:500 9px 'IBM Plex Mono',monospace">DECLINED ›</span></div>
+<div style="display:flex;justify-content:space-between"><span style="font:400 11.5px Inter,sans-serif">Coop · CHF 62</span><span style="font:500 9px 'IBM Plex Mono',monospace">APPROVED</span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPolicy }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;align-items:center;gap:10px"><div onClick="{{ goHome }}" style="font:600 12px Inter,sans-serif;cursor:pointer">‹ Back</div><div style="font:700 15px Inter,sans-serif">New policy</div></div>
+<div style="font:600 11px Inter,sans-serif;letter-spacing:.06em;color:#77776f">WRITE IT IN YOUR OWN WORDS</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:11px;min-height:104px;font:400 12.5px/1.5 Inter,sans-serif">Buy running shoes up to CHF 200. Allow CHF 15 extra if the shop is rated above 4.5. Official retailers only. Never subscriptions.</div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 11px Inter,sans-serif;letter-spacing:.06em;color:#77776f">WE READ THAT AS</div><div style="font:400 10px 'IBM Plex Mono',monospace;color:#9a9a92">live</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span style="font:500 11px Inter,sans-serif;border:1.5px solid #1a1a1a;border-radius:15px;padding:4px 10px">cap CHF 200</span>
+<span style="font:500 11px Inter,sans-serif;border:1.5px solid #1a1a1a;border-radius:15px;padding:4px 10px">flex +15</span>
+<span style="font:500 11px Inter,sans-serif;border:1.5px solid #1a1a1a;border-radius:15px;padding:4px 10px">trust ≥ 4.5</span>
+<span style="font:500 11px Inter,sans-serif;border:1.5px solid #1a1a1a;border-radius:15px;padding:4px 10px">footwear</span>
+<span style="font:500 11px Inter,sans-serif;border:1.5px solid #1a1a1a;border-radius:15px;padding:4px 10px">no recurring</span>
+</div>
+<div style="border:1.5px dashed #1a1a1a;border-radius:10px;padding:10px">
+<div style="font:600 12px Inter,sans-serif">One thing we're unsure about</div>
+<div style="font:400 11.5px/1.45 Inter,sans-serif;color:#44443f;margin-top:3px">“Official retailers” — brand stores only, or large marketplaces too?</div>
+<div style="display:flex;gap:8px;margin-top:9px"><div style="flex:1;height:38px;border:1.5px solid #1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font:500 11.5px Inter,sans-serif">Brand only</div><div style="flex:1;height:38px;border:1.5px solid #9a9a92;border-radius:8px;display:flex;align-items:center;justify-content:center;font:500 11.5px Inter,sans-serif;color:#66665f">+ Marketplaces</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;font:400 12px Inter,sans-serif;color:#55554f;border-top:1px solid #e2e0da;padding-top:10px">Show all structured controls<span>⌄</span></div>
+<div onClick="{{ goParsed }}" style="height:48px;border:2px solid #1a1a1a;border-radius:10px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer">Review permissions</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isParsed }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;align-items:center;gap:10px"><div onClick="{{ goPolicy }}" style="font:600 12px Inter,sans-serif;cursor:pointer">‹ Edit</div><div style="font:700 15px Inter,sans-serif">Confirm permissions</div></div>
+<div style="font:400 12px/1.5 Inter,sans-serif;color:#55554f">Exactly what the agent may do. Nothing else.</div>
+<div style="border:2px solid #1a1a1a;border-radius:11px;padding:11px;display:flex;flex-direction:column;gap:9px">
+<div style="font:400 12px/1.45 Inter,sans-serif">✓ &nbsp;Silent up to <b>CHF 200</b> — your soft cap</div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="font:400 12px/1.45 Inter,sans-serif">✓ &nbsp;Mandate ceiling <b>CHF 215</b> — 200–215 always asks you</div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="font:400 12px/1.45 Inter,sans-serif">✓ &nbsp;Merchants: whitelist <b>or</b> trust ≥ 4.5</div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="font:400 12px/1.45 Inter,sans-serif">✓ &nbsp;Valid <b>14 – 30 Sep</b>, then expires</div>
+<div style="height:1px;background:#e2e0da"></div>
+<div style="font:400 12px/1.45 Inter,sans-serif">✓ &nbsp;Merchant text can never change these rules</div>
+</div>
+<div style="border:1.5px dashed #9a9a92;border-radius:10px;padding:10px">
+<div style="font:600 12px Inter,sans-serif">If we're not sure</div>
+<div style="font:400 11.5px/1.45 Inter,sans-serif;color:#44443f;margin-top:3px">Ask me (default) · Decline automatically</div>
+</div>
+<div style="font:400 10px 'IBM Plex Mono',monospace;color:#77776f;border:1px dashed #c9c7c0;border-radius:5px;padding:5px 6px">writes scenario_authorities: valid_from, valid_until, initial_status</div>
+<div onClick="{{ goHome }}" style="height:48px;border:2px solid #1a1a1a;border-radius:10px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer">Save &amp; activate</div>
+<div onClick="{{ goHome }}" style="height:44px;border:1.5px solid #9a9a92;border-radius:10px;display:flex;align-items:center;justify-content:center;font:500 12.5px Inter,sans-serif;color:#55554f;cursor:pointer">Save as draft</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStepUp }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:8px 10px;font:600 12px Inter,sans-serif;background:#f2f1ee">Approval requested · 04:52 left</div>
+<div style="display:flex;gap:11px;align-items:center">
+<div style="width:68px;height:68px;border:1.5px solid #9a9a92;border-radius:9px;background:repeating-linear-gradient(45deg,#f4f3f0 0 6px,#e6e4de 6px 12px);display:flex;align-items:center;justify-content:center;font:400 8px 'IBM Plex Mono',monospace;color:#9a9a92">item img</div>
+<div style="flex:1"><div style="font:600 13px Inter,sans-serif">Nike Air Zoom Pegasus</div><div style="font:400 11.5px Inter,sans-serif;color:#66665f;margin-top:2px">Official Nike Store · trust 4.9</div></div>
+</div>
+<div style="border:1.5px dashed #9a9a92;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font:400 12px Inter,sans-serif"><span>Item</span><span>CHF 199.00</span></div>
+<div style="display:flex;justify-content:space-between;font:400 12px Inter,sans-serif"><span>Delivery</span><span>CHF 9.00</span></div>
+<div style="display:flex;justify-content:space-between;font:700 13.5px Inter,sans-serif;border-top:1.5px solid #1a1a1a;padding-top:7px"><span>Total</span><span>CHF 208.00</span></div>
+</div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px">
+<div style="font:600 12px Inter,sans-serif">Why you're being asked</div>
+<div style="font:400 11.5px/1.5 Inter,sans-serif;color:#33332f">+CHF 8 over your cap · inside your +15 flex · merchant known, 12 past purchases · merchant text contained an instruction — ignored</div>
+</div>
+<div onClick="{{ goDetail }}" style="height:50px;border:2px solid #1a1a1a;border-radius:10px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13.5px Inter,sans-serif;cursor:pointer">Approve +CHF 8</div>
+<div onClick="{{ goHome }}" style="height:48px;border:2px solid #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 13px Inter,sans-serif;cursor:pointer">Reject this purchase</div>
+<div onClick="{{ goKill }}" style="height:48px;border:2px dashed #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 12.5px Inter,sans-serif;cursor:pointer">Block merchant &amp; revoke</div>
+<div style="font:400 10.5px Inter,sans-serif;color:#9a9a92;text-align:center">All targets ≥ 48dp · Face ID on approve</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;align-items:center;gap:10px"><div onClick="{{ goHome }}" style="font:600 12px Inter,sans-serif;cursor:pointer">‹ Log</div><div style="font:700 15px Inter,sans-serif">Decision detail</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:10px;padding:10px"><div style="font:700 14px Inter,sans-serif">DECLINED · CHF 45.00</div><div style="font:400 10px 'IBM Plex Mono',monospace;color:#77776f;margin-top:3px">14 Sep 21:04 · auth 8f21…c3</div></div>
+<div style="font:600 11px Inter,sans-serif;letter-spacing:.06em;color:#77776f">EVIDENCE CONSIDERED</div>
+<div style="border:1.5px dashed #9a9a92;border-radius:9px;padding:9px"><div style="font:400 11.5px/1.45 Inter,sans-serif"><b>Merchant</b> — unknown, first seen, country outside policy</div><div style="font:400 9px 'IBM Plex Mono',monospace;color:#9a9a92;margin-top:3px">merchants.merchant_country</div></div>
+<div style="border:1.5px dashed #9a9a92;border-radius:9px;padding:9px"><div style="font:400 11.5px/1.45 Inter,sans-serif"><b>Velocity</b> — 4 attempts in 10 minutes</div><div style="font:400 9px 'IBM Plex Mono',monospace;color:#9a9a92;margin-top:3px">recent_attempt_count_10m</div></div>
+<div style="border:1.5px dashed #9a9a92;border-radius:9px;padding:9px"><div style="font:400 11.5px/1.45 Inter,sans-serif"><b>Duplicate</b> — same basket as a declined attempt</div><div style="font:400 9px 'IBM Plex Mono',monospace;color:#9a9a92;margin-top:3px">related_authorization_id</div></div>
+<div style="border:2px solid #1a1a1a;border-radius:9px;padding:9px"><div style="font:400 11.5px/1.45 Inter,sans-serif"><b>Untrusted text</b> — merchant description asked to ignore limits. Quarantined, never sent to the engine.</div><div style="font:500 11px Inter,sans-serif;text-decoration:underline;margin-top:5px">View raw text (sandboxed)</div></div>
+<div onClick="{{ goHome }}" style="height:44px;border:1.5px solid #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:500 12.5px Inter,sans-serif;cursor:pointer">Allow this merchant once</div>
+<div onClick="{{ goHome }}" style="height:44px;border:1.5px solid #9a9a92;border-radius:10px;display:flex;align-items:center;justify-content:center;font:500 12.5px Inter,sans-serif;color:#55554f;cursor:pointer">Export decision</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKill }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><div onClick="{{ goHome }}" style="font:600 12px Inter,sans-serif;cursor:pointer">‹ Cancel</div></div>
+<div style="font:700 17px Inter,sans-serif">Cut the leash?</div>
+<div style="font:400 12.5px/1.6 Inter,sans-serif;color:#44443f">The agent loses all spending access immediately. Nothing pending goes through. Your real card is untouched.</div>
+<div style="border:1.5px dashed #9a9a92;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:6px">
+<div style="font:600 12px Inter,sans-serif">This will</div>
+<div style="font:400 11.5px Inter,sans-serif">— revoke virtual card ••4417</div>
+<div style="font:400 11.5px Inter,sans-serif">— cancel 1 pending request (CHF 208)</div>
+<div style="font:400 11.5px Inter,sans-serif">— keep all policies saved as drafts</div>
+</div>
+<div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border:2px solid #1a1a1a;border-radius:4px"></div><div style="font:400 12px Inter,sans-serif">Also block Sportshop24 permanently</div></div>
+<div onClick="{{ goHome }}" style="height:54px;border:2px solid #1a1a1a;border-radius:10px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font:600 13.5px Inter,sans-serif;cursor:pointer">Slide to cut →</div>
+<div onClick="{{ goHome }}" style="height:46px;border:1.5px solid #1a1a1a;border-radius:10px;display:flex;align-items:center;justify-content:center;font:500 12.5px Inter,sans-serif;cursor:pointer">Just pause for 24 h</div>
+</div>
+</sc-if>
+
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;width:360px">
+<div style="font:500 10px 'IBM Plex Mono',monospace;color:#77776f">{{ screenLabel }}</div>
+<div onClick="{{ goHome }}" style="font:500 10px 'IBM Plex Mono',monospace;color:#77776f;text-decoration:underline;cursor:pointer">restart</div>
+</div>
+</div>
+
+<div style="flex:1;min-width:320px;display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:10px;padding:18px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.06em;color:#77776f;margin-bottom:12px">FLOW MAP — tap a node to jump</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="6">
+<div onClick="{{ n.go }}" style="border:1.5px solid #1a1a1a;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:{{ n.bg }};color:{{ n.fg }}">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12.5px Inter,sans-serif">{{ n.title }}</span><span style="font:400 10.5px Inter,sans-serif;opacity:.7">{{ n.sub }}</span></div>
+<span style="font:500 9px 'IBM Plex Mono',monospace;opacity:.7">{{ n.id }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #dcdad4;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px">
+<div style="font:600 12px Inter,sans-serif;letter-spacing:.06em;color:#77776f">PROTOTYPE CONNECTIONS (Figma equivalent)</div>
+<div style="font:400 11.5px/1.7 Inter,sans-serif;color:#44443f">S1 “+ New” → S2 · <i style="font-style:normal;color:#9a9a92">push right, 200ms ease-out</i><br>S2 “Review permissions” → S3 · <span style="color:#9a9a92">push right</span><br>S3 “Save &amp; activate” → S1 · <span style="color:#9a9a92">push left + success toast</span><br>Agent attempt (backend) → S4 · <span style="color:#9a9a92">overlay, move in from bottom</span><br>S4 “Approve” → S5 · <span style="color:#9a9a92">dissolve</span><br>Any screen, freeze control → S6 · <span style="color:#9a9a92">overlay, no auto-dismiss</span><br>S6 “Slide to cut” → S1 · <span style="color:#9a9a92">dissolve, state = revoked</span></div>
+<div style="border-top:1px solid #e2e0da;padding-top:10px;font:400 11px/1.6 Inter,sans-serif;color:#77776f">Only three decision outcomes exist — approve (silent), decline (notify + reason + one recovery action), step_up (timed, two choices). Every screen keeps the freeze control reachable in one tap.</div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { screen: 'home' };
+  go(s) { return () => this.setState({ screen: s }); }
+  renderVals() {
+    const s = this.state.screen;
+    const defs = [
+      ['home', 'S1', 'Dashboard', 'status, policies, log'],
+      ['policy', 'S2', 'Policy editor', 'natural language + live parse'],
+      ['parsed', 'S3', 'Confirm permissions', 'executable rule list'],
+      ['stepup', 'S4', 'Step-up approval', 'timed, evidence first'],
+      ['detail', 'S5', 'Decision detail', 'audit + recovery'],
+      ['kill', 'S6', 'Revoke / kill switch', 'destructive confirm']
+    ];
+    const cur = defs.find(d => d[0] === s) || defs[0];
+    return {
+      isHome: s === 'home', isPolicy: s === 'policy', isParsed: s === 'parsed',
+      isStepUp: s === 'stepup', isDetail: s === 'detail', isKill: s === 'kill',
+      screenLabel: cur[1] + ' · ' + cur[2],
+      goHome: this.go('home'), goPolicy: this.go('policy'), goParsed: this.go('parsed'),
+      goStepUp: this.go('stepup'), goDetail: this.go('detail'), goKill: this.go('kill'),
+      nodes: defs.map(([k, id, title, sub]) => ({
+        id, title, sub, go: this.go(k),
+        bg: k === s ? '#1a1a1a' : '#fff', fg: k === s ? '#fff' : '#1a1a1a'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
