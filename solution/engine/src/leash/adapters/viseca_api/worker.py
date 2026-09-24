@@ -37,7 +37,8 @@ class WorkerApi(Protocol):
 
     async def get_run(self, run_id: str) -> Any: ...
 
-    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any]) -> Any: ...
+    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any],
+                            budget_seconds: float | None = None) -> Any: ...
 
 
 class Handler(Protocol):
@@ -45,13 +46,18 @@ class Handler(Protocol):
 
 
 class ApiSender:
-    """DecidePurchase's Sender: POST /v1/authorizations/{id}/decision."""
+    """DecidePurchase's Sender: POST /v1/authorizations/{id}/decision.
+
+    `send` takes the remaining seconds, which bounds every phase of the POST inside httpx as well
+    (LEASH-136), so no send outlives the authoritative deadline.
+    """
 
     def __init__(self, api: WorkerApi) -> None:
         self._api = api
 
-    async def send(self, authorization_id: str, body: Mapping[str, Any]) -> None:
-        await self._api.post_decision(authorization_id, body)
+    async def send(self, authorization_id: str, body: Mapping[str, Any],
+                   budget_seconds: float | None = None) -> None:
+        await self._api.post_decision(authorization_id, body, budget_seconds)
 
 
 def _run_over(body: Any) -> bool:
@@ -201,20 +207,19 @@ async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exer
 
     from leash.adapters.postgres.unit_of_work import DEFAULT_LEASE_SECONDS, DEFAULT_LOCK_TIMEOUT_MS, PostgresDecisionStore
     from leash.adapters.regex_reader import RegexReader
-    from leash.adapters.viseca_api.client import VisecaClient
     from leash.adapters.viseca_api.event_schema import load_event_validator
     from leash.adapters.viseca_api.outbox_sender import OutboxSender
     from leash.application.decide_purchase import DeadlinePlan, DecidePurchase
-    from leash.config import Settings, install_redaction, load_runtime
+    from leash.config import Settings, install_redaction, load_runtime, platform_client
 
     settings = Settings.from_env(os.environ)
     install_redaction(settings)
-    client = VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url, settings.api_timeout_seconds)
+    client = platform_client(settings)  # this process owns the pool and closes it below (LEASH-136)
     runtime = await load_runtime(settings, client)
     schema = Path(os.environ.get("LEASH_EVENT_SCHEMA", "../../data/schemas/authorization_event.schema.json"))
     version = f"leash-{runtime.api_version}"
     pool = await asyncpg.create_pool(settings.database_url.get_secret_value(), min_size=1, max_size=8)
-    try:
+    try:  # the HTTP pool is closed with the database pool: one create, one close per process (LEASH-136)
         store = PostgresDecisionStore(pool, engine_version=version, lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS)
         plan = DeadlinePlan.for_lock_timeout(lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS,
                                              send_seconds=settings.watchdog_margin_seconds / 2)
@@ -251,6 +256,7 @@ async def _serve(run_id: str | None) -> None:  # pragma: no cover - wiring, exer
             await serving
     finally:
         await pool.close()
+        await client.aclose()
 
 
 def main() -> None:  # pragma: no cover - process entry point

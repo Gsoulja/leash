@@ -18,7 +18,10 @@ from urllib.parse import quote, quote_plus, unquote, unquote_plus, urlsplit
 
 from pydantic import BaseModel, Field, SecretStr, ValidationError, field_validator
 
-from leash.adapters.viseca_api.client import DEFAULT_BASE_URL, BootstrapSettings, VisecaClient
+from leash.adapters.viseca_api.client import (DEFAULT_BASE_URL, DEFAULT_CONNECT_RETRIES,
+                                              DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
+                                              DEFAULT_MAX_KEEPALIVE_CONNECTIONS, DEFAULT_MAX_CONNECTIONS,
+                                              BootstrapSettings, VisecaClient)
 from leash.domain.clock import WallTime
 
 EXPECTED_API_MAJOR = "0"
@@ -29,6 +32,10 @@ _ENV = {
     "base_url": "LEASH_BASE_URL",
     "api_timeout_seconds": "LEASH_API_TIMEOUT_SECONDS",
     "watchdog_margin_seconds": "LEASH_WATCHDOG_MARGIN_SECONDS",
+    "http_max_connections": "LEASH_HTTP_MAX_CONNECTIONS",
+    "http_max_keepalive_connections": "LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS",
+    "http_keepalive_expiry_seconds": "LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS",
+    "http_connect_retries": "LEASH_HTTP_CONNECT_RETRIES",
 }
 
 
@@ -48,6 +55,12 @@ class Settings(BaseModel):
     base_url: str = DEFAULT_BASE_URL
     api_timeout_seconds: float = Field(default=10.0, gt=0)
     watchdog_margin_seconds: float = Field(default=2.0, gt=0)
+    # HTTP connection pool (LEASH-136). Both processes build their client from these, so the variables
+    # are live rather than only reachable through VisecaClient.from_env.
+    http_max_connections: int = Field(default=DEFAULT_MAX_CONNECTIONS, gt=0)
+    http_max_keepalive_connections: int = Field(default=DEFAULT_MAX_KEEPALIVE_CONNECTIONS, ge=0)
+    http_keepalive_expiry_seconds: float = Field(default=DEFAULT_KEEPALIVE_EXPIRY_SECONDS, gt=0)
+    http_connect_retries: int = Field(default=DEFAULT_CONNECT_RETRIES, ge=0)
 
     @field_validator("database_url")
     @classmethod
@@ -196,6 +209,20 @@ class RuntimeSettings:
         return {"human_window_seconds": self.human_window_seconds,
                 "decision_timeout_seconds": self.decision_timeout_seconds,
                 "defaults_used": sorted(self.bootstrap.defaults_used)}
+
+
+def platform_client(settings: Settings) -> VisecaClient:
+    """The one pooled client a process uses to talk to the platform (LEASH-136).
+
+    Both entry points build it here, so the pool variables configure the deployed processes and not only
+    `VisecaClient.from_env`. Whoever calls this owns the client and closes it.
+    """
+    return VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
+                        settings.api_timeout_seconds,
+                        max_connections=settings.http_max_connections,
+                        max_keepalive_connections=settings.http_max_keepalive_connections,
+                        keepalive_expiry_seconds=settings.http_keepalive_expiry_seconds,
+                        connect_retries=settings.http_connect_retries)
 
 
 async def load_runtime(settings: Settings, client: VisecaClient) -> RuntimeSettings:

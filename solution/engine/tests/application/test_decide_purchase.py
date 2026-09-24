@@ -439,3 +439,50 @@ def test_a_failing_refresh_never_stops_the_decision():
     store.refresh_fails = True
     result = run(use_case(store=store, claim_refresh_seconds=0.05).handle(request()))
     assert result.path == "decided" and result.sent
+
+
+# --- LEASH-136: the send never outlives the authoritative deadline -------------------------------------
+
+class Slow:
+    """A sender that never returns, recording the budget it was given (like ApiSender, it takes one)."""
+
+    def __init__(self):
+        self.budgets: list[float | None] = []
+        self.started: list[float] = []
+
+    async def send(self, authorization_id, body, budget_seconds=None):
+        self.started.append(time.monotonic())
+        self.budgets.append(budget_seconds)
+        await asyncio.sleep(30)
+
+
+def test_the_decision_send_is_cut_off_at_the_deadline_not_after_it():
+    # send_seconds (0.3) is longer than what is left (~0.15): the old code took max(), overshooting the
+    # deadline. The budget is now the smaller of the two, so the send is abandoned before deadline_at.
+    sender = Slow()
+    start = time.monotonic()
+    result = run(use_case(sender=sender).handle(request(deadline_in=0.15)))
+    elapsed = time.monotonic() - start
+    assert result.sent is False
+    assert elapsed < 0.15 + 0.05, f"the send ran {elapsed:.2f}s, past the 0.15s deadline"
+    # the transport is told the truth too, not just cut off from outside
+    [budget] = sender.budgets
+    assert budget is not None and 0 < budget <= PLAN.send_seconds
+    assert budget <= 0.15, f"the budget ({budget:.2f}s) outlasts the time left"
+
+
+def test_a_send_with_no_time_left_is_not_attempted_and_is_left_to_the_outbox():
+    # The watchdog answered so late that nothing remains. Holding the platform connection open past the
+    # deadline cannot help: the row stays unmarked and the outbox delivers it (LEASH-054).
+    class NeverCalled:
+        def __init__(self):
+            self.sent = []
+
+        async def send(self, authorization_id, body):
+            self.sent.append(authorization_id)
+
+    store, sender = FakeStore(decide_delay=5, fallback_delay=5), NeverCalled()
+    result = run(use_case(store=store, sender=sender, plan=PLAN).handle(request(deadline_in=0.2)))
+    assert result.sent is False
+    assert sender.sent == [], "nothing may be sent once the deadline has passed"
+    assert store.sent_marks == []

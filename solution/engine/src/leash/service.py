@@ -114,6 +114,9 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
             if state["hub"] is not None:
                 await state["hub"].stop()
             await state["pool"].close()
+            # The platform client is *not* closed here: `create_api` is given it, so it does not own it.
+            # Whoever built it closes it (see `main`), which also lets a process share one client between
+            # the API and a worker without the app's shutdown pulling the pool out from under the worker.
 
     app = FastAPI(title="Leash", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=list(cors_origins),
@@ -163,24 +166,45 @@ def load_catalogue(data_dir: Path) -> list[CatalogueItem]:
         return [CatalogueItem(r["item_id"], r["item_name"], r["item_category"]) for r in csv.DictReader(f)]
 
 
+class Servable(Protocol):
+    async def serve(self) -> Any: ...
+
+
+class Closeable(Protocol):
+    async def aclose(self) -> None: ...
+
+
+async def serve_until_stopped(server: Servable, viseca: Closeable) -> None:
+    """Serve, then close the platform client — in the loop the pool's sockets were opened on.
+
+    Closing from a second `asyncio.run` after serving has finished raises "Event loop is closed" from
+    httpcore while it tears down an idle keep-alive connection, so the process would exit on a traceback
+    with the socket left uncleanly closed (LEASH-136).
+    """
+    try:
+        await server.serve()
+    finally:
+        await viseca.aclose()
+
+
 def main() -> None:  # pragma: no cover - process entry point
     import uvicorn
 
-    from leash.adapters.viseca_api.client import VisecaClient
-    from leash.config import Settings, configure_logging, install_redaction
+    from leash.config import Settings, configure_logging, install_redaction, platform_client
 
     configure_logging(os.environ.get("LEASH_LOG_LEVEL", "INFO"))
     settings = Settings.from_env(os.environ)
     install_redaction(settings)
     data_dir = Path(os.environ.get("LEASH_DATA_DIR", str(ENGINE.parents[1] / "data")))
     dist = os.environ.get("LEASH_APP_DIST")
-    app = create_api(settings.database_url.get_secret_value(),
-                     VisecaClient(settings.team_api_key.get_secret_value(), settings.base_url,
-                                  settings.api_timeout_seconds),
-                     load_catalogue(data_dir),
+    # This process builds the pooled platform client, so this process closes it — exactly once, in the
+    # loop that served with it (LEASH-136).
+    viseca = platform_client(settings)
+    app = create_api(settings.database_url.get_secret_value(), viseca, load_catalogue(data_dir),
                      cors_origins=[o for o in os.environ.get("LEASH_CORS_ORIGINS", "http://localhost:5173").split(",")
                                    if o],
                      app_dist=Path(dist) if dist else None)
-    uvicorn.run(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
-                port=int(os.environ.get("LEASH_API_PORT", "8080")),
-                log_config=None)
+    server = uvicorn.Server(uvicorn.Config(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
+                                           port=int(os.environ.get("LEASH_API_PORT", "8080")),
+                                           log_config=None))
+    asyncio.run(serve_until_stopped(server, viseca))

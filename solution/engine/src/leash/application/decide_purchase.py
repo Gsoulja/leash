@@ -20,6 +20,7 @@ and sends the stored decision instead. The recovery path for each crash point is
 """
 
 import asyncio
+import inspect
 import logging
 import threading
 import time
@@ -130,6 +131,23 @@ class Sender(Protocol):
     async def send(self, authorization_id: str, body: Mapping[str, Any]) -> None: ...
 
 
+def _takes_budget(send: Any) -> bool:
+    """Whether this `send` can be given the remaining seconds as a third positional argument.
+
+    Read from the bound method itself rather than from a class flag, so a sender that subclasses one
+    which accepts a budget — but overrides `send` with the two-argument form — is called correctly.
+    """
+    try:
+        parameters = list(inspect.signature(send).parameters.values())
+    except (TypeError, ValueError):  # a callable without an introspectable signature: assume the basics
+        return False
+    if any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in parameters):
+        return True
+    positional = [p for p in parameters
+                  if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+    return len(positional) >= 3
+
+
 class _Budget:
     def __init__(self, until: float) -> None:
         self._until = until  # time.monotonic() value
@@ -164,6 +182,7 @@ class DecidePurchase:
         self._human_window = timedelta(seconds=human_window_seconds)
         self._claim_refresh = claim_refresh_seconds
         self._in_flight_poll = in_flight_poll_seconds
+        self._sender_takes_budget = _takes_budget(sender.send)
 
     async def handle(self, request: DecisionRequest) -> HandleResult:
         claim = _Claim()
@@ -295,8 +314,16 @@ class DecidePurchase:
                     timer: "_StageTimer") -> None:
         aid = request.purchase.authorization_id
         left = (request.deadline_at.at - datetime.now(timezone.utc)).total_seconds()
+        if left <= 0:  # holding the connection open past deadline_at cannot help; the outbox delivers it
+            timer.done("send")
+            log.warning("no time left to send before the deadline; leaving it to the outbox",
+                        extra={"authorization_id": aid})
+            return
+        # The budget is what is actually left, never the planned send window: an answer that lands after
+        # deadline_at is refused by the platform anyway, and the outbox is the recovery path (LEASH-054).
+        budget = min(self._plan.send_seconds, left)
         try:
-            await asyncio.wait_for(self._sender.send(aid, body), timeout=max(self._plan.send_seconds, left))
+            await asyncio.wait_for(self._send_within(aid, body, budget), timeout=left)
         except Exception:  # left unmarked: the outbox resends it (LEASH-054)
             timer.done("send")
             log.exception("sending the decision failed; the outbox will retry", extra={"authorization_id": aid})
@@ -308,6 +335,19 @@ class DecidePurchase:
         except Exception:  # sent but not marked: the outbox resends the same body, which is harmless
             log.exception("could not mark the decision sent", extra={"authorization_id": aid})
         timer.done("mark_sent")
+
+    async def _send_within(self, aid: str, body: Mapping[str, Any], budget_seconds: float) -> None:
+        """Send, telling the transport its budget when its `send` can take one.
+
+        A sender that accepts a budget (`ApiSender`) bounds connect, read, write and the pool wait by it,
+        so the deadline is enforced inside httpx as well as by the `wait_for` around this call. A simpler
+        sender keeps the two-argument form. Support is read from the actual `send` once, at construction:
+        a class attribute would be inherited by a subclass that overrides `send` without the parameter.
+        """
+        if self._sender_takes_budget:
+            await self._sender.send(aid, body, budget_seconds)  # type: ignore[call-arg]
+            return
+        await self._sender.send(aid, body)
 
 
 class _StageTimer:

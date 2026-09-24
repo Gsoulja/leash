@@ -23,20 +23,25 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # transaction readers for the permission conversation's context bundle. The diff is additive only
 # (120 insertions, 0 deletions): no existing read path, seed row or decision input changed, so every
 # field moved for the same reason and no field's meaning did.
+# Re-pinned again 2026-09-24 (LEASH-136): the decision send is now bounded by the time actually left
+# before deadline_at (it used to take max(send_seconds, left), which could overshoot) and is skipped
+# entirely when nothing remains, leaving delivery to the outbox. This is decide_purchase's delivery
+# timing, not any field's meaning: no rule, compiled mandate, fact or check changed, so every field moved
+# for the same reason.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "09ec68a5ac2d",
-    "authorization.fulfillment_method@v1": "ef49895b214c",
-    "merchant.merchant_category@v1": "7b11df2f1af0",
-    "items.item_category@v1": "8387b56ee3b8",
-    "items.item_id@v1": "2e1395c38e77",
-    "leash.items.size.v1@v1": "b755c830f6cc",
-    "leash.merchant.prior_purchases.v1@v1": "cb7b19e2a17c",
-    "leash.order.return_days.v1@v1": "b6da1e349333",
-    "leash.items.unrequested_count.v1@v1": "1a92272f2478",
-    "leash.purchase.max_count.v2@v2": "b49ffe16ad2c",
-    "leash.items.max_quantity.v1@v1": "63d79d074391",
-    "leash.session.risk_score.v1@v1": "e6bf9bb75b30",
-    "leash.orders.split_check.v1@v1": "46d453673f6a",
+    "authorization.billing_amount_chf@v1": "74a6113a2713",
+    "authorization.fulfillment_method@v1": "02b349ff6f4d",
+    "merchant.merchant_category@v1": "5b7ce7188e6c",
+    "items.item_category@v1": "1d30232a1f48",
+    "items.item_id@v1": "34ec9073ec4d",
+    "leash.items.size.v1@v1": "3f7611d80074",
+    "leash.merchant.prior_purchases.v1@v1": "6d7486ba0ebc",
+    "leash.order.return_days.v1@v1": "df051ec521a6",
+    "leash.items.unrequested_count.v1@v1": "843e95819297",
+    "leash.purchase.max_count.v2@v2": "f453f1dc16ab",
+    "leash.items.max_quantity.v1@v1": "f4d87334efe4",
+    "leash.session.risk_score.v1@v1": "90d74fc09219",
+    "leash.orders.split_check.v1@v1": "76980282a1bb",
 }
 
 

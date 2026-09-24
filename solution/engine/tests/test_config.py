@@ -266,3 +266,39 @@ def test_structured_log_lines_are_redacted_too(redaction):
         log.removeHandler(handler)
     text = stream.getvalue()
     assert KEY not in text and "db-pass-456" not in text and json.loads(text.splitlines()[0])
+
+
+# --- LEASH-136: the pool is configurable where the processes actually build their client -----------
+
+def test_pool_settings_come_from_the_environment():
+    settings = Settings.from_env({**ENV, "LEASH_HTTP_MAX_CONNECTIONS": "12",
+                                  "LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS": "6",
+                                  "LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS": "45",
+                                  "LEASH_HTTP_CONNECT_RETRIES": "3"})
+    assert settings.http_max_connections == 12
+    assert settings.http_max_keepalive_connections == 6
+    assert settings.http_keepalive_expiry_seconds == 45.0
+    assert settings.http_connect_retries == 3
+
+
+def test_pool_settings_have_defaults_when_unset():
+    settings = Settings.from_env(ENV)
+    assert settings.http_max_connections > 0 and settings.http_max_keepalive_connections > 0
+    assert settings.http_keepalive_expiry_seconds > 0 and settings.http_connect_retries >= 0
+
+
+def test_the_client_a_process_builds_uses_the_configured_pool():
+    """Both entry points build their client through this helper, so the env vars are not dead."""
+    from leash.config import platform_client
+
+    settings = Settings.from_env({**ENV, "LEASH_HTTP_MAX_CONNECTIONS": "9",
+                                  "LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS": "4",
+                                  "LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS": "21"})
+    client = platform_client(settings)
+    try:
+        assert client.limits.max_connections == 9
+        assert client.limits.max_keepalive_connections == 4
+        assert client.limits.keepalive_expiry == 21.0
+        assert client.base_url == settings.base_url.rstrip("/")
+    finally:
+        asyncio.run(client.aclose())

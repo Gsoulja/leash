@@ -17,6 +17,15 @@ DEFAULT_BASE_URL = "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurec
 DEFAULT_TIMEOUT_SECONDS = 10.0
 LONG_POLL_MARGIN_SECONDS = 10.0
 
+# Connection pool (LEASH-136). The platform is a single host, so a small pool is plenty; keep-alive
+# expiry stays under the idle timeout of a typical proxy so we never write to a half-closed socket.
+DEFAULT_MAX_CONNECTIONS = 20
+DEFAULT_MAX_KEEPALIVE_CONNECTIONS = 10
+DEFAULT_KEEPALIVE_EXPIRY_SECONDS = 30.0
+# httpx retries failed *connection attempts* only; a request whose body was already written is never
+# replayed, so this is safe for POST /decision and /resolve without a platform idempotency guarantee.
+DEFAULT_CONNECT_RETRIES = 1
+
 # Documented in technical_details.md; used only when bootstrap doesn't state them.
 DOCUMENTED_DECISION_TIMEOUT_SECONDS = 8.0
 DOCUMENTED_HUMAN_WINDOW_SECONDS = 120.0
@@ -106,14 +115,40 @@ def _as_str(value: Any) -> str | None:
 
 
 class VisecaClient:
+    """One pooled `httpx.AsyncClient` for the service lifetime (LEASH-136).
+
+    The pooled client is built once in `__init__` — constructing it opens no socket, so this costs
+    nothing until the first request and makes "exactly once" true without a lock. Connections are then
+    reused for every call instead of paying a TLS handshake per request inside an 8-second decision
+    budget. Close it with `aclose()` (or use it as an async context manager); closing twice is a no-op.
+
+    `budget_seconds` bounds *every* phase of one call — connect, read, write and the wait for a pooled
+    connection — so a send can never outlive the authoritative `deadline_at`.
+    """
+
     def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL, timeout: float = DEFAULT_TIMEOUT_SECONDS,
-                 transport: httpx.AsyncBaseTransport | None = None):
+                 transport: httpx.AsyncBaseTransport | None = None, *,
+                 max_connections: int = DEFAULT_MAX_CONNECTIONS,
+                 max_keepalive_connections: int = DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
+                 keepalive_expiry_seconds: float = DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
+                 pool_timeout_seconds: float | None = None,
+                 connect_retries: int = DEFAULT_CONNECT_RETRIES):
         if not api_key:
             raise MissingApiKey("TEAM_API_KEY is empty")
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.connect_retries = connect_retries
+        self.limits = httpx.Limits(max_connections=max_connections,
+                                   max_keepalive_connections=max_keepalive_connections,
+                                   keepalive_expiry=keepalive_expiry_seconds)
         self._api_key = api_key
-        self._transport = transport
+        self._pool_timeout = pool_timeout_seconds
+        self._closed = False
+        # An injected transport (tests, the fake API) is used as given: retries belong to the real one.
+        self._http = httpx.AsyncClient(
+            base_url=self.base_url, limits=self.limits, timeout=self._timeout(),
+            transport=transport if transport is not None
+            else httpx.AsyncHTTPTransport(limits=self.limits, retries=connect_retries))
 
     @classmethod
     def from_env(cls, transport: httpx.AsyncBaseTransport | None = None) -> "VisecaClient":
@@ -121,19 +156,61 @@ class VisecaClient:
         if not key:
             raise MissingApiKey("set TEAM_API_KEY to the team's bearer key")
         timeout = float(os.environ.get("LEASH_API_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
-        return cls(key, os.environ.get("LEASH_BASE_URL", DEFAULT_BASE_URL), timeout, transport)
+        return cls(key, os.environ.get("LEASH_BASE_URL", DEFAULT_BASE_URL), timeout, transport,
+                   max_connections=int(os.environ.get("LEASH_HTTP_MAX_CONNECTIONS", DEFAULT_MAX_CONNECTIONS)),
+                   max_keepalive_connections=int(os.environ.get("LEASH_HTTP_MAX_KEEPALIVE_CONNECTIONS",
+                                                                DEFAULT_MAX_KEEPALIVE_CONNECTIONS)),
+                   keepalive_expiry_seconds=float(os.environ.get("LEASH_HTTP_KEEPALIVE_EXPIRY_SECONDS",
+                                                                 DEFAULT_KEEPALIVE_EXPIRY_SECONDS)),
+                   connect_retries=int(os.environ.get("LEASH_HTTP_CONNECT_RETRIES", DEFAULT_CONNECT_RETRIES)))
+
+    @property
+    def http(self) -> httpx.AsyncClient:
+        """The pooled client. The same object for this client's whole life."""
+        return self._http
+
+    @property
+    def is_closed(self) -> bool:
+        return self._closed
+
+    async def aclose(self) -> None:
+        """Close the pool. Safe to call more than once, so shutdown paths need no guard of their own."""
+        if self._closed:
+            return
+        self._closed = True
+        await self._http.aclose()
+
+    async def __aenter__(self) -> "VisecaClient":
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        await self.aclose()
+
+    def _timeout(self, *, timeout: float | None = None, budget_seconds: float | None = None) -> httpx.Timeout:
+        """Per-phase timeouts. A budget caps every phase; without one the configured timeout applies."""
+        base = timeout or self.timeout
+        pool = self._pool_timeout if self._pool_timeout is not None else base
+        if budget_seconds is None:
+            return httpx.Timeout(connect=base, read=base, write=base, pool=pool)
+        return httpx.Timeout(connect=min(base, budget_seconds), read=min(base, budget_seconds),
+                             write=min(base, budget_seconds), pool=min(pool, budget_seconds))
 
     def __repr__(self) -> str:
         return f"VisecaClient(base_url={self.base_url!r}, timeout={self.timeout}, api_key=<redacted>)"
 
     async def _request(self, method: str, path: str, *, auth: bool = True, json: JSON = None,
-                       params: Mapping[str, Any] | None = None, timeout: float | None = None) -> httpx.Response:
+                       params: Mapping[str, Any] | None = None, timeout: float | None = None,
+                       budget_seconds: float | None = None) -> httpx.Response:
+        if self._closed:
+            raise RuntimeError("this VisecaClient is closed; build a new one")
+        if budget_seconds is not None and budget_seconds <= 0:
+            # Sending now could only land after the deadline; the outbox delivers it instead (LEASH-054).
+            raise TimeoutError(f"no time left to {method} {path}")
         headers = {"Accept": "application/json"}
         if auth:
             headers["Authorization"] = f"Bearer {self._api_key}"
-        async with httpx.AsyncClient(base_url=self.base_url, transport=self._transport,
-                                     timeout=timeout or self.timeout) as http:
-            response = await http.request(method, path, headers=headers, json=json, params=params)
+        response = await self._http.request(method, path, headers=headers, json=json, params=params,
+                                            timeout=self._timeout(timeout=timeout, budget_seconds=budget_seconds))
         if not response.is_success:
             error = None
             try:
@@ -191,11 +268,15 @@ class VisecaClient:
         return await self._json("GET", "/v1/decision-requests/next", params={"wait": wait},
                                 timeout=wait + LONG_POLL_MARGIN_SECONDS)
 
-    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any]) -> JSON:
-        return await self._json("POST", f"/v1/authorizations/{authorization_id}/decision", json=decision)
+    async def post_decision(self, authorization_id: str, decision: Mapping[str, Any],
+                            budget_seconds: float | None = None) -> JSON:
+        return await self._json("POST", f"/v1/authorizations/{authorization_id}/decision", json=decision,
+                                budget_seconds=budget_seconds)
 
-    async def resolve(self, authorization_id: str, answer: Mapping[str, Any]) -> JSON:
-        return await self._json("POST", f"/v1/authorizations/{authorization_id}/resolve", json=answer)
+    async def resolve(self, authorization_id: str, answer: Mapping[str, Any],
+                      budget_seconds: float | None = None) -> JSON:
+        return await self._json("POST", f"/v1/authorizations/{authorization_id}/resolve", json=answer,
+                                budget_seconds=budget_seconds)
 
     async def list_authorizations(self) -> JSON:
         return await self._json("GET", "/v1/authorizations")
