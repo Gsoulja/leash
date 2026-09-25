@@ -1,0 +1,63 @@
+{
+  "model": "typesafe/jev-1.13",
+  "cases": [
+    {
+      "id": "size-days",
+      "text": "Running shoes, size 43. Returns within 14 days.",
+      "expected": {
+        "sizes": [
+          "43"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "error": "ReadTimeout",
+      "correct": false,
+      "ms": 1845.41
+    },
+    {
+      "id": "decimal-de",
+      "text": "Schuhe, Gr\u00f6sse 43,5. R\u00fcckgabe innerhalb von 30 Tagen.",
+      "expected": {
+        "sizes": [
+          "43,5"
+        ],
+        "return_days": 30,
+        "final_sale": false
+      },
+      "error": "ReadTimeout",
+      "correct": false,
+      "ms": 2908.1
+    },
+    {
+      "id": "words",
+      "text": "Shirt, selected size medium. Returns within two weeks.",
+      "expected": {
+        "sizes": [
+          "M"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "M"
+        ],
+        "return_days": 14,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 1343.97
+    }
+  ],
+  "passed": 1,
+  "total": 3,
+  "scope": "Authored integration diagnostics, not production accuracy or an independent model comparison."
+}

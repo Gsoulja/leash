@@ -176,6 +176,7 @@ def code_hash(source: str) -> str:
 SHARED_ENFORCEMENT: tuple[str, ...] = (
     "leash.domain.mandate", "leash.domain.facts", "leash.domain.clock", "leash.domain.purchase",
     "leash.domain.checks", "leash.domain.decide", "leash.adapters.fallback_reader",
+    "leash.adapters.jev_reader", "leash.reading.question_bank",  # primary facts and payment-steering detection
     "leash.domain.money", "leash.domain.snapshot",  # used by several rules: shared, so no field can miss them
     "leash.domain.rules.shop_text",  # a safeguard on every purchase; decide() runs it for every verdict
     "leash.domain.rules.unsupported",  # an unenforceable rule never approves (DEC-005)
@@ -234,14 +235,13 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
                                             "decision time",
     "leash.adapters.pack.catalogue": "reference lookup for the permission conversation: names candidate items "
                                      "and their price context, never read at decision time",
-    "leash.policy.compiler": "drafts rules for the customer to confirm; only confirmed hard_rules are enforced",
     "leash.config": "runtime settings and timeouts, no rule semantics",
+    "leash.policy.compiler": "drafts rules for the customer to confirm; only confirmed hard_rules are enforced",
     "leash.policy.registry": "the registry itself; meanings and versions are in each fingerprint",
+    "leash.adapters.jev": "rule verification and reader selection; the primary fact reader is hashed separately",
     "leash.ports.fact_reader": "interface only",
-    "leash.adapters.jev": "typed model suggestions only; FallbackReader and decide enforce the deterministic floor",
     "leash.adapters.laya_reader": "legacy offline experiment; not used by runtime wiring",
     "leash.reading.laya": "legacy offline model decoding and training checks",
-    "leash.reading.question_bank": "the model's questions, pinned by bank_hash; a model can only tighten (DEC-009)",
 })
 
 # The code that gives each field its own meaning at decision time: rule evaluators and the fact sources they

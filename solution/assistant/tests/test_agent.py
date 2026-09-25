@@ -15,10 +15,12 @@ from assistant.agent import (
     MODEL_UNAVAILABLE,
     PermissionAssistant,
     Proposal,
+    Question,
     Turn,
 )
 from leash.domain import mandate as m
 from leash.domain.mandate import CompiledMandate, Rule
+from leash.policy.hard_rules import rule_to_api
 
 
 class StubModel:
@@ -57,6 +59,22 @@ def _confirmed(cap: Decimal) -> CompiledMandate:
 
 
 CUSTOMER = turns("at most CHF 50 per order")
+
+
+def test_repeating_a_confirmed_limit_is_not_loosening():
+    model = StubModel({'rules': [rule_json(m.F_BILLING_CHF, '<=', '50')], 'questions': []})
+    proposal = assistant(model).draft(CUSTOMER, confirmed=_confirmed(Decimal('50')))
+    assert len(proposal.candidates) == 1
+    assert not proposal.questions
+
+
+def test_model_question_suggestions_survive_as_unconfirmed_choices():
+    offered = {'text': 'How many earlier purchases count as regular?',
+               'options': ['At least 3 earlier purchases at the shop.', 'At least 5 earlier purchases at the shop.']}
+    proposal = assistant(StubModel({'rules': [], 'questions': [offered]})).draft(CUSTOMER)
+    assert not proposal.failure
+    assert proposal.as_draft()['questions'][0]['options'] == offered['options']
+    assert not proposal.candidates
 
 
 # --- the six limits the ticket names --------------------------------------------------------
@@ -1341,3 +1359,47 @@ def test_an_item_the_compiler_resolved_the_same_way_is_not_asked_about(catalogue
     proposal = assistant(model).draft(turns(SHOES), catalogue=catalogue)
     assert not any("exact catalogue product" in q.text for q in proposal.questions), \
         [q.text for q in proposal.questions]
+
+
+def test_a_question_that_proposes_a_rule_carries_it_to_the_policy_service():
+    """`Question.rule` is "the rule this question offers" — and it was dropped on the way out.
+
+    Without it the policy service has only prose, so every suggestion reached the customer as a blank
+    text box asking them to phrase the engine's own proposal (the hotel draft, 2026-09-25).
+    """
+    offered = Rule(m.F_RETURN_DAYS, ">=", "14")
+    proposal = Proposal(candidates=(), questions=(Question("Should returns be required?", m.F_RETURN_DAYS,
+                                                           rule=offered),))
+    [asked] = proposal.as_draft()["questions"]
+    assert asked["offers"] == rule_to_api(offered), asked
+
+
+def test_a_question_that_proposes_nothing_offers_nothing():
+    proposal = Proposal(candidates=(), questions=(Question("Which exact product?", m.F_ITEM_ID),),
+                        )
+    assert proposal.as_draft()["questions"][0].get("offers") is None
+
+
+def test_a_rule_held_back_as_a_suggestion_is_still_offered_as_a_choice():
+    """The question that rejects a rule already holds it — so the customer can press it instead of
+    guessing the wording. "refundable rate only" gave "what should it be?" and nothing to press.
+
+    The rule travels; the policy service still validates it and writes the button's own words.
+    """
+    said = turns("Book me a hotel, refundable rate only.")
+    model = StubModel({"rules": [rule_json(m.F_RETURN_DAYS, ">=", 1, says="refundable rate only")],
+                       "questions": []})
+    proposal = assistant(model).draft(said)
+    [held] = [q for q in proposal.questions if "unconfirmed suggestion" in q.text]
+    assert held.rule is not None, "the question knows the rule it is asking about"
+    assert (held.rule.field, held.rule.operator, str(held.rule.value)) == (m.F_RETURN_DAYS, ">=", "1")
+
+
+def test_an_old_limit_overridden_by_a_stricter_one_cannot_be_restated_as_current():
+    from dataclasses import replace
+    confirmed = replace(_confirmed(Decimal('50')), rules=(
+        Rule(m.F_BILLING_CHF, '<=', Decimal('50')), Rule(m.F_BILLING_CHF, '<=', Decimal('20'))))
+    model = StubModel({'rules': [rule_json(m.F_BILLING_CHF, '<=', '50')], 'questions': []})
+    proposal = assistant(model).draft(CUSTOMER, confirmed=confirmed)
+    assert not proposal.candidates
+    assert any('loosen' in q.text for q in proposal.questions)

@@ -103,6 +103,9 @@ services:
       LEASH_MODEL_BASE_URL: ${LEASH_MODEL_BASE_URL:-https://openrouter.ai/api/v1}
       LEASH_MODEL_REASONING: ${LEASH_MODEL_REASONING:-low}
       LEASH_POLICY_URL: ${LEASH_POLICY_URL:-http://api:8080}
+      # Lets the customer pick which supplied story to run from the chat. The picker chooses the story,
+      # never the persona: a scenario the pack does not hold keeps this deployment's own customer.
+      LEASH_SIMULATION: ${LEASH_SIMULATION:-}
       LEASH_CARD_ID: ${LEASH_CARD_ID:-CA0001}
       LEASH_SIM_CUTOFF: ${LEASH_SIM_CUTOFF:-2026-08-09T00:00:00Z}
       LEASH_PACK_DIR: ${LEASH_PACK_DIR:-/repo/data}  # where the image puts the pack (see LEASH_DATA_DIR)

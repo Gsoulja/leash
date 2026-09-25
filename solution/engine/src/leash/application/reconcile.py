@@ -39,7 +39,7 @@ REFUSED_STATUSES = frozenset({"not_sent", "refused", "rejected", "expired", "dea
 AGREES: Mapping[str, frozenset[str]] = {
     "approved": frozenset({"approved", "accepted", "completed"}),
     "declined": frozenset({"declined", "rejected", "refused"}),
-    "waiting": frozenset({"pending", "waiting", "waiting_for_customer"}),
+    "waiting": frozenset({"pending", "waiting", "waiting_for_customer", "pending_step_up"}),
     "received": frozenset({"pending", "waiting"}),
     "timed_out": frozenset({"declined", "expired", "timed_out", "cancelled"}),
     "not_sent": frozenset({"not_sent", "refused", "rejected", "expired", "deadline_passed", "cancelled"}),
@@ -145,6 +145,10 @@ class Reconciler:
                 log.info("reconciled %s: the platform says %s", aid, theirs, extra={"authorization_id": aid})
             return
         if theirs in agreed:
+            if str(mine["platform_outcome"] or "").startswith("conflict:"):
+                async with self._pool.acquire() as conn:
+                    await conn.execute("update authorizations set platform_outcome=$2 where authorization_id=$1 "
+                                       "and state=$3 and delivery=$4", aid, theirs, mine["state"], mine["delivery"])
             return
         await self._alert(aid, theirs, mine, found)
 
@@ -153,6 +157,10 @@ class Reconciler:
                  f"(delivery {mine['delivery']}). Not changed — a person must look.")
         found.alerts.append(alert)
         async with self._pool.acquire() as conn, conn.transaction():
+            # Expose the disagreement in the existing outcome field, without adopting a verdict
+            # or changing spend. A resolved checkout can otherwise look falsely refused in the UI.
+            await conn.execute("update authorizations set platform_outcome=$2 where authorization_id=$1 "
+                               "and state=$3 and delivery=$4", aid, f"conflict:{theirs}", mine["state"], mine["delivery"])
             # The same disagreement every 30 s is one disagreement, not sixty an hour: an append-only log
             # nobody can read is as bad as no log. It is recorded once and repeated only if it changes.
             already = await conn.fetchval(

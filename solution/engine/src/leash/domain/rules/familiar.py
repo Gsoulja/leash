@@ -1,6 +1,8 @@
 """Familiar shop: earlier approved purchases at this merchant ID on this card (history + this run).
 Names never grant familiarity; a name close to a known shop is reported as a possible lookalike."""
 
+import unicodedata
+
 from ..checks import Check
 from ..facts import Facts
 from ..mandate import CompiledMandate
@@ -9,7 +11,10 @@ from ..snapshot import Snapshot
 
 
 def _norm(name: str) -> str:
-    return "".join(ch for ch in name.lower() if ch.isalnum())
+    # ponytail: common Greek/Cyrillic lookalikes, not a complete Unicode confusables database.
+    folded = unicodedata.normalize("NFKC", name).casefold().translate(
+        str.maketrans("аеорсухіјοαρχε", "aeopcyxij oapxe".replace(" ", "")))
+    return "".join(ch for ch in folded if ch.isalnum())
 
 
 def _distance(a: str, b: str) -> int:

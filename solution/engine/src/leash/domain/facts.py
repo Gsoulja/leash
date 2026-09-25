@@ -64,6 +64,11 @@ class Facts:
     # less strict than these facts give (DEC-009).
     deterministic: "Facts | None" = None
 
+    # Source-labelled raw evidence; no merchant text is executed or promoted to policy.
+    trust_findings: tuple[tuple[str, str], ...] = ()
+    offer_outliers: tuple[str, ...] = ()
+    offer_unknown: tuple[int, ...] = ()
+
     def __post_init__(self) -> None:
         if not self.reader:
             raise ValueError("facts must name the reader that produced them")

@@ -300,3 +300,19 @@ it("shows the selected simulation's fixed limit separately from the current perm
   expect(screen.getAllByRole("button", { name: /Shop B/ })).toHaveLength(1);
   expect(within(screen.getByRole("region", { name: "Needs your decision" })).getByRole("button", { name: /Shop B/ })).toBeInTheDocument();
 });
+
+// RunActivity uses this same read model: a local approval must not inflate its accepted total.
+it("summarizes a completed run using platform acceptance, preserving pending and refused decisions", async () => {
+  const { RunActivity } = await import("./RunActivity");
+  const done = run("RUN-01", "finished");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify(
+    url.startsWith("/api/payments") ? { payments: [payment("yes", "approved"),
+      payment("pending", "approved", { delivery: "pending" }),
+      payment("no", "declined"), payment("refused", "approved", { delivery: "refused" })] } :
+    url.startsWith("/api/spending") ? SPENDING : done), { status: 200 })));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><RunActivity initial={done} /></QueryClientProvider>);
+  expect(await screen.findByText(/Platform accepted: 1 approvals, 1 declines/)).toBeInTheDocument();
+  expect(screen.getByText(/1 outcome\(s\) still pending/)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Simulation complete" })).toBeInTheDocument();
+  expect(screen.getByText(/Authorization outcomes do not prove settlement/)).toBeInTheDocument();
+});

@@ -1,0 +1,62 @@
+{
+  "model": "typesafe/jev-1.13",
+  "cases": [
+    {
+      "id": "size-days",
+      "text": "Running shoes, size 43. Returns within 14 days.",
+      "expected": {
+        "sizes": [
+          "43"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "43"
+        ],
+        "return_days": 14,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 5630.98
+    },
+    {
+      "id": "decimal-de",
+      "text": "Schuhe, Gr\u00f6sse 43,5. R\u00fcckgabe innerhalb von 30 Tagen.",
+      "expected": {
+        "sizes": [
+          "43,5"
+        ],
+        "return_days": 30,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "43,5"
+        ],
+        "return_days": 30,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 2116.09
+    }
+  ],
+  "passed": 2,
+  "total": 2,
+  "scope": "Five-second HTTP timeout for extraction-quality diagnosis only. Production retains one second; earlier failures remain recorded."
+}

@@ -25,6 +25,9 @@ class SavedAuthorization:
     #: redelivery carrying a different amount, shop or basket is a new attempt, not a retry, so the
     #: saved verdict must not be handed back as though it had covered these terms.
     changed_terms: tuple[str, ...] = ()
+    #: The platform has acknowledged this answer. A redelivery then needs no resend: a second
+    #: POST /decision is refused (409 step_up_resolution_required), and only /resolve moves it on.
+    sent: bool = False
 
 
 @runtime_checkable

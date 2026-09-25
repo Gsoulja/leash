@@ -69,3 +69,11 @@ purchase events for it to return. Once every event in that run is
 - `data/data_dictionary.md` -- field meanings, currency conversion, and time
   handling once you're writing decision logic instead of just exercising the
   API shape.
+
+## Application integration checks (2026-09-25)
+
+Hosted run responses identify the card in `fixture_profiles`; the hosted scenario/card need not exist in the local pack. The app now records that card and repairs a missing scenario association from the authenticated run-status response. A start error after Viseca returned a run ID must be investigated before retrying: the platform may already be processing it.
+
+`pending_step_up` agrees with a local waiting decision. If an external resolution disagrees with the local record, show a reconciliation conflict and preserve both facts; do not call it a successful local approval or a refused platform authorization.
+
+The CLI check requires `--live --mandate-id <already-confirmed-id>` for the hosted platform, with the exact selected scenario instruction. Keep the worker ready first. It never invents customer answers; a real step-up needs the customer flow, and the script creates a permanent run. See [live validation evidence](../docs/live-journey-validation.md).

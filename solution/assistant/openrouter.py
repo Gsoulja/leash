@@ -101,6 +101,15 @@ Rules:
   question is safe; a wrong rule is not.
 - A category request such as groceries does not choose an exact item. Do not add items.item_id unless
   the customer names a specific product; resolve its name using CATALOGUE, never invent an ID.
+- Category-level permission is complete without an exact product. Do not ask which grocery item,
+  brand or shopping list to buy when the customer lets the shopping agent choose within a category.
+- The assistant turn immediately before a reply identifies the question being answered. Interpret
+  the reply in that context and do not repeat a question the customer has answered.
+- For each necessary question offer two or three short, self-contained replies when meaningful.
+  Each option states the customer's complete choice (for example, "Only groceries." or
+  "Only shops with at least 3 prior purchases."). Never offer bare "yes" or "no", pretend an
+  option was chosen, or describe a suggestion as an active rule. Use no options when you need a
+  specific value the customer must supply. Ask only for unresolved permission, not shopping details.
 - PARSER SUGGESTIONS are an independent, incomplete reading of the customer text. Check them against the
   customer, preserve each supported restriction, and correct mistakes. Notes labelled DEC are defaults,
   not customer instructions; ask for an explicit value when it is absent. You are still responsible for
@@ -115,7 +124,7 @@ Rules:
 Answer with JSON only, no prose:
 {{"intent": "permission",
  "rules": [{{"field": ..., "operator": ..., "value": ..., "says": ..., "turn_id": ...}}],
- "questions": ["..."]}}
+ "questions": [{{"text": "...", "options": ["...", "..."]}}]}}
 For a history-only turn return exactly {{"intent":"history","rules":[],"questions":[]}}."""
 
 
@@ -166,7 +175,7 @@ class OpenRouterModel:
         self._reasoning = env.get("LEASH_MODEL_REASONING", "low")
         self._verifier = verifier
         if verifier is not None:
-            self.prompt_version += f"+{verifier.model}@{verifier.threshold}:{getattr(verifier, 'rule_mode', 'enforce')}"
+            self.prompt_version += f"+permission-jev-2:{verifier.model}@{verifier.threshold}:{getattr(verifier, 'rule_mode', 'enforce')}"
         if client is not None:
             self._client = client
             return
@@ -198,20 +207,26 @@ class OpenRouterModel:
         if getattr(choice, "finish_reason", None) in {"length", "content_filter"}:
             raise ValueError("The model did not complete the permission proposal")
         reply = _json(choice.message.content or "")
-        if self._verifier is not None and isinstance(reply.get("rules"), list) and reply["rules"]:
+        if self._verifier is not None and reply.get("intent") != "history" and isinstance(reply.get("rules"), list):
             state = {"customer_turns": [{"id": t.turn_id, "text": t.text}
                                         for t in request.turns if t.speaker == "customer"]}
             shadow = getattr(self._verifier, "rule_mode", "enforce") == "shadow"
             try:
-                supported = self._verifier.check_rules(state, reply["rules"])
+                support, omissions = self._verifier.check_permission(state, reply["rules"], reply.get("questions", []))
+                supported = [value == "supported" for value in support]
             except Exception as exc:
                 if not shadow:
                     raise
                 log.warning("Jev rule check unavailable (shadow): %s", type(exc).__name__)
                 return reply
             if shadow:
-                log.info("Jev rule check (shadow): checked=%s uncertain=%s", len(supported), supported.count(False))
+                log.info("Jev permission check (shadow): support=%s omissions=%s", support, omissions)
                 return reply
+            gaps = [name for name, value in omissions.items() if value != "covered"]
+            if gaps:
+                reply["questions"] = [*reply.get("questions", []),
+                    "The independent check could not account for all your restrictions. Please clarify: " +
+                    ", ".join(gaps) + "."]
             if not all(supported):
                 # Keep uncertainty blocking even when the compiler also read this restriction.
                 reply["questions"] = [*reply.get("questions", []),

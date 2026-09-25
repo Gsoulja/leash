@@ -116,3 +116,18 @@ def test_a_run_the_platform_lists_no_purchases_for_is_not_a_pass(capsys):
     passed on evidence it never saw. Finding nothing is unknown, not success."""
     assert asyncio.run(connection_check.check(FakeClient(LIVE_DONE, authorizations=[]), timeout=5.0)) == 1
     assert "lists no purchases" in capsys.readouterr().err
+
+
+def test_live_check_requires_existing_consent_and_never_confirms_for_the_customer():
+    class Live(FakeClient):
+        base_url = "https://live.invalid"
+        async def create_mandate(self, body):
+            raise AssertionError("must not create permission")
+        async def confirm_mandate(self, draft_id):
+            raise AssertionError("must not manufacture consent")
+        async def get_mandate(self, mandate_id):
+            return {"status": "active", "instruction": LIVE_SCENARIOS[1]["cardholder_instruction"]}
+    import pytest
+    with pytest.raises(SystemExit, match="already confirmed"):
+        asyncio.run(connection_check.check(Live(LIVE_DONE), timeout=1))
+    assert asyncio.run(connection_check.check(Live(LIVE_DONE), timeout=1, mandate_id="confirmed")) == 0

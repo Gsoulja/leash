@@ -1,0 +1,144 @@
+{
+  "model": "typesafe/jev-1.13",
+  "mode": "shadow",
+  "threshold": 0.9,
+  "prompt": "openrouter-ede9750b+permission-jev-2",
+  "release_ready": false,
+  "cases": [
+    {
+      "case": "covered",
+      "customer_text": "At most CHF 20 per order.",
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "operator": "<=",
+          "value": 20,
+          "currency": "CHF",
+          "scope": "purchase"
+        }
+      ],
+      "synthetic": true,
+      "human_reviewed": false,
+      "ms": 1441.8,
+      "support": [
+        "supported"
+      ],
+      "omissions": {
+        "authorization.billing_amount_chf": "covered",
+        "authorization.fulfillment_method": "covered",
+        "merchant.merchant_category": "covered",
+        "items.item_category": "covered",
+        "items.item_id": "covered",
+        "leash.items.size.v1": "covered",
+        "leash.merchant.prior_purchases.v1": "covered",
+        "leash.order.return_days.v1": "covered",
+        "leash.items.unrequested_count.v1": "covered",
+        "leash.purchase.max_count.v2": "covered",
+        "leash.items.max_quantity.v1": "covered",
+        "leash.session.risk_score.v1": "covered",
+        "leash.orders.split_check.v1": "covered",
+        "other": "covered"
+      }
+    },
+    {
+      "case": "omitted",
+      "customer_text": "At most CHF 20 per order.",
+      "rules": [],
+      "synthetic": true,
+      "human_reviewed": false,
+      "ms": 2079.66,
+      "support": [],
+      "omissions": {
+        "authorization.billing_amount_chf": "omitted",
+        "authorization.fulfillment_method": "covered",
+        "merchant.merchant_category": "ambiguous",
+        "items.item_category": "ambiguous",
+        "items.item_id": "ambiguous",
+        "leash.items.size.v1": "ambiguous",
+        "leash.merchant.prior_purchases.v1": "ambiguous",
+        "leash.order.return_days.v1": "ambiguous",
+        "leash.items.unrequested_count.v1": "ambiguous",
+        "leash.purchase.max_count.v2": "ambiguous",
+        "leash.items.max_quantity.v1": "covered",
+        "leash.session.risk_score.v1": "ambiguous",
+        "leash.orders.split_check.v1": "ambiguous",
+        "other": "ambiguous"
+      }
+    },
+    {
+      "case": "unsupported",
+      "customer_text": "No subscriptions or annual prepayments.",
+      "rules": [],
+      "synthetic": true,
+      "human_reviewed": false,
+      "ms": 2636.89,
+      "support": [],
+      "omissions": {
+        "authorization.billing_amount_chf": "ambiguous",
+        "authorization.fulfillment_method": "ambiguous",
+        "merchant.merchant_category": "ambiguous",
+        "items.item_category": "ambiguous",
+        "items.item_id": "ambiguous",
+        "leash.items.size.v1": "ambiguous",
+        "leash.merchant.prior_purchases.v1": "ambiguous",
+        "leash.order.return_days.v1": "ambiguous",
+        "leash.items.unrequested_count.v1": "ambiguous",
+        "leash.purchase.max_count.v2": "ambiguous",
+        "leash.items.max_quantity.v1": "ambiguous",
+        "leash.session.risk_score.v1": "ambiguous",
+        "leash.orders.split_check.v1": "ambiguous",
+        "other": "ambiguous"
+      }
+    },
+    {
+      "case": "german",
+      "customer_text": "H\u00f6chstens CHF 20 pro Bestellung.",
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "operator": "<=",
+          "value": 20,
+          "currency": "CHF",
+          "scope": "purchase"
+        }
+      ],
+      "synthetic": true,
+      "human_reviewed": false,
+      "ms": 823.86,
+      "support": [
+        "supported"
+      ],
+      "omissions": {
+        "authorization.billing_amount_chf": "covered",
+        "authorization.fulfillment_method": "covered",
+        "merchant.merchant_category": "covered",
+        "items.item_category": "covered",
+        "items.item_id": "covered",
+        "leash.items.size.v1": "ambiguous",
+        "leash.merchant.prior_purchases.v1": "covered",
+        "leash.order.return_days.v1": "covered",
+        "leash.items.unrequested_count.v1": "covered",
+        "leash.purchase.max_count.v2": "covered",
+        "leash.items.max_quantity.v1": "covered",
+        "leash.session.risk_score.v1": "covered",
+        "leash.orders.split_check.v1": "covered",
+        "other": "covered"
+      }
+    }
+  ],
+  "enforcement_fingerprints": {
+    "authorization.billing_amount_chf": "693d31ca63b4",
+    "authorization.fulfillment_method": "a39aa0f21ca4",
+    "merchant.merchant_category": "f1c1af663328",
+    "items.item_category": "0174ac069cf7",
+    "items.item_id": "bfe046ceb673",
+    "leash.items.size.v1": "ae7bdb7018c2",
+    "leash.merchant.prior_purchases.v1": "90d0f47eccea",
+    "leash.order.return_days.v1": "6505d2459ba2",
+    "leash.items.unrequested_count.v1": "c43fc35a1e5f",
+    "leash.purchase.max_count.v2": "de767ac948dd",
+    "leash.items.max_quantity.v1": "4d8c7c859229",
+    "leash.session.risk_score.v1": "dd5671617951",
+    "leash.orders.split_check.v1": "36a37d10c3eb"
+  }
+}

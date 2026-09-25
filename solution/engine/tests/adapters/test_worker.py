@@ -384,3 +384,24 @@ def test_the_worker_opens_the_pool_before_anything_that_can_fail():
     work = inspect.getsource(module._work)
     assert "load_runtime" in work and "create_pool" in work, \
         "bootstrap and the database pool must sit inside the guarded call, not beside it"
+
+
+def test_the_sender_treats_a_refused_second_decision_as_already_delivered():
+    """409 step_up_resolution_required means the platform has our answer and wants /resolve next. Raising
+    here left the outbox row unsent, so it retried the same refused POST every 2 s, for ever."""
+
+    class Refuses:
+        async def post_decision(self, authorization_id, decision, budget_seconds=None):
+            raise VisecaApiError(409, "POST", f"/v1/authorizations/{authorization_id}/decision",
+                                 {"code": "step_up_resolution_required", "message": "Resolve the pending step-up"})
+
+    asyncio.run(ApiSender(Refuses()).send("AZ-1", {"decision": "step_up"}))  # returns: it is delivered
+
+
+def test_the_sender_still_raises_on_any_other_conflict():
+    class Refuses:
+        async def post_decision(self, authorization_id, decision, budget_seconds=None):
+            raise VisecaApiError(409, "POST", "/v1/authorizations/AZ-1/decision", {"code": "something_else"})
+
+    with pytest.raises(VisecaApiError):
+        asyncio.run(ApiSender(Refuses()).send("AZ-1", {"decision": "approve"}))

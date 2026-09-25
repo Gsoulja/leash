@@ -261,8 +261,8 @@ def test_a_run_started_through_the_policy_api_is_decided_with_its_stored_snapsho
                    "Ask me when uncertain.")
     with TestClient(create_api(url, client, load_catalogue(DATA), background_seconds=30)) as http:
         draft = http.post("/api/policies/drafts", json={"instruction": instruction}).json()
-        assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 200
-        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json()
+        assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": draft["revision"]}).status_code == 200
+        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": draft["revision"]}).json()
         run = http.post("/api/runs", json={"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]}).json()
     total = len(pack.attempts("SCEN0004"))
 

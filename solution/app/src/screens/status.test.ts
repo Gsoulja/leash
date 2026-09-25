@@ -111,3 +111,10 @@ it("a decline still awaiting the platform is not presented as confirmed", () => 
   expect(deliveryNote({ ...pending, delivery: "accepted" })).toContain("confirmed the decline");
   expect(deliveryNote({ ...pending, delivery: "accepted" })).not.toContain("shipped");
 });
+
+it("does not call a conflicting platform approval a refusal or a successful local approval", () => {
+  const p = payment({ final_state: "not_sent", delivery: "refused", platform_outcome: "conflict:approved" });
+  expect(stageOf(p)).toBe("conflict");
+  expect(statusOf(p)[0]).toContain("review needed");
+  expect(deliveryNote(p)).toContain("platform reports approved");
+});

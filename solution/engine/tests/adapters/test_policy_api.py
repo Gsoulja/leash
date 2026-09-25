@@ -21,6 +21,8 @@ from leash.adapters.http.policy_api import create_policy_app
 from leash.adapters.pack.loader import Pack
 from leash.adapters.viseca_api.client import VisecaClient
 from leash.policy.compiler import CatalogueItem
+from leash.policy.hard_rules import rule_from_api
+from leash.policy.render import describe_rule
 
 ENGINE = Path(__file__).resolve().parents[2]
 DATA = ENGINE.parents[1] / "data"
@@ -70,10 +72,10 @@ def ready_draft(http):
 
 def test_confirm_requires_draft(api):
     http, viseca, _, _ = api
-    response = http.post("/api/policies/drafts/LD-nope/confirm", json={"confirmed": True})
+    response = http.post("/api/policies/drafts/LD-nope/confirm", json={"confirmed": True, "revision": 1})
     assert response.status_code == 404 and response.json()["error"]["code"] == "draft_not_found"
     draft = ready_draft(http)
-    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True})
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": 1})
     assert response.status_code == 409 and response.json()["error"]["code"] == "not_submitted"
     assert viseca.confirms == 0
 
@@ -113,12 +115,12 @@ def test_history_exchange_is_recorded_without_changing_or_confirming_permission(
 def test_submit_posts_the_draft_to_viseca_and_shows_exactly_what_was_posted(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    posted = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json(), "PlatformDraft")
+    posted = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json(), "PlatformDraft")
     assert posted["draft_id"] == draft["draft_id"] and posted["platform_draft_id"] != draft["draft_id"]
     stored = fake.mandates[posted["platform_draft_id"]].body
     assert stored["hard_rules"] == posted["hard_rules"] == draft["hard_rules"]
     assert stored["instruction"] == CLEAR and stored["uncertainty_policy"] == "ask"
-    again = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json()
+    again = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json()
     assert again == posted and viseca.creates == 1  # submitting again reuses the platform draft
 
 
@@ -126,7 +128,7 @@ def test_a_draft_with_open_questions_cannot_be_submitted(api):
     http, viseca, _, _ = api
     draft = http.post("/api/policies/drafts", json={"instruction": UNCLEAR}).json()
     assert draft["status"] == "needs_answers" and draft["open_questions"]
-    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     assert response.status_code == 409 and response.json()["error"]["code"] == "questions_open"
     assert viseca.creates == 0
 
@@ -134,8 +136,8 @@ def test_a_draft_with_open_questions_cannot_be_submitted(api):
 def test_confirm_stores_the_returned_mandate_as_version_1(api):
     http, viseca, fake, url = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
-    mandate = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json(),
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
+    mandate = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": 1}).json(),
                     "Mandate")
     assert mandate["mandate_id"].startswith("TM-") and fake.mandates[mandate["mandate_id"]].status == "active"
     assert (mandate["version"], mandate["status"]) == (1, "active")
@@ -191,8 +193,8 @@ def test_confirmation_records_the_sentences_the_customer_agreed_to(api):
         "context": {"assistant": {"model": "stub-1", "prompt_version": "p1", "history_checked": prose}},
     }).json(), "PolicyDraft")
     assert draft["status"] == "ready", draft["open_questions"]
-    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json()
-    mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json()
+    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json()
+    mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": 1}).json()
     assert "mandate_id" in mandate, (posted, mandate)
 
     async def stored():
@@ -219,7 +221,7 @@ def test_confirmation_records_the_sentences_the_customer_agreed_to(api):
 def test_confirm_needs_the_customers_explicit_yes(api):
     http, viseca, _, _ = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     for body in ({}, {"confirmed": False}, {"confirmed": "yes"}, {"confirmed": 1}, {"confirmed": True, "x": 1}):
         response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json=body)
         assert response.status_code == 422, body
@@ -229,10 +231,10 @@ def test_confirm_needs_the_customers_explicit_yes(api):
 def test_confirming_twice_returns_the_same_mandate_and_never_confirms_at_viseca_again(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
-    first = http.post(path, json={"confirmed": True}).json()
-    second = http.post(path, json={"confirmed": True})
+    first = http.post(path, json={"confirmed": True, "revision": 1}).json()
+    second = http.post(path, json={"confirmed": True, "revision": 1})
     assert second.status_code == 200 and second.json() == first
     assert viseca.confirms == 1 and sum(1 for m in fake.mandates.values() if m.status == "active") == 1
 
@@ -240,10 +242,10 @@ def test_confirming_twice_returns_the_same_mandate_and_never_confirms_at_viseca_
 def test_a_double_clicked_confirm_is_idempotent(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
     with ThreadPoolExecutor(2) as pool:
-        a, b = pool.map(lambda _: http.post(path, json={"confirmed": True}), range(2))
+        a, b = pool.map(lambda _: http.post(path, json={"confirmed": True, "revision": 1}), range(2))
     assert (a.status_code, b.status_code) == (200, 200) and a.json() == b.json()
     assert viseca.confirms == 1 and sum(1 for m in fake.mandates.values() if m.status == "active") == 1
 
@@ -251,9 +253,9 @@ def test_a_double_clicked_confirm_is_idempotent(api):
 def test_confirming_a_revoked_mandate_fails(api):
     http, viseca, _, url = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
-    mandate = http.post(path, json={"confirmed": True}).json()
+    mandate = http.post(path, json={"confirmed": True, "revision": 1}).json()
 
     async def revoke():  # LEASH-062 owns the revoke endpoint; the stored status is what confirm must respect
         conn = await asyncpg.connect(url)
@@ -262,7 +264,7 @@ def test_confirming_a_revoked_mandate_fails(api):
         finally:
             await conn.close()
     asyncio.run(revoke())
-    response = http.post(path, json={"confirmed": True})
+    response = http.post(path, json={"confirmed": True, "revision": 1})
     assert response.status_code == 409 and response.json()["error"]["code"] == "mandate_revoked"
     assert viseca.confirms == 1
 
@@ -270,9 +272,9 @@ def test_confirming_a_revoked_mandate_fails(api):
 def test_a_platform_refusal_to_confirm_stores_nothing(api):
     http, viseca, fake, url = api
     draft = ready_draft(http)
-    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json()
+    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json()
     fake.mandates[posted["platform_draft_id"]].status = "confirmed"  # e.g. confirmed elsewhere already
-    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True})
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": 1})
     assert response.status_code == 409 and response.json()["error"]["code"] == "platform_refused"
     assert valid(http.get("/api/mandates").json(), "MandateList") == {"mandates": [], "current_mandate_id": None}
 
@@ -281,7 +283,7 @@ def test_parallel_submits_create_one_platform_draft(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
     with ThreadPoolExecutor(5) as pool:
-        bodies = list(pool.map(lambda _: http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json(),
+        bodies = list(pool.map(lambda _: http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json(),
                                range(5)))
     assert all(b == bodies[0] for b in bodies) and viseca.creates == 1 and len(fake.mandates) == 1
 
@@ -289,7 +291,7 @@ def test_parallel_submits_create_one_platform_draft(api):
 def test_a_failed_local_write_after_viseca_confirmed_is_recovered_on_retry(api):
     http, viseca, fake, url = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
 
     async def break_local_write(on: bool):
         conn = await asyncpg.connect(url)
@@ -306,19 +308,19 @@ def test_a_failed_local_write_after_viseca_confirmed_is_recovered_on_retry(api):
 
     asyncio.run(break_local_write(True))
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
-    first = http.post(path, json={"confirmed": True})
+    first = http.post(path, json={"confirmed": True, "revision": 1})
     [active] = [mid for mid, m in fake.mandates.items() if m.status == "active"]  # Viseca did confirm
     assert first.status_code == 500 and first.json()["error"]["code"] == "local_write_failed"
     assert active in first.json()["error"]["message"]
     asyncio.run(break_local_write(False))
-    again = http.post(path, json={"confirmed": True})
+    again = http.post(path, json={"confirmed": True, "revision": 1})
     assert again.status_code == 200 and again.json()["mandate_id"] == active and viseca.confirms == 1
 
 
 def test_a_confirm_whose_answer_was_lost_is_reported_not_silently_refused(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     real = viseca.confirm_mandate
 
     async def lost(draft_id):
@@ -327,9 +329,9 @@ def test_a_confirm_whose_answer_was_lost_is_reported_not_silently_refused(api):
 
     viseca.confirm_mandate = lost
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
-    assert http.post(path, json={"confirmed": True}).status_code == 502
+    assert http.post(path, json={"confirmed": True, "revision": 1}).status_code == 502
     viseca.confirm_mandate = real
-    again = http.post(path, json={"confirmed": True})
+    again = http.post(path, json={"confirmed": True, "revision": 1})
     assert again.status_code == 409 and again.json()["error"]["code"] == "confirm_outcome_unknown"
     assert "may already be active" in again.json()["error"]["message"]
 
@@ -346,10 +348,10 @@ def test_many_parallel_confirms_on_many_drafts_never_deadlock(api):
     http, viseca, fake, _ = api
     drafts = [ready_draft(http) for _ in range(4)]
     for d in drafts:
-        http.post(f"/api/policies/drafts/{d['draft_id']}/submit")
+        http.post(f"/api/policies/drafts/{d['draft_id']}/submit", json={"revision": 1})
     paths = [f"/api/policies/drafts/{d['draft_id']}/confirm" for d in drafts for _ in range(3)]
     with ThreadPoolExecutor(12) as pool:
-        responses = list(pool.map(lambda p: http.post(p, json={"confirmed": True}), paths))
+        responses = list(pool.map(lambda p: http.post(p, json={"confirmed": True, "revision": 1}), paths))
     assert [r.status_code for r in responses] == [200] * 12
     assert viseca.confirms == 4 and sum(1 for m in fake.mandates.values() if m.status == "active") == 4
     for i in range(4):
@@ -359,11 +361,11 @@ def test_many_parallel_confirms_on_many_drafts_never_deadlock(api):
 def test_a_refused_confirm_is_not_later_reported_as_unknown(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json()
+    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).json()
     fake.mandates[posted["platform_draft_id"]].status = "confirmed"
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
     for _ in range(2):
-        response = http.post(path, json={"confirmed": True})
+        response = http.post(path, json={"confirmed": True, "revision": 1})
         assert response.status_code == 409 and response.json()["error"]["code"] == "platform_refused"
 
 
@@ -379,8 +381,8 @@ def test_an_unexpected_failure_gets_the_contract_error_shape(test_database_url):
 
     with TestClient(create_policy_app(test_database_url, Broken(), CATALOGUE), raise_server_exceptions=False) as http:
         draft = ready_draft(http)
-        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
-        response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True})
+        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
+        response = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": 1})
     assert response.status_code == 500
     valid(response.json(), "Error")
 
@@ -391,7 +393,7 @@ def test_a_viseca_call_slower_than_the_claim_window_is_cut_and_never_answered_tw
     monkeypatch.setattr(policy_api, "CONFIRM_WAIT_SECONDS", 1.0)
     http, viseca, fake, _ = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     real, calls = viseca.confirm_mandate, []
 
     async def slow(draft_id):
@@ -402,7 +404,7 @@ def test_a_viseca_call_slower_than_the_claim_window_is_cut_and_never_answered_tw
     viseca.confirm_mandate = slow
     path = f"/api/policies/drafts/{draft['draft_id']}/confirm"
     with ThreadPoolExecutor(2) as pool:
-        first, second = pool.map(lambda _: http.post(path, json={"confirmed": True}), range(2))
+        first, second = pool.map(lambda _: http.post(path, json={"confirmed": True, "revision": 1}), range(2))
     codes = sorted([first.status_code, second.status_code])
     assert len(calls) == 1, codes  # the second click waited; it never called Viseca a second time
     assert 502 in codes and all(c in (409, 502) for c in codes), (first.json(), second.json())
@@ -415,7 +417,7 @@ def test_no_platform_draft_while_questions_open(api):
     http, viseca, _, _ = api
     draft = valid(http.post("/api/policies/drafts", json={"instruction": GROCERIES}).json(), "PolicyDraft")
     assert draft["status"] == "needs_answers"
-    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 409
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).status_code == 409
     assert viseca.creates == 0
 
 
@@ -429,11 +431,11 @@ def test_answers_are_stored_and_recompile_until_the_draft_can_go_to_viseca(api):
     ready = valid(answered.json(), "PolicyDraft")
     assert ready["status"] == "ready" and ready["uncertainty_policy"] == "decline"
     assert http.get(f"/api/policies/drafts/{draft['draft_id']}").json() == ready  # stored
-    posted = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json(), "PlatformDraft")
+    posted = valid(http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": ready["revision"]}).json(), "PlatformDraft")
     assert posted["uncertainty_policy"] == "decline" and posted["hard_rules"] == ready["hard_rules"]
     assert fake.mandates[posted["platform_draft_id"]].body["uncertainty_policy"] == "decline"
     # what the customer confirms is exactly what was posted
-    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json() == posted
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": ready["revision"]}).json() == posted
     later = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
                       json={"answers": [{"question_id": unsure["question_id"], "answer": "Ask me"}]})
     assert later.status_code == 409 and later.json()["error"]["code"] == "already_submitted"
@@ -474,7 +476,7 @@ def test_model_questions_block_direct_submit_and_survive_reload(api):
     }}).json()
     assert draft["status"] == "needs_answers"
     assert http.get(f"/api/policies/drafts/{draft['draft_id']}").json()["assistant"]["model"] == "test"
-    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 409
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).status_code == 409
     assert viseca.creates == 0
 
 
@@ -549,16 +551,19 @@ def test_confirming_a_stale_revision_is_rejected(api):
     assert viseca.confirms == 0
 
 
-def test_submit_without_a_revision_still_works(api):
-    http, _, _, _ = api
+def test_submit_and_confirm_require_the_reviewed_revision(api):
+    http, viseca, _, _ = api
     draft = ready_draft(http)
-    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 200
+    for suffix, body in (("submit", None), ("submit", {}), ("confirm", {"confirmed": True})):
+        response = http.post(f"/api/policies/drafts/{draft['draft_id']}/{suffix}", json=body)
+        assert response.status_code == 422
+    assert viseca.creates == viseca.confirms == 0
 
 
 def test_confirmation_records_the_reviewed_local_revision(api):
     http, _, _, url = api
     draft = ready_draft(http)
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
                         json={"confirmed": True, "revision": 1}).json()
 
@@ -624,7 +629,7 @@ def test_a_malformed_revision_is_refused_rather_than_skipping_the_check(api):
     bad = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": "1"})
     assert bad.status_code == 422 and bad.json()["error"]["code"] == "invalid_request"
     assert viseca.creates == 0
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     bad = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
                     json={"confirmed": True, "revision": 0})
     assert bad.status_code == 422 and viseca.confirms == 0
@@ -677,7 +682,7 @@ def test_a_turn_is_refused_once_the_draft_is_at_viseca(api):
     """Viseca has no draft update: a submitted draft is frozen, exactly as answering one is."""
     http, _, _, _ = api
     draft = http.post("/api/policies/drafts", json={"instruction": LIMIT}).json()
-    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
     late = http.post(turns_path(draft), json={"text": "Only for delivery."})
     assert late.status_code == 409 and late.json()["error"]["code"] == "already_submitted"
 
@@ -866,3 +871,48 @@ def test_a_question_with_no_background_behind_it_carries_no_source(api):
     }}).json()
     mine = [q for q in draft["open_questions"] if q["text"] == "Which exact product?"]
     assert mine and mine[0].get("source") is None
+
+
+def test_a_question_that_proposes_a_rule_offers_it_as_a_choice(api):
+    """Every question used to be a blank text box, even when it already knew the answer it wanted.
+
+    "Book me a hotel ... refundable rate only" came back as "what should it be?" with nothing to press.
+    The label is rendered from the validated rule, never from the model's prose: an option button sends
+    its own text as the customer's next turn, so model wording here would put words in their mouth.
+    """
+    http, _, _, _ = api
+    asked = {"text": 'You said "refundable rate only", which doesn\'t give me 0 for returns. '
+                     "It stays an unconfirmed suggestion — what should it be?",
+             "field": "leash.order.return_days.v1",
+             "offers": {"field": "leash.order.return_days.v1", "operator": ">=", "value": 14}}
+    draft = http.post("/api/policies/drafts", json={"instruction": CLEAR, "context": {
+        "assistant": {"model": "test", "questions": [asked], "status": "needs_answers"}
+    }}).json()
+    [mine] = [q for q in draft["open_questions"] if q["text"] == asked["text"]]
+    assert mine.get("options"), "a question that proposes a rule must offer it"
+    assert mine["options"][0] == describe_rule(rule_from_api(asked["offers"])), "rendered from the rule"
+    assert mine["options"][-1] == "No, leave that out"
+
+
+def test_an_offer_the_registry_cannot_enforce_is_not_turned_into_a_button(api):
+    """A button the engine could not honour is worse than a text box: pressing it would read as agreed."""
+    http, _, _, _ = api
+    asked = {"text": "At most CHF 200 per night?", "field": "leash.nightly.rate.v1",
+             "offers": {"field": "leash.nightly.rate.v1", "operator": "<=", "value": 200}}
+    draft = http.post("/api/policies/drafts", json={"instruction": CLEAR, "context": {
+        "assistant": {"model": "test", "questions": [asked], "status": "needs_answers"}
+    }}).json()
+    [mine] = [q for q in draft["open_questions"] if q["text"] == asked["text"]]
+    assert "options" not in mine, mine
+
+
+def test_model_reply_choices_reach_the_view_and_answered_questions_do_not_return():
+    from leash.adapters.http.policy_api import _assessed
+    question = {'text': 'Which items?', 'options': ['Only groceries.', 'Only clothing.']}
+    view = _assessed({'open_questions': [], 'status': 'ready'}, {'questions': [question]})
+    assert view['open_questions'][0]['options'] == question['options']
+    assert view['status'] == 'needs_answers'
+    answered = _assessed({'open_questions': [], 'status': 'ready',
+                         'answers': [{'question': question['text'], 'answer': 'Only groceries.'}]},
+                        {'questions': [question]})
+    assert not answered['open_questions']

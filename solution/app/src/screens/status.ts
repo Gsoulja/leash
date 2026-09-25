@@ -13,9 +13,10 @@ import type { Payment } from "../api/client";
 export type Tone = "ok" | "ask" | "warn" | "bad" | "dim" | "off";
 
 /** The four delivery stages the ticket names, for anyone who needs them without the label. */
-export type Stage = "decided" | "submitted" | "accepted" | "not_sent";
+export type Stage = "decided" | "submitted" | "accepted" | "not_sent" | "conflict";
 
 export function stageOf(p: Payment): Stage {
+  if (p.platform_outcome?.startsWith("conflict:")) return "conflict";
   if (p.final_state === "not_sent" || p.delivery === "refused") return "not_sent";
   if (p.delivery === "accepted") return "accepted";
   if (p.final_state === "waiting") return "decided";  // decided, and still the customer's to answer
@@ -23,6 +24,7 @@ export function stageOf(p: Payment): Stage {
 }
 
 export function statusOf(p: Payment): [string, Tone] {
+  if (stageOf(p) === "conflict") return ["Platform outcome differs · review needed", "warn"];
   const byCustomer = p.resolved_by === "customer";
   if (p.delivery === "refused" && p.engine_verdict !== null) {
     // We answered; the platform would not take our answer. Not the same as a purchase the platform
@@ -48,6 +50,8 @@ export function statusOf(p: Payment): [string, Tone] {
 /** One line explaining the delivery, for a detail view. Empty when there is nothing worth saying. */
 export function deliveryNote(p: Payment): string {
   switch (stageOf(p)) {
+    case "conflict":
+      return `The platform reports ${p.platform_outcome?.slice(9)}; our local record differs. Review the evidence before relying on this outcome.`;
     case "submitted":
       return "Sent to the bank; waiting for it to confirm.";
     case "accepted":

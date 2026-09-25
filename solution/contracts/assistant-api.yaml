@@ -98,6 +98,10 @@ components:
         replace_instruction:
           type: boolean
           description: On an existing unsubmitted draft, explicitly replace its task and review afresh.
+        question_id:
+          type: string
+          minLength: 1
+          description: On an existing draft, answer this currently open question. Cannot be combined with replacement.
         text:
           type: string
           minLength: 1
@@ -140,6 +144,13 @@ components:
             properties:
               text:
                 type: string
+              options:
+                type: array
+                maxItems: 3
+                items:
+                  type: string
+                  minLength: 1
+                  maxLength: 240
               field:
                 type:
                 - string
@@ -168,6 +179,13 @@ components:
                     type: [string, 'null']
                   row_id:
                     type: [string, 'null']
+              offers:
+                description: >-
+                  The rule this question proposes, when it proposes one. The policy service validates
+                  it against the registry and renders the choice's own wording from the rule, so the
+                  customer is never offered a button worded by the model or one the engine could not
+                  enforce. Absent when the question proposes nothing.
+                type: object
         status:
           type: string
           enum:

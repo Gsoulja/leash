@@ -217,3 +217,13 @@ All of the corpus work below is diagnostic: no case has been human reviewed and 
 12. Is a stated but unmeasurable requirement ("good for professional design work") something the
     assistant may carry as a confirmed rule with a clarification attached, or must it be resolved to
     measurable criteria before the mandate is created? (DEC-050)
+
+### 2026-09-25 — live journey hardening
+
+Implementation defaults for the requested missing PoC work: submit and confirm require the exact reviewed revision. Jev scans all five free-text surfaces, retaining raw evidence and a Unicode-normalized view. Off-platform payment requests and uncertain security classifications require customer attention (or decline under that policy). Model-only size/return claims cannot erase the structured-only uncertainty check; no regex reader is added. Price checks use only the pack's exact item IDs, Decimal FX and stated ranges; absent reference data remains explicitly unknown. Conversation omissions are checked separately from candidate support, including unsupported restrictions and empty candidate lists. Jev permission verification remains shadow until reviewed calibration supports enforcement; diagnostics are not human review. Live simulation uses the documented customer-confirmation and step-up sequence, with platform outcomes as evidence.
+
+Live validation found two additional integration gaps: hosted starts name cards through `fixture_profiles`, and `pending_step_up` is a waiting state. Preserve a run that the platform already created, recover its missing scenario metadata, and never retry a start merely because local projection failed. A platform/local outcome disagreement is surfaced as `conflict:<platform status>` in the existing outcome field and as a review state in the UI; the reconciler does not adopt an external approval or alter the local money state.
+
+### DEC-061 — Answer the current clarification — 2026-09-25
+
+Accepted for the user's requested clarification-loop fix. Restating an equivalent confirmed rule is not a loosening; the append-only tightening operation still requires an actual tightening. Clarification replies carry the current question ID. Deterministic questions use the existing validated answer workflow, preserving the original instruction and closing the answered question. Model questions receive that question explicitly as context and may offer up to three self-contained suggested replies; suggestions are unconfirmed and use the same validation and review as typed replies. Category-level permission does not require selecting an exact product. Unsupported or stale answers cannot close a question or activate permission. Existing hard rules and explicit review/confirmation remain authoritative.

@@ -1,0 +1,6 @@
+{
+  "local_http_status": 502,
+  "platform_started_run_id": "run_f11ee62f0d98d58d",
+  "cause": "Hosted card was absent from local scenario pack; platform start succeeded before local projection failed.",
+  "retried": false
+}

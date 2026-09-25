@@ -29,7 +29,7 @@ from assistant.conversation import ModelUnavailable, PermissionConversation, Pol
 from leash.application.permission_context import UnknownScope, resolve_scope
 from leash.domain.clock import SimTime
 from leash.domain.mandate import CompiledMandate
-from leash.policy.hard_rules import mandate_from_api
+from leash.policy.hard_rules import mandate_from_api, rule_to_api
 
 log = logging.getLogger("leash.assistant")
 
@@ -40,9 +40,13 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
-def _text(body: Any, *, simulation: bool = False) -> str | None:
+def _text(body: Any, *, simulation: bool = False, answering: bool = False) -> str | None:
     """The customer's own words, or None. `context` and `card_id` are deliberately not accepted."""
-    if not isinstance(body, Mapping) or set(body) - ({"replace_instruction", "scenario_id"} if simulation else {"replace_instruction"}) != {"text"}:
+    allowed = {"replace_instruction"} | ({"scenario_id"} if simulation else set()) | ({"question_id"} if answering else set())
+    if not isinstance(body, Mapping) or set(body) - allowed != {"text"}:
+        return None
+    if "question_id" in body and (not isinstance(body["question_id"], str) or not body["question_id"].strip()
+                                  or body.get("replace_instruction")):
         return None
     if "replace_instruction" in body and not isinstance(body["replace_instruction"], bool):
         return None
@@ -86,6 +90,10 @@ class HttpPolicyService:
     anything, so this process cannot do those things by mistake. Reading the active permission is a
     read: a candidate rule has to be checked against it before a customer ever sees it (DEC-006).
     """
+
+    def __init__(self, message: str, status: int = 503):
+        super().__init__(message)
+        self.status = status
 
     def __init__(self, client: Any, *, timeout_seconds: float = 10.0) -> None:
         self._client, self._timeout = client, timeout_seconds
@@ -139,13 +147,26 @@ class HttpPolicyService:
         return self._post(f"/api/policies/drafts/{quote(draft_id, safe='')}/messages",
                           {"text": text, "reply": reply, "context": dict(context)})
 
+    def answer_draft(self, draft_id: str, question_id: str, answer: str) -> Mapping[str, Any]:
+        from urllib.parse import quote
+
+        return self._post(f"/api/policies/drafts/{quote(draft_id, safe='')}/answers",
+                          {"answers": [{"question_id": question_id, "answer": answer}]})
+
     def _post(self, path: str, body: Mapping[str, Any]) -> Mapping[str, Any]:
         try:
             response = self._client.post(path, json=body, timeout=self._timeout)
         except Exception as exc:  # noqa: BLE001 — unreachable is an error the customer must see
             raise PolicyServiceError(f"could not reach the policy service: {exc}") from exc
         if response.status_code >= 400:
-            raise PolicyServiceError(f"the policy service refused the draft ({response.status_code})")
+            message = f"The policy service refused the draft ({response.status_code})."
+            try:
+                detail = response.json().get("error", {})
+                if isinstance(detail, dict) and isinstance(detail.get("message"), str):
+                    message = detail["message"]
+            except (ValueError, AttributeError):
+                pass
+            raise PolicyServiceError(message, response.status_code)
         return response.json()
 
 
@@ -177,7 +198,7 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
         a later sentence can change how an earlier one should be read — while only the newest words
         are added to the draft, so the revisions the customer reviewed stay as they were.
         """
-        text = _text(body)
+        text = _text(body, answering=True)
         if text is None:
             return _error(422, "invalid_request", 'Send {"text": "…"} with the customer\'s own words.')
         try:
@@ -186,12 +207,26 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             log.warning("no draft to add to", exc_info=exc)
             return _error(404, "draft_not_found", "No draft with this ID.")
         replacing = body.get("replace_instruction", False)
+        target = None
+        if question_id := body.get("question_id"):
+            target = next((q for q in stored.get("open_questions", []) if q.get("question_id") == question_id), None)
+            if target is None:
+                return _error(409, "stale_question", "This question is no longer open. Reload the draft before answering.")
+            if not question_id.startswith("AQ-") and target.get("origin") != "model":
+                try:
+                    draft = policy.answer_draft(draft_id, question_id, text)
+                except PolicyServiceError as exc:
+                    return _error(exc.status, "invalid_answer", str(exc))
+                return {"draft": draft, "kind": "permission", "reply": None, "consent_text": [],
+                        "questions": [], "status": draft.get("status", "needs_answers")}
         earlier = "" if replacing else str(stored.get("instruction", ""))
         turns = _said(earlier, text)
         if not replacing:
             questions = [q["text"] for q in stored.get("open_questions", []) if isinstance(q.get("text"), str)]
             questions += [_asked(q) for q in stored.get("assistant", {}).get("questions", [])]
             questions = [q for q in questions if q.strip()]
+            if target is not None:
+                questions = [target["text"]]
             turns[-1:-1] = [Turn("Q", "assistant", "\n".join(questions))] if questions else []
         return _reply(turns, draft_id=draft_id, replace_instruction=replacing,
                       scenario_id=stored.get("simulation_scenario"))
@@ -209,12 +244,15 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
         scoped_card = card_id
         if scenario_id is not None:
             if not simulation or not isinstance(scenario_id, str):
-                return _error(422, "invalid_scenario", "Scenario selection is only available in local simulation.")
-            attempts = pack.attempts(scenario_id)
-            cards = {a.purchase.card_id for a in attempts}
-            if len(cards) != 1:
-                return _error(422, "invalid_scenario", "Choose a supplied scenario with one customer card.")
-            scoped_card = cards.pop()
+                return _error(422, "invalid_scenario", "Scenario selection is not enabled for this deployment.")
+            # The picker chooses the story, not the persona. A supplied scenario names one customer card
+            # in the pack, so the conversation can be scoped to whoever it belongs to. A hosted scenario
+            # does not: the platform delivers its purchases one at a time and only publishes the profile
+            # it used once the run has started, and the assistant holds no platform key to ask (DEC-044).
+            # Then the deployment's own customer stays in scope — never a persona the client named.
+            cards = {a.purchase.card_id for a in pack.attempts(scenario_id)}
+            if len(cards) == 1:
+                scoped_card = cards.pop()
         try:
             scope = resolve_scope(pack, scoped_card)
         except UnknownScope as exc:
@@ -243,8 +281,13 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             "kind": result.proposal.intent,
             "reply": result.reply,
             "consent_text": list(result.consent_text),
+            # `offers` is the rule the question proposes, so the policy service can offer it as a
+            # choice instead of a blank text box. It validates the rule again and renders the button's
+            # own wording from it; nothing here is shown to the customer as written.
             "questions": [{"text": q.text, "field": q.field,
-                           "source": q.source.as_dict() if q.source else None}
+                           "source": q.source.as_dict() if q.source else None,
+                           **({"offers": rule_to_api(q.rule)} if q.rule is not None else {}),
+                           **({"options": list(q.options)} if q.options else {})}
                           for q in result.questions],
             "status": result.status,
             "model": result.proposal.model,

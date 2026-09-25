@@ -129,7 +129,7 @@ class PostgresRepository:
                     await self._event(conn, purchase.authorization_id, "reclaimed", {"owner": owner})
                 return None
             row = await conn.fetchrow(
-                "select state, engine_verdict, checks, merchant_id, billing_chf, item_fingerprint "
+                "select state, engine_verdict, checks, merchant_id, billing_chf, item_fingerprint, delivery "
                 "from authorizations where authorization_id = $1", purchase.authorization_id)
             changed = _changed_terms(purchase, row)
             if changed:
@@ -139,7 +139,8 @@ class PostgresRepository:
                                   {"mismatches": list(changed), "source": "receive"})
         checks = json.loads(row["checks"]) if row["checks"] else None
         return SavedAuthorization(purchase.authorization_id, row["state"], row["engine_verdict"],
-                                  checks["response"] if checks else None, changed_terms=changed)
+                                  checks["response"] if checks else None, changed_terms=changed,
+                                  sent=row["delivery"] == "accepted")
 
     async def refresh_claim(self, authorization_id: str, owner: str, lease_seconds: float) -> bool:
         """Extend the owner's lease while the work is still undecided. False: the claim is no longer ours."""

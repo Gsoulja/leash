@@ -350,6 +350,8 @@ def test_mark_sent_failure_is_logged_not_raised():
 
 
 def test_a_lock_timeout_or_any_failure_of_the_work_is_answered_with_a_safe_step_up():
+    import httpx
+    from leash.adapters.jev import JevClient, JevReader
     from leash.adapters.postgres.unit_of_work import LockTimeout
 
     class Locked(FakeStore):
@@ -361,7 +363,9 @@ def test_a_lock_timeout_or_any_failure_of_the_work_is_answered_with_a_safe_step_
         def read(self, p, budget):
             raise RuntimeError("reader crashed")
 
-    for store, reader in ((Locked(), Reader()), (FakeStore(), BrokenReader())):
+    unavailable_jev = JevReader(JevClient({"OPENROUTER_API_KEY": "test-key"}, client=httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(503)))))
+    for store, reader in ((Locked(), Reader()), (FakeStore(), BrokenReader()), (FakeStore(), unavailable_jev)):
         sender = FakeSender()
         result = run(use_case(store=store, reader=reader, sender=sender).handle(request()))
         assert (result.path, result.verdict) == ("watchdog", "step_up")
@@ -483,3 +487,16 @@ def test_a_hanging_send_is_abandoned_before_the_deadline():
     elapsed = time.monotonic() - start
     # send_seconds (5 s) is longer than the deadline: the deadline wins, not the plan
     assert result.sent is False and elapsed < 1.0, elapsed
+
+
+def test_a_redelivery_the_platform_already_holds_is_not_sent_a_second_time():
+    """LEASH-102 / the connection-check pitfall: the platform re-delivers a step_up'd purchase on every
+    poll until the customer resolves it. Our answer is already with it, so a second POST /decision is
+    refused (409 step_up_resolution_required) — and on a live run that loop ran ~5x a second for the
+    whole 120 s human window. The saved answer is resent only while the platform has not acknowledged it.
+    """
+    body = {"authorization_id": "AZ-1", "decision": "step_up", "reason_codes": ["ask_customer"]}
+    store, sender = FakeStore(saved=SavedAuthorization("AZ-1", "waiting", "step_up", body, sent=True)), FakeSender()
+    result = run(use_case(store=store, sender=sender).handle(request()))
+    assert (result.path, result.verdict) == ("repeat", "step_up")
+    assert sender.sent == [], "the platform already has this answer; only /resolve can move it on"

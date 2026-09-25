@@ -15,9 +15,9 @@ import { Icon, LogoMark } from "../components/icons";
 const zurichDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", year: "numeric" });
 const zurichTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" });
 
-function useCockpitData(runId: string | null) {
+export function useCockpitData(runId: string | null) {
   const client = useQueryClient();
-  const payments = useQuery({ queryKey: ["payments", runId], enabled: runId !== null,
+  const payments = useQuery({ queryKey: ["payments", runId], refetchInterval: 2000, enabled: runId !== null,
                               queryFn: async () => (await api().payments(runId ?? undefined)).payments });
   const spending = useQuery({ queryKey: ["spending", runId], enabled: runId !== null,
                               queryFn: () => api().spending(runId ?? undefined) });

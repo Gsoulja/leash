@@ -243,6 +243,9 @@ class DecidePurchase:
             if payload.changed_terms:
                 return await self._changed_terms(request, payload, result, timer)
             result.path, result.verdict, result.response = "repeat", payload.engine_verdict, payload.response
+            if payload.sent:  # the platform already has this answer; resending it is the 409 loop
+                result.sent = True
+                return result
             await self._send(request, payload.response, result, timer)
             return result
         outcome = payload

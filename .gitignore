@@ -18,9 +18,6 @@ solution/postman/*.postman_environment.json
 # Claude Code: personal settings stay local
 .claude/settings.local.json
 
-# Third-party clone, has its own .git — not ours to vendor
-laya/
-
 # LibreOffice lock files
 .~lock.*#
 

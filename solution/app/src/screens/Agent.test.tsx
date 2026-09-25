@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { PlatformDraft, PolicyDraft } from "../api/client";
 import { Agent } from "./Agent";
@@ -54,7 +54,7 @@ function stubFetch(replies: Record<string, Reply[]>) {
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
-    const queue = replies[`${method} ${url}`] ?? [{ status: 404, body: { error: { code: "not_found", message: "no" } } }];
+    const queue = replies[`${method} ${url}`] ?? (method === "GET" && url === "/api/runs" ? [{ status: 200, body: { runs: [], current_run_id: null } }] : undefined) ?? [{ status: 404, body: { error: { code: "not_found", message: "no" } } }];
     const reply = queue.length > 1 ? queue.shift()! : queue[0];
     return new Response(JSON.stringify(reply.body), { status: reply.status });
   }));
@@ -193,6 +193,7 @@ describe("Agent conversation (LEASH-145)", () => {
                               rules: [{ text: "At most CHF 30.00 per order, delivery included",
                                         source: "customer", decision: null, tightened: false }] });
     const calls = await start(draft(), { "POST /api/permission/drafts/LD-1/turns": [{ status: 200, body: assistant(CORRECTED) }] });
+    fireEvent.click(screen.getByRole("button", { name: "Ask or change something else" }));
     await say("Actually, make it CHF 30.");
 
     expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({ text: "Actually, make it CHF 30." });
@@ -264,6 +265,7 @@ describe("Agent conversation (LEASH-145)", () => {
     const after = draft({ messages: [{ text: "check the history", reply, revision: 1, context: {} }] });
     const calls = await start(draft(), { "POST /api/permission/drafts/LD-1/turns": [
       { status: 200, body: { ...assistant(after), kind: "history", reply } }] });
+    fireEvent.click(screen.getByRole("button", { name: "Ask or change something else" }));
     await say("check the history");
     await screen.findByText(reply);
     expect(posts(calls, "/api/policies/drafts/LD-1/answers")).toHaveLength(0);
@@ -540,7 +542,8 @@ it("connects supplied task, exact review, confirmation and checkout simulation",
   expect(screen.getByRole("heading", { name: "May choose" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Must ask" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Confirm this permission" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Start shopping" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "Start shopping" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Start shopping" }));
   await settle();
   expect(posts(calls, "/api/runs")[0].body).toEqual({ scenario_id: task.scenario_id, mandate_id: "TM-9" });
   expect(started).toHaveBeenCalledWith("RUN-local");
@@ -694,20 +697,22 @@ describe("the handoff to the shopping agent (LEASH-147)", () => {
     const run = { run_id: "RUN-7", scenario_id: "SCEN0004", mandate_id: "TM-9", mandate_version: 1, status: "running" };
     const calls = await confirmed([{ status: 201, body: run }]);
     const start = await screen.findByRole("button", { name: "Start shopping" });
+    await waitFor(() => expect(start).toBeEnabled());
     fireEvent.click(start);
     fireEvent.click(start);      // a double tap is one handoff, not two runs
     await settle();
     expect(posts(calls, "/api/runs")).toHaveLength(1);
     expect(posts(calls, "/api/runs")[0].body).toEqual({ scenario_id: "SCEN0004", mandate_id: "TM-9" });
     expect(await screen.findByText(/RUN-7/)).toBeInTheDocument();
-    expect(screen.getByText(/running/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Checking shop checkouts" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start shopping" })).not.toBeInTheDocument();
   });
 
   it("says why a refused start was refused, and leaves the action to try again", async () => {
     const calls = await confirmed([{ status: 409, body: { error: { code: "mandate_not_active", message: "This permission is not active." } } },
                                    { status: 201, body: { run_id: "RUN-8", scenario_id: "SCEN0004", mandate_id: "TM-9", mandate_version: 1, status: "running" } }]);
-    fireEvent.click(await screen.findByRole("button", { name: "Start shopping" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start shopping" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Start shopping" }));
     await settle();
     expect(screen.getByRole("alert")).toHaveTextContent("This permission is not active.");
     fireEvent.click(screen.getByRole("button", { name: "Start shopping" }));
@@ -723,4 +728,17 @@ describe("the handoff to the shopping agent (LEASH-147)", () => {
     expect(screen.queryByRole("button", { name: "Edit task and review again" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();  // nothing more can be said into this draft
   });
+});
+
+it("sends a selected model suggestion with the question it answers", async () => {
+  const calls = await start(draft({ open_questions: [{ question_id: "AQ-items", text: "Which items?",
+    blocking: true, origin: "model", options: ["Only groceries.", "Only clothing."] }] }), {
+    "POST /api/permission/drafts/LD-1/turns": [{ status: 200, body: assistant(READY) }],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Only groceries." }));
+  await settle();
+  expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({
+    text: "Only groceries.", question_id: "AQ-items",
+  });
+  expect(screen.queryByRole("group", { name: "Which items?" })).not.toBeInTheDocument();
 });

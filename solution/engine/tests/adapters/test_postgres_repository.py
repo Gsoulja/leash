@@ -256,3 +256,24 @@ def test_snapshot_reconciles_with_the_event_context(db):
     assert any("140.00" in m and "100.00" in m for m in mismatches)
     rows = sql(db, "select payload from decision_events where kind = 'integrity_alert' and authorization_id = 'N'")
     assert len(rows) == 1
+
+
+def test_a_repeat_says_whether_the_platform_already_accepted_the_answer(db):
+    """So the caller can tell a resend (our POST never landed) from the 409 loop (it did).
+
+    The platform re-delivers a step_up'd purchase on every poll until the customer resolves it; sending
+    the decision again is refused, and that refusal is not a reason to keep trying.
+    """
+    async def body(repo):
+        p = buy("AZ-1", "2026-08-12T09:15:00Z", "18.00")
+        await received(repo, p)
+        await repo.record_decision("AZ-1", decision("step_up", "ask_customer"), response={"decision": "step_up"},
+                                   ask_expires_at=NOW + timedelta(seconds=120))
+        before = await received(repo, p)
+        async with repo._pool.acquire() as conn, conn.transaction():  # what a successful POST records
+            await PostgresRepository.record_delivery(conn, "AZ-1", accepted=True, outcome="accepted", at=NOW)
+        return before, await received(repo, p)
+
+    before, after = with_repo(db, body)
+    assert before.sent is False, "not acknowledged yet: a redelivery must resend it"
+    assert after.sent is True, "the platform has it; only /resolve moves this on"

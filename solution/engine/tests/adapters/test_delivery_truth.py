@@ -449,3 +449,13 @@ async def _scalar_conn(url, query):
 
 def _scalar(url, query):
     return _scalar_conn(url, query)
+
+
+def test_live_pending_step_up_and_external_resolution_stay_truthful(db):
+    add_authorization(db, "AZ-live", state="waiting")
+    found = reconcile(db, [{"authorization_id": "AZ-live", "status": "pending_step_up"}])
+    assert not found.alerts and read(db, "AZ-live")["delivery"] == "accepted"
+    found = reconcile(db, [{"authorization_id": "AZ-live", "status": "approved"}])
+    row = read(db, "AZ-live")
+    assert found.alerts and row["state"] == "waiting"
+    assert row["platform_outcome"] == "conflict:approved"

@@ -57,8 +57,8 @@ def api(test_database_url):
     viseca = Counting(VisecaClient("k", "http://fake", transport=httpx.ASGITransport(app=fake.app)))
     with TestClient(create_api(test_database_url, viseca, load_catalogue(DATA), background_seconds=30)) as http:
         draft = http.post("/api/policies/drafts", json={"instruction": CLEAR}).json()
-        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
-        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json()
+        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": draft["revision"]})
+        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": draft["revision"]}).json()
         yield http, fake, viseca, test_database_url, mandate
 
 

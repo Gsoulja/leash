@@ -263,7 +263,19 @@ acceptance, and platform acceptance is not settlement or fulfilment.
 ## Model selection and benchmark
 
 Permission drafting uses Gemini 3.8 Flash on OpenRouter with low reasoning and latency routing.
-Jev replaces the local Laya reader, with the existing one-second regex fallback. Jev also checks
+Jev replaces the local Laya reader and supplies all shop-text facts, including sizes and return windows.
+It makes one typed request per purchase, with a one-second HTTP timeout and the engine's overall deadline.
+There is no regex merge or fallback in the Jev path. Provider errors, invalid or ambiguous extractions,
+and input beyond the reader's bounds reach the existing safe customer-confirmation path.
+Regex remains an explicitly selected offline/benchmark baseline; a missing OpenRouter key fails startup.
+Jev also checks
 rule proposals in shadow mode (`LEASH_JEV_RULE_MODE=shadow`): the benchmark found false rejections,
 so these checks do not block drafts until calibrated. `enforce` enables the experimental blocking check.
 See [the measured comparison and reproduction command](docs/openrouter-benchmark.md).
+
+For the full-reader diagnostic, set `OPENROUTER_API_KEY` in the process environment and run from `solution/engine`:
+`PYTHONPATH=src:tests .venv/bin/python -m evals.jev --output ../../output/jev-full-reader.json`.
+Size choices come from source tokens and standard clothing labels. Return choices cover literal numeric
+day/week counts and common spelled-out windows. Unsupported values (such as an ambiguous calendar month),
+conflicting selected sizes and low-confidence extractions request confirmation rather than guessing.
+The reader caps input at 16,000 characters, 64 lines and 128 distinct candidate tokens per line.

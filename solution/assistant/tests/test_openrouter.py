@@ -235,15 +235,15 @@ def test_a_rate_limited_endpoint_is_retried_before_the_customer_sees_a_failure(m
 def test_verifier_disagreement_is_blocking_and_failure_is_retryable():
     class Verifier:
         model, threshold = "typesafe/jev-test", .9
-        def check_rules(self, state, rules):
+        def check_permission(self, state, rules, unresolved):
             assert state["customer_turns"][0]["text"] == "at most CHF 50 per order"
-            return [False]
+            return ["not_stated"], {}
     model = OpenRouterModel(client=FakeClient(ONE_RULE), verifier=Verifier())
     reply = model.propose(request("at most CHF 50 per order"))
     assert reply["rules"] == [] and reply["questions"]
     assert "jev-test" in model.prompt_version
     class Broken(Verifier):
-        def check_rules(self, *args):
+        def check_permission(self, *args):
             raise TimeoutError("not logged")
     proposal = PermissionAssistant(OpenRouterModel(client=FakeClient(ONE_RULE), verifier=Broken())).draft(
         request("at most CHF 50 per order").turns)
@@ -273,3 +273,14 @@ def test_explicit_environment_controls_key_endpoint_and_model(monkeypatch):
     options = model._client.calls[0]
     assert options["extra_body"]["provider"]["sort"] == "latency"
     assert options["extra_body"]["reasoning"]["effort"] == "low"
+
+
+def test_omission_check_runs_when_model_proposes_no_rules():
+    class Verifier:
+        model, threshold, rule_mode = "jev-test", .9, "enforce"
+        def check_permission(self, state, rules, unresolved):
+            assert not rules and state["customer_turns"][0]["text"] == "No subscriptions"
+            return [], {"other": "omitted"}
+    result = OpenRouterModel(client=FakeClient(json.dumps({"rules": [], "questions": []})), verifier=Verifier()).propose(
+        request("No subscriptions"))
+    assert "could not account" in result["questions"][0]

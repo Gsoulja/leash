@@ -109,6 +109,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
 
 <section id="architecture">
   <h2>Components and trust boundaries</h2>
+  <p>Clarification replies carry the question ID (DEC-061). Deterministic answers close that question without rewriting the original instruction; suggested replies to model questions remain unconfirmed until reviewed. Repeating a current rule is allowed, and category permission does not require selecting an exact product.</p>
   <figure>
     <div class="scroll">
     <svg viewBox="0 0 1030 645" role="img" aria-label="Architecture with the trust filter. The customer talks to the permission assistant, which proposes drafts only to the policy service. The customer app and policy service manage mandates through the Viseca API. Inside the decision engine, the worker receives the untrusted purchase event and passes it to the trust filter. The filter sends canonical text to the fact reader, findings to Decide, and raw text to the state store as evidence. Decide combines rules, facts and findings into the verdict the worker returns within 8 seconds. The app shows shop text quoted.">

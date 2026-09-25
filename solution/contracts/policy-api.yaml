@@ -354,7 +354,7 @@ paths:
       tags:
       - policy
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -504,6 +504,7 @@ paths:
               confirm:
                 value:
                   confirmed: true
+                  revision: 1
       parameters:
       - name: draft_id
         in: path
@@ -2058,7 +2059,7 @@ components:
           minimum: 1
           description: 'Which revision of this draft you are looking at (LEASH-101). A correction
             before activation creates the next revision and marks the previous one superseded;
-            submit and confirm may name the revision that was reviewed and refuse a stale one.'
+            submit and confirm require the revision that was reviewed and refuse a stale one.'
         instruction:
           type: string
         status:
@@ -2222,6 +2223,7 @@ components:
       type: object
       required:
       - confirmed
+      - revision
       additionalProperties: false
       properties:
         confirmed:
@@ -2229,18 +2231,17 @@ components:
         revision:
           type: integer
           minimum: 1
-          description: 'The draft revision the customer reviewed. Omit to confirm whatever is
-            current; send it to be refused with 409 stale_revision if the draft moved on.'
+          description: 'The required reviewed revision; stale revisions are refused with 409 stale_revision.'
     SubmitRequest:
       type: object
       additionalProperties: false
-      description: 'Optional body for submitDraft (LEASH-101).'
+      required: [revision]
+      description: 'The exact reviewed draft revision.'
       properties:
         revision:
           type: integer
           minimum: 1
-          description: 'The draft revision the customer reviewed. Omit to submit whatever is
-            current; send it to be refused with 409 stale_revision if the draft moved on.'
+          description: 'The required reviewed revision; stale revisions are refused with 409 stale_revision.'
     Mandate:
       type: object
       additionalProperties: false
@@ -2389,7 +2390,7 @@ components:
           type:
           - string
           - 'null'
-          description: What the platform said, verbatim where it said anything. Null while pending.
+          description: Platform response, or conflict:&lt;status&gt; when reconciliation found a disagreement. Null while pending.
         source_authorization_id:
           type:
           - string

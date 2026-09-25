@@ -25,7 +25,7 @@ failure before any policy write, never a partial draft mistaken for a reviewed o
 import logging
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, Protocol, cast, get_args
 
@@ -100,6 +100,18 @@ class Question:
     #: The rule this question offers, when it offers one. Kept so a later stage can tell a suggestion
     #: the draft already enforces from one that would change it — the text alone cannot say.
     rule: Rule | None = None
+    options: tuple[str, ...] = ()
+
+
+def _model_question(raw: Any) -> Question | None:
+    if isinstance(raw, str):
+        return Question(raw)
+    if (isinstance(raw, dict) and set(raw) == {"text", "options"}
+            and isinstance(raw["text"], str) and raw["text"].strip()
+            and isinstance(raw["options"], list) and len(raw["options"]) <= 3
+            and all(isinstance(o, str) and 0 < len(o.strip()) <= 240 for o in raw["options"])):
+        return Question(raw["text"], options=tuple(dict.fromkeys(o.strip() for o in raw["options"])))
+    return None
 
 
 @dataclass(frozen=True)
@@ -156,8 +168,13 @@ class Proposal:
         """The draft as it goes to the policy service: rules, questions and provenance only."""
         return {
             "rules": [rule_to_api(c.rule) for c in self.candidates],
+            # `offers` is the rule the question proposes, so the policy service can offer it as a
+            # choice instead of a blank text box. It validates the rule again and renders the button's
+            # own wording from it; nothing here is shown to the customer as written.
             "questions": [{"text": q.text, "field": q.field,
-                           "source": q.source.as_dict() if q.source else None}
+                           "source": q.source.as_dict() if q.source else None,
+                           **({"offers": rule_to_api(q.rule)} if q.rule is not None else {}),
+                           **({"options": list(q.options)} if q.options else {})}
                           for q in self.questions],
             "status": self.status,
             "provenance": [{"field": c.rule.field, "turn_id": c.turn_id, "says": c.says,
@@ -426,6 +443,12 @@ def _read_by_the_engine(rule: Rule, compiled: Sequence[Rule]) -> bool:
     return any(_same_restriction(rule, read) for read in compiled)
 
 
+def _restates_current(rule: Rule, confirmed: CompiledMandate) -> bool:
+    matching = [r for r in confirmed.rules if r.field == rule.field and r.period_days == rule.period_days]
+    return (_read_by_the_engine(rule, matching)
+            and replace(confirmed, rules=(rule,))._snapshot() == replace(confirmed, rules=tuple(matching))._snapshot())
+
+
 def _compiler_rules(turns: Sequence[Turn], catalogue: Any) -> tuple[Rule, ...]:
     """What the deterministic compiler reads from the customer's own words, or nothing on failure."""
     said = " ".join(t.text for t in turns if t.speaker == "customer")
@@ -496,7 +519,7 @@ class PermissionAssistant:
             return self._fallback("The model returned an unreadable proposal. Please retry; you do not need to reword your task.",
                                   "model_invalid_response")
         asked = reply.get("questions", [])
-        if not isinstance(asked, list) or not all(isinstance(q, str) for q in asked):
+        if not isinstance(asked, list) or any(_model_question(q) is None for q in asked):
             # Not pedantry: a bare string iterates into one question per character, and `None` or a
             # number raises. Either way the customer gets a broken chat instead of a retry, so an
             # unreadable `questions` is the same failure as an unreadable `rules` (DEC-047).
@@ -508,7 +531,7 @@ class PermissionAssistant:
         # same instruction, so a rule in here is already in the draft whatever we do with the model's
         # version of it — which is what makes a question about it redundant rather than a safeguard.
         compiled = _compiler_rules(turns, catalogue)
-        questions: list[Question] = [Question(q) for q in asked if q.strip()]
+        questions = [q for raw in asked if (q := _model_question(raw)) is not None and q.text.strip()]
         calls: list[ToolCall] = []
         for raw in reply["rules"]:
             candidate, question = self._one(raw, turns, confirmed, catalogue, calls, compiled)
@@ -631,8 +654,11 @@ class PermissionAssistant:
             missing = (f"{rule.period_days} days as the period"
                        if rule.period_days is not None and not _spans(str(rule.period_days), says)
                        else f"{rule.value} for {_label(field_name)}")
+            # The rule travels with the question so the customer can press it instead of guessing the
+            # wording the engine wants. It is still only a suggestion: the policy service validates it
+            # again and writes the choice's own words from the rule, never from this text.
             return None, Question(f'You said "{says}", which doesn\'t give me {missing}. It stays an '
-                                  "unconfirmed suggestion — what should it be?", field_name)
+                                  "unconfirmed suggestion — what should it be?", field_name, rule=rule)
         unevidenced: Question | None = None
         if not evidenced and _read_by_the_engine(rule, compiled):
             # Our wording, yes — but the engine read the same restriction from the same words, so the
@@ -647,7 +673,7 @@ class PermissionAssistant:
             unevidenced = Question(f'I read "{says}" as {_label(field_name)}: {describe_rule(rule)} '
                                    "Those are my words, not yours — did you mean that?", field_name)
         # 3. no looser than a permission already confirmed
-        if confirmed is not None:
+        if confirmed is not None and not _restates_current(rule, confirmed):
             try:
                 confirmed.tighten(rule)
             except LooseningError:

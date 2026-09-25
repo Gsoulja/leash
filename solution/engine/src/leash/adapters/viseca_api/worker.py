@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
+from leash.adapters.viseca_api.client import VisecaApiError
 from leash.adapters.viseca_api.translate import InvalidEvent, invalid_event_response, request_from_envelope
 from leash.application.decide_purchase import DecisionRequest
 
@@ -30,6 +31,8 @@ MAX_BACKOFF_SECONDS = 30.0
 #: How often our record is checked against the platform's. Slow on purpose (LEASH-130): it is an
 #: after-the-fact check and must never compete with answering a live purchase.
 RECONCILE_SECONDS = 30.0
+#: The platform's code for "this purchase already has a decision; resolve it instead".
+ALREADY_DECIDED = "step_up_resolution_required"
 _RUN_OVER = frozenset({"completed", "stopped", "finished", "failed", "cancelled", "canceled", "expired"})
 
 Validate = Callable[[Mapping[str, Any]], None]
@@ -61,7 +64,15 @@ class ApiSender:
 
     async def send(self, authorization_id: str, body: Mapping[str, Any],
                    budget_seconds: float | None = None) -> None:
-        await self._api.post_decision(authorization_id, body, budget_seconds)
+        try:
+            await self._api.post_decision(authorization_id, body, budget_seconds)
+        except VisecaApiError as refused:
+            # The platform holds this decision already and is waiting for /resolve. Raising would leave
+            # the outbox row unsent, so it would retry the same refused POST every 2 s for ever.
+            if refused.status != 409 or (refused.error or {}).get("code") != ALREADY_DECIDED:
+                raise
+            log.info("the platform already holds this decision; it needs a customer answer, not a resend",
+                     extra={"authorization_id": authorization_id})
 
 
 def run_over(body: Any) -> bool:

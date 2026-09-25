@@ -1,6 +1,10 @@
 # OpenRouter migration benchmark — 25 September 2026
 
-Use Gemini 3.8 Flash with low reasoning and latency-based OpenRouter routing for permission drafting. Use Jev for merchant-text facts alongside the deterministic regex floor. Keep Jev rule verification in **shadow** mode until calibrated: the measured enforcement threshold rejected valid instructions.
+Use Gemini 3.8 Flash with low reasoning and latency-based OpenRouter routing for permission drafting. Keep Jev rule verification in **shadow** mode until calibrated: the measured enforcement threshold rejected valid instructions.
+
+Implementation update: the production fact reader now uses Jev alone, including typed sizes and return windows. Regex remains an offline/benchmark baseline. Reader failures and ambiguous extractions reach customer confirmation. The measurements below describe the earlier four-flag reader and its regex merge; they are historical results, not measurements of the expanded reader. Reproduce the expanded-reader checks with `evals.jev` as documented in the runbook.
+
+Expanded-reader live diagnostics: the first run passed 9/12 cases, with three transport failures. Rechecking those failures passed 1/3; reversing all cases passed 7/12, again with transport failures. The two inputs never successfully read in those runs both returned the expected facts with a five-second diagnostic HTTP timeout (5.63 s and 2.12 s total elapsed). All 12 expected outcomes were therefore observed across runs, **not** in one successful production-budget run. Production retains its one-second per-phase HTTP timeout and the engine's overall deadline; failures request confirmation. These results validate extraction behavior but do not establish a reliable latency target. Raw runs are retained at `output/jev-full-reader.json`, `output/jev-full-reader-recheck.json`, `output/jev-full-reader-reverse-order.json` and `output/jev-full-reader-quality-check.json`.
 
 ## Measured results
 
@@ -38,6 +42,6 @@ PYTHONPATH=..:src .venv/bin/python -m evals.openrouter \
 
 The Apertus comparison invokes its original adapter inside the configured container; no credential is extracted. Keep that adapter for reproducibility. The worker no longer loads Laya; its old training/evaluation files remain historical experiments.
 
-Configuration in `solution/.env` stays ignored and private. Runtime defaults are `LEASH_MODEL=google/gemini-3.8-flash`, `LEASH_MODEL_REASONING=low`, `LEASH_FACT_READER=jev`, `LEASH_RULE_CLASSIFIER=jev`, and `LEASH_JEV_RULE_MODE=shadow`. `enforce` is an explicit experiment, not the recommended default. The engine still validates rules, requires customer confirmation and never lets model facts weaken deterministic findings.
+Configuration in `solution/.env` stays ignored and private. Runtime defaults are `LEASH_MODEL=google/gemini-3.8-flash`, `LEASH_MODEL_REASONING=low`, `LEASH_FACT_READER=jev`, `LEASH_RULE_CLASSIFIER=jev`, and `LEASH_JEV_RULE_MODE=shadow`. `enforce` is an explicit experiment, not the recommended default. The engine still validates rules and requires customer confirmation of permissions. Structured amounts and confirmed policy are enforced deterministically; the production reader no longer imposes regex findings on Jev's interpretation.
 
 Sources: [Gemini 3.8 Flash on OpenRouter](https://openrouter.ai/google/gemini-3.8-flash), [Jev Decisions API tutorial](https://openrouter.ai/docs/guides/community/jev-tutorial), [TypeSafe System One introduction](https://typesafe.ai/blog/introducing-system-one-models-and-jev).

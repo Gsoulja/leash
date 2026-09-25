@@ -43,7 +43,7 @@ from leash.policy.compiler import CatalogueItem, Classifier
 from leash.policy.hard_rules import (AppendOnlyError, HardRulesError, check_append_only, mandate_from_api,
                                      mandate_to_api, rule_from_api, rule_to_api)
 from leash.policy.registry import describe_field, problems
-from leash.policy.render import permission_review
+from leash.policy.render import describe_rule, permission_review
 
 log = logging.getLogger("leash.policy")
 _UNANSWERED = datetime(2000, 1, 1, tzinfo=timezone.utc)  # a call that ended without an answer, not in progress
@@ -64,10 +64,10 @@ class _BadRevision(ValueError):
     """A revision was stated but is not a whole number: refuse rather than skip the staleness check."""
 
 
-def _reviewed_revision(body: Any) -> int | None:
-    """The revision the customer reviewed, when the caller states one. Absent means "whatever is current"."""
+def _reviewed_revision(body: Any) -> int:
+    """Consent binds to a reviewed revision, never whichever draft happens to be current."""
     if not isinstance(body, Mapping) or "revision" not in body:
-        return None
+        raise _BadRevision("revision is required; review the current draft first")
     value = body["revision"]
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
         raise _BadRevision(f"revision must be a whole number from 1, not {value!r}")
@@ -100,6 +100,21 @@ async def _mandate_view(conn: asyncpg.Connection, mandate_id: str) -> dict[str, 
             "review": permission_review([rule_from_api(r) for r in json.loads(row["hard_rules"])], row["uncertainty_policy"]),
             "applies_from": "next run",
             "revocation": None if row["status"] == "active" else {"platform_confirmed": True, "note": None}}
+
+
+#: The plain refusal offered next to a proposed rule, so declining needs no wording of the customer's own.
+NO_OFFER = "No, leave that out"
+
+
+def _offered(raw: Any) -> Rule | None:
+    """A rule a question proposes, if the registry can enforce it exactly as written."""
+    if not isinstance(raw, Mapping):
+        return None
+    try:
+        rule = rule_from_api(raw)
+    except (HardRulesError, TypeError, ValueError, KeyError):
+        return None
+    return None if problems([rule]) else rule
 
 
 def _proposed(stored: Any) -> list[Rule]:
@@ -154,7 +169,8 @@ def _assessed(view: dict[str, Any], assessment: Any) -> dict[str, Any]:
             source = asked.get("source") if isinstance(asked.get("source"), dict) else None
         else:
             continue
-        if text.strip() and not any(q["text"] == text for q in view["open_questions"]):
+        if text.strip() and not any(q["text"] == text for q in view["open_questions"]) \
+                and not any(a.get("question") == text for a in view.get("answers", [])):
             # Labelled as the model's, because that is what it is: this function's only input is the
             # assistant's assessment (LEASH-174, DEC-045). Our own questions are generated from a rule
             # or a registry field; shown side by side without this, the two were indistinguishable and
@@ -163,6 +179,19 @@ def _assessed(view: dict[str, Any], assessment: Any) -> dict[str, Any]:
                      "text": text, "field": field, "blocking": True, "origin": "model"}
             if source is not None:
                 entry["source"] = source
+            offered = _offered(asked.get("offers") if isinstance(asked, dict) else None)
+            if offered is not None:
+                # An option button sends its own label as the customer's next turn, so the label is
+                # rendered from the rule the registry accepted — never the model's prose, which would
+                # be putting words in the customer's mouth. An offer the engine could not enforce is
+                # dropped: a button that reads as agreement to something unenforceable is worse than
+                # the text box it replaces.
+                entry["options"] = [describe_rule(offered), NO_OFFER]
+            elif isinstance(asked, dict):
+                options = asked.get("options")
+                if isinstance(options, list) and len(options) <= 3 and all(
+                        isinstance(o, str) and 0 < len(o.strip()) <= 240 for o in options):
+                    entry["options"] = list(dict.fromkeys(o.strip() for o in options))
             view["open_questions"].append(entry)
     if any(q["blocking"] for q in view["open_questions"]):
         view["status"] = "needs_answers"
@@ -367,7 +396,7 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                                       "where draft_id = $1 for update", draft_id)
             if row is None:
                 return _error(404, "draft_not_found", "No draft with this ID.")
-            if reviewed is not None and reviewed != int(row["revision"]):
+            if reviewed != int(row["revision"]):
                 return _error(409, "stale_revision", _STALE.format(reviewed=reviewed, current=row["revision"]))
             if row["platform_body"]:  # submitted already: the same platform draft, never a second one
                 return json.loads(row["platform_body"])
@@ -448,7 +477,7 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 return _error(404, "draft_not_found", "No draft with this ID.")
             if row["platform_draft_id"] is None:
                 return _error(409, "not_submitted", "Submit the draft to Viseca before confirming.")
-            if reviewed is not None and reviewed != int(row["revision"]):
+            if reviewed != int(row["revision"]):
                 return _error(409, "stale_revision", _STALE.format(reviewed=reviewed, current=row["revision"]))
             known = row["mandate_id"] or row["confirmed_mandate_id"]
             if known is not None:  # confirmed already (a double click), or only our write is left
@@ -674,19 +703,32 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
                                **{k: v for k, v in scenario_notes.get(row["scenario_id"], {}).items() if v}}
                               for row in rows]}
 
-    async def platform_status(run_id: str) -> tuple[str, dict[str, int]]:
+    async def platform_status(run_id: str) -> tuple[str, dict[str, int], str | None]:
         try:
             body = _data(await asyncio.wait_for(viseca.get_run(run_id), timeout=RUN_STATUS_SECONDS))
+        except VisecaApiError as exc:
+            if exc.status == 404:
+                return "failed", {}, None
+            log.warning("run %s: status unavailable (%s)", run_id, exc)
+            return "running", {}, None
         except Exception as exc:  # the platform is unreachable: show the run as still running
             log.warning("run %s: status unavailable (%s)", run_id, exc)
-            return "running", {}
+            return "running", {}, None
         status = str(body.get("status", "running")).lower()
         counters = _run_counters(body)
-        return ("finished" if status in _FINISHED else "failed" if status in _FAILED else "running"), counters
+        return ("finished" if status in _FINISHED else "failed" if status in _FAILED else "running"), counters, body.get("scenario_id")
 
     async def view(row: asyncpg.Record) -> dict[str, Any]:
-        status, counters = await platform_status(row["run_id"])
-        return {"run_id": row["run_id"], "scenario_id": row["scenario_id"], "mandate_id": row["mandate_id"],
+        status, counters, platform_scenario = await platform_status(row["run_id"])
+        scenario = row["scenario_id"]
+        if scenario == "unknown" and isinstance(platform_scenario, str) and platform_scenario:
+            # A worker may receive the first event before the start response. Recover metadata
+            # from the authenticated platform; never alter the card or permission snapshot.
+            scenario = platform_scenario
+            async with pool().acquire() as conn:
+                await conn.execute("update runs set scenario_id=$2 where run_id=$1 and scenario_id='unknown'",
+                                   row["run_id"], scenario)
+        return {"run_id": row["run_id"], "scenario_id": scenario, "mandate_id": row["mandate_id"],
                 "mandate_version": row["mandate_version"], "status": status, "counters": counters}
 
     @router.post("/api/runs", status_code=201)
@@ -756,12 +798,17 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
                 snapshot.get("uncertainty_policy") != local["uncertainty_policy"]:
             log.error("INTEGRITY: run %s: the platform's snapshot of mandate %s differs from our version %s; the "
                       "platform's is used for this run", run_id, mandate_id, local["version"])
-        card = snapshot.get("card_id") if isinstance(snapshot.get("card_id"), str) else scenario_cards.get(scenario)
+        profiles = started.get("fixture_profiles", [])
+        cards = {p["card_id"] for p in profiles if isinstance(p, Mapping) and isinstance(p.get("card_id"), str)
+                 and p["card_id"]} if isinstance(profiles, list) else set()
+        card = (next(iter(cards)) if len(cards) == 1 else snapshot.get("card_id"))
+        card = card if isinstance(card, str) and card else scenario_cards.get(scenario)
         if card is None:
             return _error(502, "platform_error", f"No card is known for scenario {scenario}.")
         await repo_of(pool()).ensure_run(run_id, {"mandate": dict(snapshot, mandate_id=mandate_id),
                                                   "scenario_id": scenario}, card)
         async with pool().acquire() as conn:
+            await conn.execute("update runs set scenario_id=$2 where run_id=$1 and scenario_id='unknown'", run_id, scenario)
             row = await conn.fetchrow("select run_id, scenario_id, mandate_id, mandate_version from runs "
                                       "where run_id = $1", run_id)
         counters = _run_counters(started)

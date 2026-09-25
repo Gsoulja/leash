@@ -22,7 +22,8 @@ ENGINE = Path(__file__).resolve().parents[1]
 
 from leash.adapters.viseca_api.client import VisecaClient  # noqa: E402
 from leash.adapters.viseca_api.worker import run_over  # noqa: E402
-from leash.application.reconcile import _rows  # noqa: E402
+from leash.application.reconcile import _rows
+from leash.application.clarify import optional  # noqa: E402
 from leash.policy.compiler import compile_instruction  # noqa: E402
 from leash.policy.hard_rules import mandate_to_api  # noqa: E402
 from leash.service import load_catalogue  # noqa: E402
@@ -47,19 +48,27 @@ def connection_scenario(scenarios: Sequence[Mapping[str, Any]], wanted: str | No
     return min(scenarios, key=lambda s: s.get("event_count") or 0)
 
 
-async def check(client: VisecaClient, timeout: float, wanted: str | None = None) -> int:
+async def check(client: VisecaClient, timeout: float, wanted: str | None = None,
+                mandate_id: str | None = None) -> int:
     bootstrap = await client.bootstrap()
     scenario = connection_scenario(bootstrap.scenarios, wanted)
     scenario_id, instruction = str(scenario["scenario_id"]), str(scenario["cardholder_instruction"])
     print(f"{scenario_id}: {instruction}")
-    # Compiled from the platform's own wording, so a pack that numbers or words its scenarios
-    # differently still gets the permission its instruction actually asks for.
-    draft = compile_instruction(instruction, catalogue=load_catalogue(DATA))
-    for question in draft.questions:
-        print(f"  open question (left unanswered here): {question.text}")
-    body = {**mandate_to_api(draft.mandate), "guidance": [], "open_questions": []}
-    created = await client.create_mandate(body)
-    mandate_id = (await client.confirm_mandate(str(created["draft_id"])))["mandate_id"]
+    if mandate_id is None:
+        # Automatic confirmation is only for the explicit local fake. A live run reuses consent.
+        if getattr(client, "base_url", "http://fake") and urlsplit(getattr(client, "base_url", "http://fake")).hostname not in LOCAL_HOSTS:
+            raise SystemExit("live checks require --mandate-id from an already confirmed customer permission")
+        draft = compile_instruction(instruction, catalogue=load_catalogue(DATA))
+        if any(not optional(q) for q in draft.questions):
+            raise SystemExit("resolve the mandate's blocking questions before running the check")
+        body = {**mandate_to_api(draft.mandate), "guidance": [], "open_questions": []}
+        created = await client.create_mandate(body)
+        mandate_id = (await client.confirm_mandate(str(created["draft_id"])))["mandate_id"]
+    else:
+        held = await client.get_mandate(mandate_id)
+        held = held.get("data", held)
+        if held.get("status") != "active" or held.get("instruction") != instruction:
+            raise SystemExit("the mandate must be active and retain the exact selected scenario instruction")
     run_id = (await client.start_run(scenario_id, str(mandate_id)))["run_id"]
     print(f"run {run_id} started with mandate {mandate_id}")
     until = time.monotonic() + timeout
@@ -103,9 +112,9 @@ async def _unanswered(client: VisecaClient, run_id: str) -> list[str]:
     return missing
 
 
-async def _checked(client: VisecaClient, timeout: float, wanted: str | None) -> int:
+async def _checked(client: VisecaClient, timeout: float, wanted: str | None, mandate_id: str | None) -> int:
     async with client:  # one pooled connection for the whole check, closed on the way out
-        return await check(client, timeout, wanted)
+        return await check(client, timeout, wanted, mandate_id)
 
 
 def main() -> int:
@@ -113,12 +122,13 @@ def main() -> int:
     parser.add_argument("--live", action="store_true", help="allow a non-local base URL (starts a real run)")
     parser.add_argument("--timeout", type=float, default=60.0)
     parser.add_argument("--scenario", help="scenario ID to check (default: the platform's shortest)")
+    parser.add_argument("--mandate-id", help="already confirmed mandate; required for live checks")
     args = parser.parse_args()
     client = VisecaClient.from_env()
     if not args.live and urlsplit(client.base_url).hostname not in LOCAL_HOSTS:
         print(f"refusing to run against {client.base_url} without --live", file=sys.stderr)
         return 2
-    return asyncio.run(_checked(client, args.timeout, args.scenario))
+    return asyncio.run(_checked(client, args.timeout, args.scenario, args.mandate_id))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,270 @@
+{
+  "model": "typesafe/jev-1.13",
+  "cases": [
+    {
+      "id": "size-days",
+      "text": "Running shoes, size 43. Returns within 14 days.",
+      "expected": {
+        "sizes": [
+          "43"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "error": "ReadTimeout",
+      "correct": false,
+      "ms": 2347.64
+    },
+    {
+      "id": "decimal-de",
+      "text": "Schuhe, Gr\u00f6sse 43,5. R\u00fcckgabe innerhalb von 30 Tagen.",
+      "expected": {
+        "sizes": [
+          "43,5"
+        ],
+        "return_days": 30,
+        "final_sale": false
+      },
+      "error": "ConnectError",
+      "correct": false,
+      "ms": 2003.07
+    },
+    {
+      "id": "words",
+      "text": "Shirt, selected size medium. Returns within two weeks.",
+      "expected": {
+        "sizes": [
+          "M"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "error": "ConnectError",
+      "correct": false,
+      "ms": 2003.01
+    },
+    {
+      "id": "final-sale",
+      "text": "Jacket, size XL. Final sale, no returns.",
+      "expected": {
+        "sizes": [
+          "XL"
+        ],
+        "return_days": null,
+        "final_sale": true
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "XL"
+        ],
+        "return_days": null,
+        "final_sale": true,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 2572.97
+    },
+    {
+      "id": "absent",
+      "text": "A blue ceramic bowl.",
+      "expected": {
+        "sizes": null,
+        "return_days": null,
+        "final_sale": null
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": null,
+        "return_days": null,
+        "final_sale": null,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 380.84
+    },
+    {
+      "id": "irrelevant-numbers",
+      "text": "Model 43 costs CHF 14. Delivery within 7 days. Warranty 30 days.",
+      "expected": {
+        "sizes": null,
+        "return_days": null,
+        "final_sale": null
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": null,
+        "return_days": null,
+        "final_sale": null,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 406.42
+    },
+    {
+      "id": "selected-size",
+      "text": "Available in sizes 41, 42, 43. Selected size 42. Returns within 21 days.",
+      "expected": {
+        "sizes": [
+          "42"
+        ],
+        "return_days": 21,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "42"
+        ],
+        "return_days": 21,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 408.03
+    },
+    {
+      "id": "negated-size",
+      "text": "This is size 42, not size 43. Returns accepted within 14 days.",
+      "expected": {
+        "sizes": [
+          "42"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "42"
+        ],
+        "return_days": 14,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 481.85
+    },
+    {
+      "id": "french",
+      "text": "Chaussures, taille 39. Retours sous 30 jours.",
+      "expected": {
+        "sizes": [
+          "39"
+        ],
+        "return_days": 30,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "39"
+        ],
+        "return_days": 30,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 342.75
+    },
+    {
+      "id": "literal-days",
+      "text": "Size S. Returns accepted within 17 days.",
+      "expected": {
+        "sizes": [
+          "S"
+        ],
+        "return_days": 17,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "S"
+        ],
+        "return_days": 17,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 304.87
+    },
+    {
+      "id": "shortest-window",
+      "text": "Size L. General returns within 30 days; this item only 14 days.",
+      "expected": {
+        "sizes": [
+          "L"
+        ],
+        "return_days": 14,
+        "final_sale": false
+      },
+      "actual": {
+        "reader": "jev",
+        "sizes": [
+          "L"
+        ],
+        "return_days": 14,
+        "final_sale": false,
+        "injection_excerpt": null,
+        "addon_lines": [],
+        "recurring_lines": [],
+        "model_unavailable": false,
+        "oversized_text": false,
+        "deterministic": null
+      },
+      "correct": true,
+      "ms": 718.46
+    },
+    {
+      "id": "unknown-duration",
+      "text": "Size M. Returns within one calendar month.",
+      "expected": {
+        "sizes": "step_up",
+        "return_days": null,
+        "final_sale": null
+      },
+      "error": "ValueError",
+      "correct": true,
+      "ms": 369.17
+    }
+  ],
+  "passed": 9,
+  "total": 12,
+  "scope": "Authored integration diagnostics, not production accuracy or an independent model comparison."
+}

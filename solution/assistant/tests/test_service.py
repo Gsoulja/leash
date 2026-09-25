@@ -348,7 +348,12 @@ def test_local_simulation_selects_supplied_customer_not_client_background(pack):
         assert response.status_code == 200, response.text
         assert policy.calls[-1]["context"]["scope"]["card_id"] == "CA0011"
         assert policy.calls[-1]["context"]["simulation_scenario"] == "SCEN0002"
-        assert http.post("/api/permission/drafts", json={"text": GERMAN, "scenario_id": "unknown"}).status_code == 422
+        # A scenario the pack does not hold keeps this deployment's own customer rather than being
+        # refused — hosted scenarios are never in the pack. What stays refused is the client naming a
+        # persona directly, which is the part that would let it choose whose background it sees.
+        unknown = http.post("/api/permission/drafts", json={"text": GERMAN, "scenario_id": "unknown"})
+        assert unknown.status_code == 200, unknown.text
+        assert policy.calls[-1]["context"]["scope"]["card_id"] == "CA0001"
         assert http.post("/api/permission/drafts", json={"text": GERMAN, "card_id": "CA0011"}).status_code == 422
     with client(pack, model, policy) as http:
         assert http.post("/api/permission/drafts", json={"text": GERMAN, "scenario_id": "SCEN0002"}).status_code == 422
@@ -515,3 +520,62 @@ def test_with_no_active_permission_a_rule_is_drafted_normally(pack):
     body = client(pack, model, policy).post("/api/permission/drafts",
                                             json={"text": "at most CHF 500 per order"}).json()
     assert [str(r["value"]) for r in policy.calls[0]["rules"]] == ["500"]
+
+
+def test_a_scenario_the_pack_does_not_hold_keeps_the_deployments_own_customer(pack):
+    """Live scenarios are not in the supplied pack: the platform says
+    `purchase_attempts: delivered one at a time by scenario runs`, and only publishes whose card a run
+    used once it has started (`fixture_profiles`). The assistant holds no platform key (DEC-044), so it
+    cannot look it up. The picker therefore chooses the story, never the persona: an unknown scenario
+    keeps this deployment's configured customer, and the client still cannot select someone else's.
+    """
+    policy, model = StubPolicy(), StubModel()
+    app = create_app(PermissionAssistant(model), pack, policy, cutoff=CUTOFF,
+                     card_id="CA0001", simulation=True)
+    with TestClient(app) as http:
+        response = http.post("/api/permission/drafts", json={"text": GERMAN, "scenario_id": "SCEN0101"})
+        assert response.status_code == 200, response.text
+        assert policy.calls[-1]["context"]["scope"]["card_id"] == "CA0001", "not another persona's rows"
+        assert policy.calls[-1]["context"]["simulation_scenario"] == "SCEN0101", "the run still needs it"
+
+
+def test_a_targeted_parser_answer_uses_answer_workflow_without_appending_words(pack):
+    class AnswerPolicy(StubPolicy):
+        def draft(self, draft_id):
+            return {'draft_id': draft_id, 'instruction': GERMAN, 'open_questions': [
+                {'question_id': 'Q-items', 'text': 'What kind of items may I buy?', 'field': m.F_ITEM_CATEGORY}]}
+
+        def answer_draft(self, draft_id, question_id, answer):
+            self.calls.append((draft_id, question_id, answer))
+            return {'draft_id': draft_id, 'instruction': GERMAN, 'status': 'ready', 'open_questions': [],
+                    'answers': [{'question_id': question_id, 'answer': answer}], 'hard_rules': []}
+
+    policy, model = AnswerPolicy(), StubModel()
+    response = client(pack, model, policy).post('/api/permission/drafts/LD-1/turns',
+        json={'text': 'Only groceries.', 'question_id': 'Q-items'})
+    assert response.status_code == 200, response.text
+    assert response.json()['draft']['instruction'] == GERMAN
+    assert policy.calls == [('LD-1', 'Q-items', 'Only groceries.')]
+    assert not model.seen
+    stale = client(pack, model, policy).post('/api/permission/drafts/LD-1/turns',
+        json={'text': 'Only groceries.', 'question_id': 'Q-gone'})
+    assert stale.status_code == 409
+    assert len(policy.calls) == 1
+
+
+def test_targeted_model_reply_supplies_only_the_question_being_answered(pack):
+    class StoredPolicy(StubPolicy):
+        def draft(self, draft_id):
+            return {'instruction': GERMAN, 'open_questions': [
+                {'question_id': 'AQ-shop', 'text': 'Which shops?', 'origin': 'model'},
+                {'question_id': 'AQ-item', 'text': 'Which items?', 'origin': 'model'}]}
+
+        def add_turn(self, draft_id, text, rules=(), **kwargs):
+            return {'instruction': GERMAN + ' ' + text, 'hard_rules': list(rules), 'open_questions': []}
+
+    model = StubModel({'rules': [rule(m.F_ITEM_CATEGORY, 'in', ['groceries'], 'Only groceries.', 'T2')], 'questions': []})
+    response = client(pack, model, StoredPolicy()).post('/api/permission/drafts/LD-1/turns',
+        json={'text': 'Only groceries.', 'question_id': 'AQ-item'})
+    assert response.status_code == 200, response.text
+    asked = [t.text for t in model.seen[0].turns if t.speaker == 'assistant']
+    assert asked == ['Which items?']

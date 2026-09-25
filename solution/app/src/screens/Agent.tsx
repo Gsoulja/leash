@@ -1,3 +1,4 @@
+import { RunActivity } from "./RunActivity";
 // Agent screen (LEASH-092, rebuilt as a conversation for LEASH-145): the customer talks to Leash's
 // permission assistant, sees how it reads each thing they say, answers what is unclear, and only then
 // reviews exactly what was posted to Viseca and confirms. Nothing is active, and nothing can be paid,
@@ -150,6 +151,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   const scenarios = useQuery({ queryKey: ["scenarios"], queryFn: () => api().scenarios(), retry: false });
   const [scenarioId, setScenarioId] = useState("");
   const [editing, setEditing] = useState(false);
+  const [generalMessage, setGeneralMessage] = useState(false);
   const [mandateId, setMandateId] = useState<string | null>(null);
   const [started, setStarted] = useState<Run | null>(null);  // the run as the engine recorded it
   const starting = useRef(false);  // a second tap while the first is in flight is the same handoff
@@ -169,6 +171,9 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   const d = query.data;
   const confirmedId = mandateId ?? d?.confirmed_mandate?.mandate_id;
   const runScenario = d?.simulation_scenario ?? scenarioId;
+  const previousRuns = useQuery({ queryKey: ["runs"], enabled: !!confirmedId,
+    queryFn: () => api().runs(), retry: false });
+  const currentRun = started ?? previousRuns.data?.runs?.find(r => r.mandate_id === confirmedId && r.scenario_id === runScenario);
 
   // The rehearsed demonstration is chosen for the presenter, once, and only while nothing has been said
   // yet: a customer who has started typing owns the composer (LEASH-147).
@@ -224,7 +229,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
    *  retry (LEASH-102), so a double tap cannot mint two sets of counters. This guard is the local half:
    *  without it the second tap still asks, and a refused start would read as two failures. */
   async function handOff() {
-    if (starting.current || started || !confirmedId) return;
+    if (starting.current || currentRun || !confirmedId) return;
     starting.current = true;
     try {
       const run = await act(() => api().startRun(runScenario, confirmedId), "Handing the task over…");
@@ -241,7 +246,8 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   async function say(text: string) {
     setSending(text);
     setComposer("");
-    const result = await act(() => api().chatTurn(text, draftId ?? undefined, scenarioId || undefined, editing));
+    const result = await act(() => api().chatTurn(text, draftId ?? undefined, scenarioId || undefined, editing,
+                                               editing || generalMessage ? undefined : asking?.question_id));
     setSending(null);
     // A reply answers what they said; it is not a new boundary, so it must not become a revision or
     // reset a review. Both a history answer and "that changed nothing" are this shape — the latter is
@@ -274,7 +280,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
     setMessage(null);
     try {
       const fromModel = !option || q.question_id.startsWith("AQ-");
-      const response = fromModel ? await api().chatTurn(text, d!.draft_id) : null;
+      const response = fromModel ? await api().chatTurn(text, d!.draft_id, undefined, false, q.question_id) : null;
       // Nothing changed: say so under the question rather than recording an answer that was not one.
       if (response?.reply && response.kind !== "history") return response.reply;
       const next = fromModel ? response?.draft : await api().answerDraft(d!.draft_id, q.question_id, text);
@@ -355,6 +361,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   }
   const asking = (d?.open_questions ?? []).find((q) => q.blocking) ?? (d?.open_questions ?? [])[0];
   const blocking = (d?.open_questions ?? []).filter((q) => q.blocking).length;
+  useEffect(() => { setGeneralMessage(false); }, [asking?.question_id]);
 
   return (
     <div className="perm talk">
@@ -549,7 +556,8 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
             <button type="button" className="btn primary" disabled={busy}
                     onClick={async () => {
                       // the revision reviewed, not whatever the draft is now: a stale tab is refused
-                      const m = await act(() => api().confirmDraft(posted.draft_id, reviewed ?? undefined), "Confirming your permission…");
+                      if (reviewed === null) return;
+                      const m = await act(() => api().confirmDraft(posted.draft_id, reviewed), "Confirming your permission…");
                       if (m) {
                         setMandateId(m.mandate_id);
                         show({ ...d!, confirmed_mandate: m });
@@ -566,17 +574,17 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {confirmedId && runScenario && (
         <section className="card handoff" aria-label="Start shopping">
           <p>Permission confirmed. The shopping agent can start, inside these boundaries.</p>
-          {started
-            ? <p className="message" role="status">Run {started.run_id} · {started.status}. I check every
-                checkout it sends and ask you about anything the boundaries don't settle.</p>
+          {currentRun
+            ? <RunActivity initial={currentRun} />
             : <>
-                <button type="button" className="btn primary" disabled={busy} onClick={() => handOff()}>Start shopping</button>
+                {previousRuns.isError && <p role="alert">Could not check earlier runs. <button type="button" onClick={() => previousRuns.refetch()}>Retry</button></p>}
+                <button type="button" className="btn primary" disabled={busy || previousRuns.isPending || previousRuns.isError} onClick={() => handOff()}>Start shopping</button>
                 <p className="small">Leash checks each checkout; the simulated platform records whether it accepts
                   the decision. A started run is not proof of a real merchant integration, and no real payment is made.</p>
               </>}
         </section>
       )}
-      {done && (
+      {done && !currentRun && (
         <Bubble from="leash" label="Leash">
           <p className="message" role="status">{done}</p>
           <p className="small">Nothing is bought yet. When the shopping agent checks out, I check it
@@ -589,12 +597,16 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {!posted && !confirmedId && (
         <section className="composer" aria-label="Say something">
           <label className="k" htmlFor="composer">
-            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking ? "Reply to Leash" : "Anything to add or change?"}
+            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking && !generalMessage ? "Reply to Leash" : "Anything to add or change?"}
           </label>
-          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing ? "Your answer or question…" : "Message Leash…"} aria-describedby={asking && !editing ? `q-${asking.question_id}` : undefined} value={composer}
+          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing && !generalMessage ? "Your answer…" : "Message Leash…"} aria-describedby={asking && !editing && !generalMessage ? `q-${asking.question_id}` : undefined} value={composer}
                     onChange={(e) => setComposer(e.target.value)} />
           <button type="button" className="btn primary" disabled={busy || sending !== null || !composer.trim()}
                   onClick={() => say(composer.trim())} aria-label="Send"><Icon name="send" /></button></div>
+          {asking && !editing && <button type="button" className="btn ghost sm" disabled={busy}
+            onClick={() => setGeneralMessage(!generalMessage)}>
+            {generalMessage ? "Reply to current question" : "Ask or change something else"}
+          </button>}
         </section>
       )}
     </div>

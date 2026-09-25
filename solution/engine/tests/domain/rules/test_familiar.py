@@ -71,3 +71,9 @@ def test_absence_is_still_unfamiliar_once_the_card_has_a_history():
     """A card that shops elsewhere says something: this shop really is not one of them."""
     [check] = at("ME0023")
     assert (check.status, check.reason_code) == ("fail", "unfamiliar_merchant")
+
+
+def test_unicode_lookalike_never_inherits_the_known_merchant_id():
+    p = purchase(merchant=merchant(merchant_id="new", name="ＰіxеlＨаrbοr"))
+    [check] = familiar_rule(p, USED_BEFORE, snapshot(baseline=KNOWN, merchant_names=NAMES), facts())
+    assert check.status == "fail" and check.reason_code == "lookalike_merchant"

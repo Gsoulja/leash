@@ -39,8 +39,8 @@ def api(test_database_url):
     viseca = VisecaClient("k", "http://fake", transport=httpx.ASGITransport(app=fake.app))
     with TestClient(create_api(test_database_url, viseca, load_catalogue(DATA), background_seconds=30)) as http:
         draft = http.post("/api/policies/drafts", json={"instruction": CLEAR}).json()
-        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
-        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json()
+        http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": draft["revision"]})
+        mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True, "revision": draft["revision"]}).json()
         yield http, fake, viseca, test_database_url, mandate
 
 
@@ -271,3 +271,37 @@ def test_scenarios_carry_a_one_line_outcome_and_the_recommended_one(api):
     assert all(not s["summary"].startswith("SCEN") for s in described)
     recommended = [s for s in body["scenarios"] if s.get("recommended")]
     assert len(recommended) == 1, recommended
+
+
+def test_hosted_run_uses_fixture_profile_card_and_retries_the_same_run(api):
+    http, _, viseca, url, mandate = api
+    calls = []
+    async def hosted(scenario_id, mandate_id):
+        calls.append(scenario_id)
+        return {"run_id": "hosted-run", "scenario_id": scenario_id, "mandate_id": mandate_id,
+                "fixture_profiles": [{"profile_id": "live", "customer_id": "live", "card_id": "CA-hosted"}],
+                "status": "running", "generated_event_count": 2}
+    async def progress(run_id):
+        return {"run_id": run_id, "scenario_id": "SCEN-hosted", "status": "completed"}
+    viseca.start_run, viseca.get_run = hosted, progress
+    body = {"scenario_id": "SCEN-hosted", "mandate_id": mandate["mandate_id"]}
+    first = http.post("/api/runs", json=body)
+    assert first.status_code == 201, first.text
+    assert fetch(url, "select card_id, scenario_id from runs where run_id = 'hosted-run'") == [("CA-hosted", "SCEN-hosted")]
+    assert http.post("/api/runs", json=body).json()["run_id"] == "hosted-run"
+    assert calls == ["SCEN-hosted"]
+
+
+def test_live_run_read_recovers_missing_scenario_without_starting_again(api):
+    http, _, viseca, url, mandate = api
+    from leash.adapters.postgres.repository import PostgresRepository
+    async def event_first():
+        async with asyncpg.create_pool(url) as pool:
+            await PostgresRepository(pool).ensure_run("event-first", {"mandate": mandate}, "CA-live")
+    asyncio.run(event_first())
+    async def progress(run_id):
+        return {"run_id": run_id, "scenario_id": "SCEN-live", "status": "completed"}
+    viseca.get_run = progress
+    response = http.get("/api/runs/event-first")
+    assert response.json()["scenario_id"] == "SCEN-live"
+    assert fetch(url, "select scenario_id from runs where run_id='event-first'") == [("SCEN-live",)]

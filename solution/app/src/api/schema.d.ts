@@ -463,7 +463,7 @@ export interface components {
             review?: components["schemas"]["PermissionReview"];
             assistant?: components["schemas"]["AssistantAssessment"];
             draft_id: string;
-            /** @description Which revision of this draft you are looking at (LEASH-101). A correction before activation creates the next revision and marks the previous one superseded; submit and confirm may name the revision that was reviewed and refuse a stale one. */
+            /** @description Which revision of this draft you are looking at (LEASH-101). A correction before activation creates the next revision and marks the previous one superseded; submit and confirm require the revision that was reviewed and refuse a stale one. */
             revision: number;
             instruction: string;
             /** @enum {string} */
@@ -522,13 +522,13 @@ export interface components {
         ConfirmRequest: {
             /** @constant */
             confirmed: true;
-            /** @description The draft revision the customer reviewed. Omit to confirm whatever is current; send it to be refused with 409 stale_revision if the draft moved on. */
-            revision?: number;
+            /** @description The required reviewed revision; stale revisions are refused with 409 stale_revision. */
+            revision: number;
         };
-        /** @description Optional body for submitDraft (LEASH-101). */
+        /** @description The exact reviewed draft revision. */
         SubmitRequest: {
-            /** @description The draft revision the customer reviewed. Omit to submit whatever is current; send it to be refused with 409 stale_revision if the draft moved on. */
-            revision?: number;
+            /** @description The required reviewed revision; stale revisions are refused with 409 stale_revision. */
+            revision: number;
         };
         Mandate: {
             review?: components["schemas"]["PermissionReview"];
@@ -578,7 +578,7 @@ export interface components {
              * @enum {string}
              */
             delivery: "pending" | "accepted" | "refused";
-            /** @description What the platform said, verbatim where it said anything. Null while pending. */
+            /** @description Platform response, or conflict:&lt;status&gt; when reconciliation found a disagreement. Null while pending. */
             platform_outcome: string | null;
             source_authorization_id?: string | null;
             run_id: string;
@@ -967,7 +967,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["SubmitRequest"];
             };

@@ -109,20 +109,30 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # This does change what is *sent* for such a redelivery — a saved `approve` is no longer posted for terms it
 # was never checked against — and that is the point of the criterion. It only ever moves a verdict towards
 # caution (approve → step_up), reads no rule, fact, check or amount, and cannot affect a first delivery.
+# Re-pinned 2026-09-25: Jev replaces the regex-backed Laya reader at the user's request.
+# Jev and its question bank are now hashed shared enforcement, because shop-text cautions
+# affect every purchase. Field meanings and operators are unchanged; extraction can change
+# verdicts in either direction. Regex is only an explicit baseline, and reader failures step up.
+# This pin also includes concurrent acknowledged-redelivery handling in SavedAuthorization,
+# PostgresRepository.receive and DecidePurchase: accepted responses are not posted twice.
+# These shared-module edits affect hashes but do not change the first-decision rule meanings.
+# Re-pinned 2026-09-25: all-field Jev safety checks, conservative uncertainty and structured-only
+# floor can only add caution to model facts. Offer ranges are warnings, never authority.
+# Unicode lookalike matching does not grant familiarity; merchant IDs remain authoritative.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "93437733ba9e",
-    "authorization.fulfillment_method@v1": "3eaaa5f96d74",
-    "merchant.merchant_category@v1": "7d9694745f6f",
-    "items.item_category@v1": "3f0599f57585",
-    "items.item_id@v1": "a9ee61cb31ef",
-    "leash.items.size.v1@v1": "2312127c48bb",
-    "leash.merchant.prior_purchases.v1@v1": "a4f0f111c147",
-    "leash.order.return_days.v1@v1": "6538d40e3894",
-    "leash.items.unrequested_count.v1@v1": "1a917ef30abe",
-    "leash.purchase.max_count.v2@v2": "b891e23cd5d8",
-    "leash.items.max_quantity.v1@v1": "3cd7d78d798c",
-    "leash.session.risk_score.v1@v1": "52061d132442",
-    "leash.orders.split_check.v1@v1": "8403b04f8e77",
+    "authorization.billing_amount_chf@v1": "693d31ca63b4",
+    "authorization.fulfillment_method@v1": "a39aa0f21ca4",
+    "merchant.merchant_category@v1": "f1c1af663328",
+    "items.item_category@v1": "0174ac069cf7",
+    "items.item_id@v1": "bfe046ceb673",
+    "leash.items.size.v1@v1": "ae7bdb7018c2",
+    "leash.merchant.prior_purchases.v1@v1": "90d0f47eccea",
+    "leash.order.return_days.v1@v1": "6505d2459ba2",
+    "leash.items.unrequested_count.v1@v1": "c43fc35a1e5f",
+    "leash.purchase.max_count.v2@v2": "de767ac948dd",
+    "leash.items.max_quantity.v1@v1": "4d8c7c859229",
+    "leash.session.risk_score.v1@v1": "dd5671617951",
+    "leash.orders.split_check.v1@v1": "36a37d10c3eb",
 }
 
 

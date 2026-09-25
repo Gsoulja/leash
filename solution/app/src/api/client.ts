@@ -109,10 +109,11 @@ export function api(fetcher: Fetcher = (url, init) => fetch(url, init)) {
   }
   const draftPath = (path: string, id: string) => path.replace("{draft_id}", encodeURIComponent(id));
   return {
-    chatTurn: (text: string, draftId?: string, scenarioId?: string, replaceInstruction = false) =>
+    chatTurn: (text: string, draftId?: string, scenarioId?: string, replaceInstruction = false, questionId?: string) =>
       send<AssistantDraft>(draftId ? draftPath(ASSISTANT_PATHS.assistantTurns, draftId) : ASSISTANT_PATHS.assistantDrafts,
         { text, ...(draftId ? {} : scenarioId ? { scenario_id: scenarioId } : {}),
-          ...(replaceInstruction ? { replace_instruction: true } : {}) }),
+          ...(replaceInstruction ? { replace_instruction: true } : {}),
+          ...(questionId ? { question_id: questionId } : {}) }),
     // The chat goes through the assistant; it answers with the policy service's own draft, unwrapped.
     // Only the newest words are sent: everything said earlier is read back from the stored draft, so
     // the transcript stays derived here exactly as it is on the screen.
@@ -123,9 +124,9 @@ export function api(fetcher: Fetcher = (url, init) => fetch(url, init)) {
       send<PolicyDraft>(draftPath(PATHS.draftAnswers, id), { answers: [{ question_id: questionId, answer }] }),
     addTurn: (id: string, text: string, replaceInstruction = false) =>
       send<AssistantDraft>(draftPath(ASSISTANT_PATHS.assistantTurns, id), { text, ...(replaceInstruction ? { replace_instruction: true } : {}) }).then((r) => r.draft),
-    submitDraft: (id: string, revision?: number) =>
+    submitDraft: (id: string, revision: number) =>
       send<PlatformDraft>(draftPath(PATHS.draftSubmit, id), revision === undefined ? null : { revision }),
-    confirmDraft: (id: string, revision?: number) =>
+    confirmDraft: (id: string, revision: number) =>
       send<Mandate>(draftPath(PATHS.draftConfirm, id),
                     revision === undefined ? { confirmed: true } : { confirmed: true, revision }),
     payments: (runId?: string) => get<PaymentList>(withQuery(PATHS.payments, { run_id: runId })),
