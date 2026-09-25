@@ -1,6 +1,6 @@
 # LEASH-192: Step-up prompt in the handoff style
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P1
 **Type**: feature
 **Estimated Effort**: S
@@ -20,11 +20,11 @@ Restyle `StepUp.tsx` with the handoff system: violet "your turn" header tint, am
 The one moment the customer is interrupted must be the clearest screen in the app.
 
 ## Acceptance Criteria
-- [ ] Button names "Confirm payment", "Reject", "Decide later", "OK" are unchanged.
-- [ ] `.p-amt` still holds the amount (queried by `StepUp.test.tsx`).
-- [ ] When a hard rule now fails, Approve is still replaced by the reason (DEC-012), styled as the stopped tone.
-- [ ] Colour never carries meaning alone; decision targets ≥ 48px.
-- [ ] Existing tests for StepUp and useAsks still pass.
+- [x] Button names "Confirm payment", "Reject", "Decide later", "OK" are unchanged.
+- [x] `.p-amt` still holds the amount (queried by `StepUp.test.tsx`).
+- [x] When a hard rule now fails, Approve is still replaced by the reason (DEC-012), styled as the stopped tone.
+- [x] Colour never carries meaning alone; decision targets ≥ 48px.
+- [x] Existing tests for StepUp and useAsks still pass.
 
 ## Technical Approach
 Markup/class changes in `screens/StepUp.tsx` plus CSS. `useDialogFocus`, `useNow`, `ARM_MS`, `ANSWER_TIMEOUT_MS` and the answer flow are not modified.
@@ -44,3 +44,13 @@ At risk: `src/screens/StepUp.test.tsx` (enabled-button list, `.p-amt`), `src/api
 ## Out of scope
 - Moving the ask into the chat as a proposal card with "Approve · CHF" (superseded by DEC-033).
 - Biometric confirmation.
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: "Confirm payment", "Reject", "Decide later", "OK" unchanged (and match `journey.spec.ts`).
+- [x] met — criterion 2: `.p-amt` still holds the amount; only its CSS changed (28/700).
+- [x] met — criterion 3: `{!reason && <Button variant="approve">}` kept; `.p-blocked` now in the stopped tint/ink; tested.
+- [ ] not met → fixed → [x] met — criterion 4: the first review found "Decide later" (`.link.later`) at ~35px, while the ticket counts it among the ≥ 48px decision buttons. Fixed: `.link.later` now has `min-height:48px`, with a test asserting it and `.btn-decision`'s 48px. Re-review: met. Colour never carries meaning alone ("YOUR ANSWER NEEDED", "X OK" chips, reason text, labels).
+- [x] met — criterion 5: all StepUp and useAsks tests pass. One assertion changed with the ticket's copy: "Price, Known shop: OK" became one chip per passed check ("Price OK", "Known shop OK"); the reviewer judged the same behaviour asserted, more strictly.
+Verdict: moved to review.

@@ -1,6 +1,6 @@
 # LEASH-184: Presentational primitives — buttons, tiles, badges and chips
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P1
 **Type**: feature
 **Estimated Effort**: M
@@ -24,12 +24,12 @@ Build the small shared building blocks the screen tickets will use, as CSS class
 One consistent vocabulary for every later screen ticket, reviewed once instead of per screen.
 
 ## Acceptance Criteria
-- [ ] Each primitive renders the handoff shape and tone from tokens only (no hard-coded hex in components).
-- [ ] Decision-sized buttons are ≥ 48px tall; other targets ≥ 44px.
-- [ ] Every tone also carries text (e.g. "Hard stop at", "over budget"); colour never carries meaning alone.
-- [ ] `LimitTile` formats amounts from a string/`Decimal`-safe input, never recomputing money in floats.
-- [ ] No existing screen imports the new primitives in this ticket; the existing `.pill`, `.chip`, `.card` classes keep working.
-- [ ] Existing tests for all screens still pass.
+- [x] Each primitive renders the handoff shape and tone from tokens only (no hard-coded hex in components).
+- [x] Decision-sized buttons are ≥ 48px tall; other targets ≥ 44px.
+- [x] Every tone also carries text (e.g. "Hard stop at", "over budget"); colour never carries meaning alone.
+- [x] `LimitTile` formats amounts from a string/`Decimal`-safe input, never recomputing money in floats.
+- [x] No existing screen imports the new primitives in this ticket; the existing `.pill`, `.chip`, `.card` classes keep working.
+- [x] Existing tests for all screens still pass.
 
 ## Technical Approach
 `solution/app/src/components/ui/` (Button, LimitTile, StatusBadge, Chip) and their CSS in `theme.css`. Pure presentational components: props in, markup out; no queries, no API.
@@ -56,3 +56,14 @@ At risk: none (no screen changes); run the full suite to prove it.
 - Chat-specific primitives (LEASH-189).
 - Adopting the primitives in screens.
 - Approve buttons on product proposals (superseded by DEC-033).
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [?] unverifiable — criterion 1: tokens-only part met (no hex in the `.tsx` components; every tone is a `var(--hf-*)` token; `#fff` labels on filled buttons are the handoff's neutral, contrast-tested ≥ 4.5). Tile, badge and button geometry match the handoff. Fixed after review: the destructive outline label now uses stopped red `#C0203A` as the Sticker Sheet does (5.98:1 on white). Remaining deliberate drifts for a human to accept: DRAFT badge uses `--hf-divider`/`--hf-muted-text` (prototype's `#F1F0EC`/`#55554F` are not tokens); badge text is `--fs-overline` (11px) rather than 9.5px. The visual match needs a human look.
+- [x] met — criterion 2: `.btn` min-height 44px, `.btn-decision` 48px (class tested; jsdom can't measure pixels).
+- [x] met — criterion 3: tiles say "Hard stop at" / "Stretch up to" / "Budget · guidance" (DEC-044 ruling 4) in text and `aria-label`; badges show DRAFT/ACTIVE/REVOKED; buttons and chips require text children.
+- [x] met — criterion 4: `formatChf` is regex + string operations only; tests cover an amount beyond float precision and reject `1e3`, `-5`, `12.345`, `NaN`, empty.
+- [x] met — criterion 5: nothing in `src/screens` or `App.tsx` imports `components/ui`; new selectors collide with no existing rule; `.pill`, `.chip`, `.card` untouched.
+- [x] met — criterion 6: 152/152 at review time; typecheck clean.
+Verdict: moved to review; the visual match is left for the human gate.

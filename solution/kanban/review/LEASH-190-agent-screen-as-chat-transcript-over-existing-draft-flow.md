@@ -1,6 +1,6 @@
 # LEASH-190: Agent screen as a chat transcript over the existing draft flow
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P1
 **Type**: feature
 **Estimated Effort**: M
@@ -29,13 +29,13 @@ Example: "Buy a 27-inch monitor, no more than CHF 400" → customer bubble, chip
 The Agent tab finally reads as a conversation, without touching the review and consent logic that makes activation safe.
 
 ## Acceptance Criteria
-- [ ] The same API calls happen in the same order as today for create and answer (verified by the existing `api` mocks).
-- [ ] Rules, notes and open questions from the draft all appear; nothing is shown that the draft does not contain.
-- [ ] Blocking vs optional questions remain distinguishable in text ("Needed" / "Optional").
-- [ ] Review, posted-draft and confirm UI and behaviour are unchanged.
-- [ ] Accessible names used by tests and e2e — "What may the agent buy?", "Read my instruction", "Your answer", "Send", list "Rules as I read them" — are kept, or changed in the same commit with `Agent.test.tsx` and `e2e/journey.spec.ts` updated to assert the same behaviour.
-- [ ] The assistant never claims to search, shop or pay (DEC-033).
-- [ ] Existing tests for Agent still pass (updated only for renamed accessible names, never deleted).
+- [x] The same API calls happen in the same order as today for create and answer (verified by the existing `api` mocks).
+- [x] Rules, notes and open questions from the draft all appear; nothing is shown that the draft does not contain.
+- [x] Blocking vs optional questions remain distinguishable in text ("Needed" / "Optional").
+- [x] Review, posted-draft and confirm UI and behaviour are unchanged.
+- [x] Accessible names used by tests and e2e — "What may the agent buy?", "Read my instruction", "Your answer", "Send", list "Rules as I read them" — are kept, or changed in the same commit with `Agent.test.tsx` and `e2e/journey.spec.ts` updated to assert the same behaviour.
+- [x] The assistant never claims to search, shop or pay (DEC-033).
+- [x] Existing tests for Agent still pass (updated only for renamed accessible names, never deleted).
 
 ## Technical Approach
 Derive a `messages` array from `PolicyDraft` in a pure function (`draftToMessages`) and render it with LEASH-189's `Transcript`. State (`draftId`, `posted`, `confirmed`, `busy`, `message`), `act()`, `answer()`, `startOver()` and the query stay as they are. This is presentation over the existing state machine, not a new one; LEASH-145 later adds persistence of the full conversation and revisions.
@@ -58,3 +58,16 @@ At risk: `src/screens/Agent.test.tsx` (queries by label, list name, button name,
 - Review and confirmation (LEASH-191).
 - LLM clarification, draft revisions, context questions, persistent transcript storage (LEASH-101, LEASH-145, LEASH-154).
 - Product search results or any shopping activity in the chat (DEC-033).
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: `createDraft` still gets the trimmed instruction; `answerDraft(d.draft_id, questionId, text)` is unchanged apart from taking the id; the api-mock tests pass.
+- [x] met — criterion 2: `draftToMessages` maps only instruction, rules, notes and open questions ("no message is produced for data the draft lacks" pins it); after posting, questions are filtered out as before. The draft has no answered-question history, so none is shown.
+- [x] met — criterion 3: "Needed" / "Optional" chips; the existing test passes.
+- [x] met — criterion 4: everything after the transcript (review, "What Viseca received", confirm, status, start over) was identical to HEAD in this ticket's diff.
+- [x] met — criterion 5: "What may the agent buy?" and "Read my instruction" are the Composer's accessible names; each question group has its own "Your answer" and "Send"; the rule list is still "Rules as I read them". Nothing renamed.
+- [x] met — criterion 6: the greeting only reads, asks and says nothing is active until the customer confirms; tests check no search/shop/pay claim.
+- [x] met — criterion 7: `Agent.test.tsx` only gained a describe block; all Agent tests pass.
+e2e: `npm run test:e2e` on a fresh isolated `leash-e2e` stack passed the whole Agent part (instruction, rules list, answering a question group, review, confirm) and failed later at `journey.spec.ts:126` on the Cockpit wording "Paid · you approved", which `status.ts` had changed before this epic (fixed in LEASH-194).
+Verdict: moved to review.

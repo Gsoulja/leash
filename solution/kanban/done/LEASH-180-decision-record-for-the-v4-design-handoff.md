@@ -1,6 +1,6 @@
 # LEASH-180: Decision record — adopt the v4 handoff as the design source and rule on its scope
 
-**Status**: BACKLOG
+**Status**: DONE
 **Priority**: P1
 **Type**: docs
 **Estimated Effort**: S
@@ -33,10 +33,10 @@ Questions the product owner must answer (each with the proposed default):
 Every later ticket in LEASH-179 cites one settled decision instead of two competing design sources, and no ticket quietly re-introduces the superseded agent-shopping surfaces.
 
 ## Acceptance Criteria
-- [ ] DEC-044 exists in `solution/docs/decisions.md` with source (product owner), date and status.
-- [ ] DEC-021's status reads `Superseded by DEC-044` (row kept; nothing deleted).
-- [ ] Each of the eight questions above has a recorded answer or an explicitly named default with an owner.
-- [ ] DEC-044 lists the handoff surfaces that are out of scope under DEC-033.
+- [x] DEC-044 exists in `solution/docs/decisions.md` with source (product owner), date and status.
+- [x] DEC-021's status reads `Superseded by DEC-044` (row kept; nothing deleted).
+- [x] Each of the eight questions above has a recorded answer or an explicitly named default with an owner.
+- [x] DEC-044 lists the handoff surfaces that are out of scope under DEC-033.
 
 ## Technical Approach
 Edit `solution/docs/decisions.md` only. Quote the handoff README sections ("About the design files", "Critical domain rules" 1–2, "Screens" V3/V4/V7) as the sources.
@@ -58,3 +58,17 @@ No code. Check: `grep -n "DEC-044\|DEC-021" solution/docs/decisions.md` shows th
 - Writing code or tests.
 - Editing the design handoff or the challenge pack.
 - Changing other DEC entries beyond cross-references.
+
+## Review log
+
+### 2026-09-25 — gate ruling
+The product owner accepted all eight proposed defaults as written, and is recorded as DEC-044's source.
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: DEC-044 row reads "Product owner, 2026-09-25 | Accepted", in the log's ID | Decision | Source | Status format.
+- [x] met — criterion 2: DEC-021's status cell is `Superseded by DEC-044`; the row is kept and no other entry changed.
+- [x] met — criterion 3: items 1–8 each record a ruling, owned by the product owner.
+- [x] met — criterion 4: item 2 lists the DEC-033 exclusions (search card, carousel and pagination, per-proposal Approve buttons, receipt card, searching/matches banners, handoff rule 1).
+Quotes from `designPrototype/README.md` and `customer-journey-for-design.md` were checked and are accurate.
+Fixed after review: two wordings went beyond the accepted defaults. Item 7 said "LEASH-189–191" and item 2 added "card-settings rows" to the host-shell exclusions. Both were reverted to the default text.
+Verdict: moved to review.

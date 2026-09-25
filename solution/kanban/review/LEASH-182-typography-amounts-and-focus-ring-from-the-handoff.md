@@ -1,6 +1,6 @@
 # LEASH-182: Typography, amounts and focus ring from the handoff
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P1
 **Type**: feature
 **Estimated Effort**: S
@@ -20,11 +20,11 @@ Switch the phone's type from Figtree / JetBrains Mono to **Inter 400/500/600/700
 Type is half of the handoff's look; tabular amounts make money columns scannable.
 
 ## Acceptance Criteria
-- [ ] `--sans` resolves to Inter and `--mono` to IBM Plex Mono, each with a system fallback stack so an offline demo still renders.
-- [ ] `index.html` loads Inter and IBM Plex Mono (weights actually used) instead of Figtree / JetBrains Mono.
-- [ ] Amount classes (`.v`, `.v2`, `.ramt`, `.p-amt`; not the inspector's `.iamt`) use tabular numerals.
-- [ ] Focus-visible inside `.screen` is a 3px `#8A1FA8` ring at 2px offset; the inspector keeps its focus style.
-- [ ] Existing tests for all screens still pass.
+- [x] `--sans` resolves to Inter and `--mono` to IBM Plex Mono, each with a system fallback stack so an offline demo still renders.
+- [x] `index.html` loads Inter and IBM Plex Mono (weights actually used) instead of Figtree / JetBrains Mono.
+- [x] Amount classes (`.v`, `.v2`, `.ramt`, `.p-amt`; not the inspector's `.iamt`) use tabular numerals.
+- [x] Focus-visible inside `.screen` is a 3px `#8A1FA8` ring at 2px offset; the inspector keeps its focus style.
+- [x] Existing tests for all screens still pass.
 
 ## Technical Approach
 `theme.css` and `index.html` only. Type-scale tokens as custom properties; no component markup change.
@@ -45,3 +45,14 @@ At risk: none of the screen tests query fonts; `src/theme.test.ts` gains a case.
 ## Out of scope
 - Self-hosting fonts (only if LEASH-151's deterministic delivery requires it — note it there).
 - Screen layout changes.
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: `--sans` is `"Inter",…,sans-serif` and `--mono` is `"IBM Plex Mono",…,monospace`, both with system fallbacks; tests assert both.
+- [x] met — criterion 2: `index.html` loads Inter 400–800 (800 is still used by `.view h1`, `.sum-row .v`, `.p-amt`) and IBM Plex Mono 400/500; a test guards against Figtree/JetBrains returning.
+- [x] met — criterion 3: tabular numerals on `.sum-row .v`, `.v2`, `.ramt` (added) and `.p-amt` (already); `.iamt` untouched.
+- [x] met — criterion 4: `.screen :focus-visible{outline:3px solid var(--hf-your-turn);outline-offset:2px}`; every per-element `--a-blue` ring removed; the inspector's rings unchanged. Deliberate deviation accepted by the reviewer: `.sheet` and `.prompt` ring inward (−5px) because `.screen` has `overflow:hidden` and they are full-bleed, so an outward ring would be clipped.
+- [?] unverifiable — how the ring looks rendered, especially on the bottom sheet, needs a human eye.
+- [x] met — criterion 5: `npm test` 123/123, typecheck clean, build succeeds.
+Verdict: moved to review.

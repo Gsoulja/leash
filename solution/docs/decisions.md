@@ -18,7 +18,7 @@ Reviewed with the product owner on 2026-09-23. Tickets reference these IDs.
 | --- | --- | --- | --- |
 | DEC-001 | Postgres 17 is the database. The "SQLite for the hackathon" line in the system design is stale and gets fixed in LEASH-111. | Team | Accepted |
 | DEC-002 | Backend in Python 3.12 (FastAPI, asyncpg); customer app in React + TypeScript. | Team | Accepted |
-| DEC-021 | The customer app **ports the prototype's screens and styles** into React components wired to the real API, rather than redesigning them. | Team | Proposed |
+| DEC-021 | The customer app **ports the prototype's screens and styles** into React components wired to the real API, rather than redesigning them. | Team | Superseded by DEC-044 |
 | DEC-026 | Lightweight Definition of Ready: a ticket names its rule source, gives one example and one edge case, and has no open decision that could change it. | Team | Accepted |
 | DEC-027 | Work is sequenced in vertical milestones M0–M6 (tagged on every ticket) so a thin end-to-end slice works early. | Team | Accepted |
 | DEC-028 | Team size and available hours. The MVP (M0–M5) is still about 200 h. | — | **Open** |
@@ -102,6 +102,33 @@ over. **Proposed**: the code builds on them now, and the product owner has not y
 | DEC-041 | A demo reset verifies the baseline **per card**, against `data/authorization_history.csv`. A reset leaves no runs, so per-card (the scope a run is bound to, `runs.card_id`) is the only scoped total the database can check. Per-scenario totals live in `purchase_attempts.csv`, which is not seeded. | Team, 2026-09-24 | Proposed |
 | DEC-042 | The Compose service name `db` counts as a local database for the demo reset's host guard, so the containerised reset works. On a machine where DNS resolves `db` to something real, the `--yes` / `LEASH_ALLOW_DEMO_RESET` guard is the only remaining protection. Chosen over dropping `db` and requiring `--live` in Compose. Locality is otherwise resolved the way libpq resolves it: URL host, then `?host=`, then `PGHOST`, then a unix socket. | Team, 2026-09-24 | Proposed |
 | DEC-043 | CI checks run on GitHub Actions. The repository has a GitHub remote and no other CI configuration, so this is the only non-speculative choice for the **checks**. It is explicitly *not* a deployment decision: LEASH-141's out-of-scope rule stands, and staged rollout, rollback and a deployment target remain open behind deployment ownership. | Team, 2026-09-24 | Proposed |
+
+## Customer-app design source — 2026-09-25
+
+Ruled on by the product owner at the LEASH-180 gate: all eight proposed defaults were accepted as written. Sources are quoted from the handoff `designPrototype/README.md` ("About the design files", "Critical domain rules" 1–2, "Screens" V3, V4 and V7) and weighed against DEC-033, which was logged after the handoff and outranks it.
+
+| ID | Decision | Source | Status |
+| --- | --- | --- | --- |
+| DEC-044 | The Hi-Fi v4 handoff (`designPrototype/`) replaces the placeholder prototype as the **design source for the customer phone app**; DEC-021 is superseded. The handoff's own README says the files are "not production code": recreate them with the app's components and do not port `support.js`, `<x-dc>`, `image-slot.js` or inline styles. The eight scope rulings follow this table. | Product owner, 2026-09-25 | Accepted (ruling 2 amended by DEC-045) |
+
+1. **Design source.** Adopt the handoff's visual system (tokens, type, icons, logo, component shapes) for the customer phone app. The engine inspector keeps its own tokens.
+2. **Surfaces in scope.** In: tokens, type, icons and logo, chat primitives, rule chip, summary card, mandate bar, V3 agent-access status card and tiles, V7 freeze sheet as the revoke presentation, V5 transaction-detail styling, step-up restyle. **Out, superseded by DEC-033:** agent product search and the search card, the product carousel and pagination, per-proposal "Approve · CHF" buttons, the receipt card, the "searching / N matches" banner states, and handoff rule 1 (see 3). **Out, generic host shell:** card hero, quick actions, Cards/Profile tabs. **Out, owned elsewhere:** the V6 decision-log timeline (LEASH-148/150).
+3. **Handoff rule 1 ("Every purchase requires customer approval").** Not adopted. The designer brief (`customer-journey-for-design.md`, "Fits: proceed without interruption") and the engine both approve within permission. UI copy must never say the customer approves every purchase.
+4. **Budget vs hard stop.** Live mandates carry only `hard_rules` (DEC-004); Leash has no "stretch" concept. The enforceable per-order limit is the red "HARD STOP AT" tile. A green BUDGET tile appears only when a separate guidance budget exists, labelled as guidance, never as enforced.
+5. **"Confirm with Face ID".** DEC-019 excludes login from the prototype and the app performs no biometric check. Keep the ink-filled confirm chip with the fingerprint icon, labelled "Confirm permission"; never claim biometric authentication.
+6. **Assistant persona.** Under DEC-033 Leash's assistant clarifies permission and does not shop. The chat header reads "Permission assistant"; status lines are limited to setting up / active / revoked (no "Shopping agent", no "Searching…").
+7. **Split with LEASH-145/146.** LEASH-189–190 present today's draft flow as a chat. LEASH-145/146 add LLM clarification, revisions, context and the Must follow / May choose / Must ask review (DEC-035) on top, reusing these chat primitives rather than rebuilding them.
+8. **Tab bar.** The app's three tabs stay visible everywhere, including chat and the freeze sheet. They are the app's navigation, not the handoff's host shell.
+
+**Amendment, 2026-09-25 (after the LEASH-179 build).** The product owner asked for the handoff's V1 Home instead of the restyled Cockpit.
+
+| ID | Decision | Source | Status |
+| --- | --- | --- | --- |
+| DEC-045 | Amends DEC-044 ruling 2: the first tab becomes **Home**, following the handoff's V1 layout (replacing the "Cockpit" name; the spending card and payment list stay below). Adopted parts: a greeting, a dark card hero and four quick-action tiles. The card hero shows only facts Leash has (the agent's permission status, the per-order hard stop, what is left in the period): no card number, balance or expiry is invented, and nothing imitates an issuer's real card. Each tile opens a real Leash destination (no dead buttons): the handoff's "Lock card" and "Settings" have no Leash equivalent and become "Revoke" and "Payments". The greeting has no customer name, since the prototype has no login (DEC-019). Still out: the agent banner (not chosen), the Cards/Profile tabs, and the banner's searching/matches states (DEC-033). Tabs stay Home · Agent · Permission (ruling 8). | Product owner, 2026-09-25 | Accepted (card and banner amended by DEC-046) |
+
+| ID | Decision | Source | Status |
+| --- | --- | --- | --- |
+| DEC-046 | Amends DEC-045 on Home. (1) The dark card becomes the handoff's **credit card** ("Credit card", masked number, available amount, expiry) with **static demo values**. These are invented for the demo: no API or pack field supplies a card number or balance. They live in one constant in `Home.tsx` and never feed a decision. The agent's permission status leaves the card; it stays on the Permission tab. (2) The spending card ("Agent spent" with its counts) is removed from Home. In its place is the handoff's agent banner in its "never started" state, "Try your new AI shopping agent · Set rules together in a chat", which opens the chat. It is shown only while no permission is active, and hidden once one is. The banner names the external shopping agent, whose rules the chat sets; Leash itself still never claims to search or shop (DEC-033). | Product owner, 2026-09-25 | Accepted |
 
 ## Questions for the Viseca experts (LEASH-110)
 

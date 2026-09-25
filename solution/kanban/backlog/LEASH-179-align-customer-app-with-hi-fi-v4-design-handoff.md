@@ -25,8 +25,8 @@ LEASH-145 (conversational journey) and LEASH-146 (human-readable review) own the
 The demo is judged on whether the audience instantly sees the customer's control. The handoff's hard-stop tile, rule chips and single visual language make that legible; today's generic form and blue pills read as an admin tool.
 
 ## Sub-tasks
-- [ ] LEASH-180 (179-T1): Decision record — adopt the v4 handoff as the design source and rule on its scope · S · **DECISION gate**
-- [ ] LEASH-181 (179-T2): Handoff colour tokens behind the existing token names · M
+- [x] LEASH-180 (179-T1): Decision record — adopt the v4 handoff as the design source and rule on its scope · S · **DECISION gate**
+- [x] LEASH-181 (179-T2): Handoff colour tokens behind the existing token names · M
 - [ ] LEASH-182 (179-T3): Typography, amounts and focus ring from the handoff · S
 - [ ] LEASH-183 (179-T4): Handoff icon set and the bracket-dot logo mark · S
 - [ ] LEASH-184 (179-T5): Presentational primitives: buttons, tiles, badges and chips · M
@@ -40,6 +40,8 @@ The demo is judged on whether the audience instantly sees the customer's control
 - [ ] LEASH-192 (179-T13): Step-up prompt in the handoff style · S
 - [ ] LEASH-193 (179-T14): Payment detail in the handoff style · S
 - [ ] LEASH-194 (179-T15): Redesign acceptance check and design-doc sync · S
+- [ ] LEASH-198 (179-T16): Home screen from the handoff's V1 (greeting, card hero, quick actions) · M · added by DEC-045
+- [ ] LEASH-199 (179-T17): Home shows the credit card and the "Try your new AI shopping agent" banner · S · added by DEC-046
 
 Sequence (enforced by Blocked by / Blocks): T1 → T2 → T3, T4 → T5, T6 → screens (T7, T8 → T9, T13, T14) and chat (T10 → T11 → T12) → T15.
 

@@ -248,7 +248,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
     <table>
       <thead><tr><th>Component</th><th>Owns</th><th>Must never</th><th>Suggested stack</th></tr></thead>
       <tbody>
-        <tr><td>Customer app</td><td>Rule review, confirm, step-up prompt, agreed-vs-paid view, tighten and revoke</td><td>Invent a human answer</td><td>React + Vite, phone-width layout, SSE for asks</td></tr>
+        <tr><td>Customer app</td><td>Rule review, confirm, step-up prompt, agreed-vs-paid view, tighten and revoke</td><td>Invent a human answer</td><td>React + Vite, phone-width layout, SSE for asks; visual design from the Hi-Fi v4 handoff (DEC-044, superseding DEC-021)</td></tr>
         <tr><td>Policy service</td><td>Instruction → <code>hard_rules</code>, open questions, mandate CRUD, relaying <code>/resolve</code></td><td>Remove or loosen an active mandate rule; unconfirmed drafts use revision-safe corrections</td><td>Python FastAPI</td></tr>
         <tr><td>Decision engine</td><td>Worker loop, facts, rules, context checks, verdict, explanation</td><td>Let model output approve a purchase</td><td>Python asyncio, same service as the worker</td></tr>
         <tr><td>Fact reader</td><td>Regex extraction, Laya questions on <code>item_details</code></td><td>Block the deadline (hard 1 s timeout)</td><td>Laya preloaded on the RTX 5070 Ti</td></tr>

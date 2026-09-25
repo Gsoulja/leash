@@ -1,6 +1,6 @@
 # LEASH-181: Handoff colour tokens behind the existing token names
 
-**Status**: BACKLOG
+**Status**: DONE
 **Priority**: P1
 **Type**: feature
 **Estimated Effort**: M
@@ -22,12 +22,12 @@ Mapping: `--a-ok*` → allowed, `--a-bad*` → stopped, `--a-warn*` → your-tur
 The one change that makes the app visibly the handoff design, with zero behavioural risk.
 
 ## Acceptance Criteria
-- [ ] `theme.css` defines the handoff tokens as new semantic custom properties on `:root`.
-- [ ] The existing `--a-*` names resolve to the handoff values; no component file changes.
-- [ ] The inspector/page token set (`--page`, `--panel`, `--accent`, … and the dark-mode blocks) is unchanged.
-- [ ] Every text/background pair used by the phone meets WCAG AA 4.5:1; where a handoff hue fails as text, a darker `-text` variant is added (as today).
-- [ ] The line-1 comment of `theme.css` cites DEC-044 and the handoff instead of DEC-021.
-- [ ] Existing tests for all screens (`Agent`, `Cockpit`, `Permission`, `StepUp`, `PaymentDetail`, `status`, `App`, `Inspector`) still pass.
+- [x] `theme.css` defines the handoff tokens as new semantic custom properties on `:root`.
+- [x] The existing `--a-*` names resolve to the handoff values; no component file changes.
+- [x] The inspector/page token set (`--page`, `--panel`, `--accent`, … and the dark-mode blocks) is unchanged.
+- [x] Every text/background pair used by the phone meets WCAG AA 4.5:1; where a handoff hue fails as text, a darker `-text` variant is added (as today).
+- [x] The line-1 comment of `theme.css` cites DEC-044 and the handoff instead of DEC-021.
+- [x] Existing tests for all screens (`Agent`, `Cockpit`, `Permission`, `StepUp`, `PaymentDetail`, `status`, `App`, `Inspector`) still pass.
 
 ## Technical Approach
 CSS custom properties only. `theme.test.ts` today asserts that tokens equal `solution/prototype/index.html`; that assertion is retargeted (not deleted) to a token table transcribed from the handoff README in the test itself (the `.dc.html` is not parsed), and the "only additions are `-text` variants" rule is kept for the new set.
@@ -51,3 +51,14 @@ At risk: `src/theme.test.ts` (updated deliberately); `src/screens/Cockpit.test.t
 - Typography (LEASH-182), component shapes (LEASH-184), any `.tsx` change.
 - Dark mode for the phone (the handoff is light-only; the phone stays light).
 - Deleting `solution/prototype/index.html` or its tokens.
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: all 17 `--hf-*` values match `designPrototype/README.md` § Design tokens → Colour.
+- [x] met — criterion 2: every `--a-*` except `--a-card` (#FFFFFF, not in the handoff table) resolves to an `--hf-*` token; `--a-blue` → ink ("Primary ink"). No `.tsx` changed.
+- [x] met — criterion 3: the inspector's light row and both dark blocks are byte-identical; a new test pins them.
+- [x] met — criterion 4: every phone text use checked. `--hf-muted-text` #6B6B64 was added because #7C7C74 is 3.82:1 on canvas; it gives 4.87 on canvas and 5.37 on card. Semantic inks score 6.9–8.5 on their tints, white on ink 18.2, white on stopped-ink 9.1.
+- [x] met — criterion 5: line 1 cites DEC-044 and the handoff; a test asserts it.
+- [x] met — criterion 6: `npm test` 12 files / 118 tests, `npm run typecheck` clean; no screen test changed.
+Verdict: moved to review.
