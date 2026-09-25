@@ -58,6 +58,7 @@ def test_missing_or_invalid_configuration_fails_with_a_clear_message():
 def test_versions_are_checked_for_compatibility():
     check_compatibility("0.1.0", "saw26")
     check_compatibility("0.4.2", "saw26")  # same major version
+    check_compatibility("0.1.0", "saw26-hackaton-api")  # the hosted pack's own name for the same family
     with pytest.raises(IncompatibleApi, match="api"):
         check_compatibility("1.0.0", "saw26")
     with pytest.raises(IncompatibleApi, match="data"):

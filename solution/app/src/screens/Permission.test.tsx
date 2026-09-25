@@ -8,6 +8,7 @@ function mandate(extra: Partial<Mandate> = {}): Mandate {
   return {
     mandate_id: "TM-1", version: 1, status: "active",
     instruction: "Buy the 27-inch monitor I chose for CHF 400 or less. Ask me when uncertain.",
+    review: { must_follow: ["At most CHF 400.00 per order, delivery included."], may_choose: [], must_ask: ["Missing evidence."] },
     rules: [{ text: "At most CHF 400.00 per order, delivery included", source: "customer", decision: null, tightened: false },
             { text: "Only the 27-inch computer monitor", source: "customer", decision: null, tightened: false }],
     hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=", value: 400, currency: "CHF", scope: "purchase" },
@@ -19,6 +20,10 @@ function mandate(extra: Partial<Mandate> = {}): Mandate {
 type Reply = { status: number; body: unknown };
 
 function stubFetch(replies: Record<string, Reply[]>) {
+  replies["GET /api/scenarios"] ??= [{ status: 200, body: { scenarios: [
+    { scenario_id: "SCEN0004", scenario_name: "Manipulated shopping", cardholder_instruction: "Test", event_count: 11 },
+    { scenario_id: "SCEN0001", scenario_name: "Household groceries", cardholder_instruction: "Test", event_count: 11 },
+  ] } }];
   const calls: { url: string; method: string; body: unknown }[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
@@ -51,10 +56,10 @@ describe("Permission screen", () => {
     render(wrap(<Permission />));
     const input = await screen.findByLabelText("New limit per order (CHF)");
     fireEvent.change(input, { target: { value: "500" } });
-    expect(screen.getByRole("button", { name: "Lower the limit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review lower limit" })).toBeDisabled();
     expect(screen.getByText(/can only go down from CHF 400.00/i)).toBeInTheDocument();
     fireEvent.change(input, { target: { value: "400" } });
-    expect(screen.getByRole("button", { name: "Lower the limit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review lower limit" })).toBeDisabled();
     expect(calls.filter((c) => c.method === "POST")).toEqual([]);
   });
 
@@ -62,12 +67,16 @@ describe("Permission screen", () => {
     const tightened = mandate({ version: 2, rules: [...mandate().rules,
       { text: "At most CHF 350.00 per order, delivery included", source: "customer", decision: null, tightened: true }] });
     const calls = stubFetch({ "GET /api/mandates": [list(mandate()), list(tightened)],
+                              "POST /api/mandates/TM-1/tighten?preview=true": [{ status: 200, body: tightened }],
                               "POST /api/mandates/TM-1/tighten": [{ status: 200, body: tightened }] });
     render(wrap(<Permission />));
     fireEvent.change(await screen.findByLabelText("New limit per order (CHF)"), { target: { value: "350" } });
-    fireEvent.click(screen.getByRole("button", { name: "Lower the limit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+    await screen.findByRole("button", { name: "Confirm permission change" });
+    expect(calls.filter((c) => c.url === "/api/mandates/TM-1/tighten")).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm permission change" }));
     await settle();
-    expect(calls).toContainEqual({ url: "/api/mandates/TM-1/tighten", method: "POST", body: { add_hard_rules: [
+    expect(calls).toContainEqual({ url: "/api/mandates/TM-1/tighten", method: "POST", body: { expected_version: 1, add_hard_rules: [
       { field: "authorization.billing_amount_chf", operator: "<=", value: 350, currency: "CHF", scope: "purchase" }] } });
     await settle();
     expect(await screen.findByText("Version 2")).toBeInTheDocument();
@@ -85,13 +94,15 @@ describe("Permission screen", () => {
 
   it("decline instead of asking tightens the uncertainty choice, and is gone once it applies", async () => {
     const calls = stubFetch({ "GET /api/mandates": [list(mandate()), list(mandate({ version: 2, uncertainty_policy: "decline" }))],
+                              "POST /api/mandates/TM-1/tighten?preview=true": [{ status: 200, body: mandate({ version: 2, uncertainty_policy: "decline" }) }],
                               "POST /api/mandates/TM-1/tighten": [{ status: 200, body: mandate({ version: 2, uncertainty_policy: "decline" }) }] });
     render(wrap(<Permission />));
-    fireEvent.click(await screen.findByRole("button", { name: "Decline instead of asking me" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Review declining when uncertain" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm permission change" }));
     await settle();
     await settle();
-    expect(calls).toContainEqual({ url: "/api/mandates/TM-1/tighten", method: "POST", body: { uncertainty_policy: "decline" } });
-    expect(screen.queryByRole("button", { name: "Decline instead of asking me" })).toBeNull();
+    expect(calls).toContainEqual({ url: "/api/mandates/TM-1/tighten", method: "POST", body: { uncertainty_policy: "decline", expected_version: 1 } });
+    expect(screen.queryByRole("button", { name: "Review declining when uncertain" })).toBeNull();
   });
 
   it("revoke needs a second tap and shows the platform's confirmation", async () => {
@@ -136,7 +147,7 @@ describe("Permission screen", () => {
     stubFetch({ "GET /api/mandates": [list(mandate())] });
     render(wrap(<Permission />));
     const input = await screen.findByLabelText("New limit per order (CHF)");
-    const button = () => screen.getByRole("button", { name: "Lower the limit" });
+    const button = () => screen.getByRole("button", { name: "Review lower limit" });
     for (const ok of ["19.99", "0.29", "1.1", "399.99", " 350 "]) {
       fireEvent.change(input, { target: { value: ok } });
       expect(button()).toBeEnabled();
@@ -167,11 +178,11 @@ describe("Permission screen", () => {
     const calls = stubFetch({ "GET /api/mandates": [list(mandate())],
                               "POST /api/runs": [{ status: 201, body: run }] });
     render(wrap(<Permission />));
-    fireEvent.change(await screen.findByLabelText("Scenario"), { target: { value: " SCEN0004 " } });
+    fireEvent.change(await screen.findByLabelText("Scenario"), { target: { value: "SCEN0004" } });
     fireEvent.click(screen.getByRole("button", { name: "Start a run" }));
     await settle();
     expect(calls).toContainEqual({ url: "/api/runs", method: "POST", body: { scenario_id: "SCEN0004", mandate_id: "TM-1" } });
-    expect(screen.getByRole("status")).toHaveTextContent("Run RUN-1 started with version 1 of your permission.");
+    expect(screen.getByRole("status")).toHaveTextContent("Simulation started.");
   });
 
   it("start a run needs a scenario and an active permission", async () => {
@@ -193,4 +204,43 @@ describe("Permission screen", () => {
     await settle();
     expect(screen.getByRole("status")).toHaveTextContent("This permission is not active.");
   });
+});
+
+it("cancelling or editing a preview sends no change; stale confirmation requires a fresh review", async () => {
+  const preview = mandate({ version: 2, review: { must_follow: ["At most CHF 350.00 per order."], may_choose: [], must_ask: ["Missing evidence."] } });
+  const calls = stubFetch({ "GET /api/mandates": [list(mandate())],
+    "POST /api/mandates/TM-1/tighten?preview=true": [{ status: 200, body: preview }],
+    "POST /api/mandates/TM-1/tighten": [{ status: 409, body: { error: { code: "stale_version", message: "This permission changed. Review again." } } }] });
+  render(wrap(<Permission />));
+  const input = await screen.findByLabelText("New limit per order (CHF)");
+  fireEvent.change(input, { target: { value: "350" } });
+  fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Cancel change" }));
+  expect(calls.filter((c) => c.url === "/api/mandates/TM-1/tighten")).toEqual([]);
+  fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+  await screen.findByRole("button", { name: "Confirm permission change" });
+  fireEvent.change(input, { target: { value: "340" } });
+  expect(screen.queryByRole("button", { name: "Confirm permission change" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Confirm permission change" }));
+  await settle();
+  expect(screen.getByRole("status")).toHaveTextContent("This permission changed. Review again.");
+  expect(screen.queryByRole("button", { name: "Confirm permission change" })).toBeNull();
+});
+
+it("refreshes a stale permission before retrying a preview", async () => {
+  const calls = stubFetch({ "GET /api/mandates": [list(mandate()), list(mandate({ version: 2 }))],
+    "POST /api/mandates/TM-1/tighten?preview=true": [
+      { status: 409, body: { error: { code: "stale_version", message: "Review the current version." } } },
+      { status: 200, body: mandate({ version: 3 }) },
+    ] });
+  render(wrap(<Permission />));
+  fireEvent.change(await screen.findByLabelText("New limit per order (CHF)"), { target: { value: "350" } });
+  fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+  await screen.findByText("Version 2");
+  await settle();
+  fireEvent.click(screen.getByRole("button", { name: "Review lower limit" }));
+  await screen.findByRole("button", { name: "Confirm permission change" });
+  expect(calls.filter((c) => c.url.endsWith("?preview=true")).map((c) => (c.body as { expected_version: number }).expected_version)).toEqual([1, 2]);
+  expect(calls.filter((c) => c.url === "/api/mandates/TM-1/tighten")).toEqual([]);
 });

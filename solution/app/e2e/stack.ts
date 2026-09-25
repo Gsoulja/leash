@@ -15,10 +15,16 @@ const env = {
   ...process.env,
   LEASH_API_PORT: PORT,
   LEASH_WORKER_HEALTH_PORT: process.env.LEASH_E2E_WORKER_PORT ?? "18081",
-  LEASH_FAKE_PORT: process.env.LEASH_E2E_FAKE_PORT ?? "19000",
+  LEASH_FAKE_PORT: process.env.LEASH_E2E_FAKE_PORT ?? "19100",  // 19000 is MinIO's default
   LEASH_DB_PORT: process.env.LEASH_E2E_DB_PORT ?? "55442",
   LEASH_BASE_URL: "http://fake:9000",  // the fake inside this project, whatever the caller's environment says
   TEAM_API_KEY: "fake-team-key",
+  LEASH_ASSISTANT_PORT: process.env.LEASH_E2E_ASSISTANT_PORT ?? "18100",
+  // The journey proves the plumbing, not the model: a real Apertus call would need a key this run does
+  // not have, and would make the test as flaky as a network. `offline` reads with the compiler instead,
+  // so what this asserts is that the words reach the policy service and come back as rules — not that
+  // any particular sentence was understood (LEASH-175).
+  LEASH_ASSISTANT_MODEL: "offline",
 };
 
 export function compose(...args: string[]) {

@@ -32,6 +32,7 @@ from types import MappingProxyType
 from typing import Any, Literal
 
 from leash.adapters.pack.loader import Pack, Transaction
+from leash.domain import mandate as m
 from leash.domain.clock import SimTime
 
 Kind = Literal["preference", "history", "statement", "confirmed"]
@@ -110,6 +111,9 @@ class SuggestedQuestion:
     needs_confirmation: bool = False  # the answer must state an amount or a scope, not just "yes"
     source: SourceRef | None = None
     answered: bool = False
+    #: The rule this question is about, when it is about one. Never a rule itself: answering it is
+    #: what may create one.
+    field: str | None = None
 
 
 @dataclass(frozen=True)
@@ -271,9 +275,13 @@ _CUES: dict[str, tuple[str, ...]] = {
     "budget": ("budget", "usual", "normally", "spend"),
 }
 
+#: cue -> (the rule this is about, the question to ask). The field lets a draft that is *missing*
+#: this restriction ask it in the customer's own terms instead of the compiler's generic wording.
 _QUESTION_FOR = {
-    "returns": "You usually buy where returns are possible. Should I only buy where the order can be returned?",
-    "pickup": "You usually collect orders from a shop. Should I only buy where collection is possible?",
+    "returns": (m.F_RETURN_DAYS,
+                "You usually buy where returns are possible. Should I only buy where the order can be returned?"),
+    "pickup": (m.F_FULFILLMENT,
+               "You usually collect orders from a shop. Should I only buy where collection is possible?"),
 }
 
 _NEGATION = re.compile(r"\b(?:no|not|don'?t|doesn'?t|never|without|ignore|skip|forget)\b", re.I)
@@ -384,11 +392,11 @@ def _questions(instruction: str, entries: Sequence[ContextEntry]) -> list[Sugges
         if entry.kind != "preference":
             continue
         settled = {cue for cue, _ in _stated_cues(instruction, entry.text)}
-        for cue, text in _QUESTION_FOR.items():
+        for cue, (field, text) in _QUESTION_FOR.items():
             if cue in settled:
                 continue  # the customer already said; background does not reopen it
             if set(_WORD.findall(entry.text.lower())) & set(_CUES[cue]):
-                questions.append(SuggestedQuestion(text, source=entry.source))
+                questions.append(SuggestedQuestion(text, source=entry.source, field=field))
     if _USUAL_BUDGET.search(instruction):
         # "my usual budget" is not an amount. History can show what was spent; only the customer
         # can say what the limit is, and for which orders it holds.

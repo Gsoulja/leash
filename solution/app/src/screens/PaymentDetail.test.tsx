@@ -20,7 +20,7 @@ function detail(extra: Partial<Detail> = {}): Detail {
       { key: "dup", label: "Repeat order", status: "warn", agreed: "Each order once", actual: "Same as the 11:40 order (approved)", detail: "Same order.", reason_code: "possible_duplicate" },
       { key: "known", label: "Known shop", status: "fail", agreed: "Paid there before", actual: "Never paid here", detail: "Unfamiliar.", reason_code: "unfamiliar_merchant" },
     ],
-    evidence: ["Price: CHF 289.00"], shop_texts: [{ item_id: "IT0017", text: EVIL }],
+    evidence: [{ check: "price", label: "Price", status: "pass", agreed: "At most CHF 400.00 per order", actual: "CHF 289.00", reason_code: null }], shop_texts: [{ item_id: "IT0017", text: EVIL }],
     sent_to_viseca: { decision: "step_up" } as unknown as Detail["sent_to_viseca"], engine_version: "leash-0.1.0", reader: { name: "regex", model_unavailable: false },
     ...extra,
   };

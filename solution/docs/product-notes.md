@@ -41,12 +41,17 @@ Start with reviewed examples and a baseline; fine-tune only when measured failur
 - LEASH-156: reviewed permission corpus, baseline metrics and complete-journey acceptance evidence.
 - LEASH-155: Laya permission-verifier evaluation and conditional fine-tuning, independent of the baseline release.
 - LEASH-140 and LEASH-143: authenticated customer consent and production identity/payment-path enforcement.
+- LEASH-175: the assistant's own HTTP surface, without which steps 2–5 have no path from the chat to the model.
+- LEASH-174: the DEC-045 authoring path — the model reads, the registry validates, a renderer writes the sentence the customer approves. Its two compensating controls are required, not optional: the unrestricted-fields list (LEASH-146) and omission checking (LEASH-155).
+- LEASH-160–173: the trust filter for untrusted shop and agent text, which today scans only `item_details` for injection.
+
+**Build state, 2026-09-25.** LEASH-154, LEASH-101 and LEASH-130 are done — the human gate was cleared for all sixteen review tickets on 2026-09-25. LEASH-174 and LEASH-175 have working code in the tree that is uncommitted and unreviewed. Steps 3, 4 and 6 of the journey — the omission check, the Must follow / May choose / Must ask review, and the external-agent handoff — have no implementation at all. Nothing here is end-to-end evidenced until LEASH-156 runs.
 
 Reuse the existing policy service, registry, confirmation lifecycle, run/checkout engine and evidence views. Optional catalogue lookup resolves references; Leash does not need its own shopping executor or a new generic agent framework. First deliver one complete permission-to-checkout journey.
 
 ### Open decisions and claims
 
-The LLM, verifier release thresholds, need for fine-tuning, production authentication, agent identity and credential/handoff protocol remain open. New TaskCard signing, delegation, cross-protocol support and settlement handling are future hypotheses, not prerequisites for the agreed challenge journey. Prototype login remains excluded under DEC-019; production consent must be authenticated.
+The LLM is no longer open: DEC-044 (Proposed) puts the permission assistant on Apertus behind one adapter, and DEC-045 (Accepted) settles the authoring path — the model reads the customer's words in any language, deterministic code validates, renders and freezes the rule. DEC-045 is only safe with its two compensating controls built, and neither is. Verifier release thresholds, need for fine-tuning, production authentication, agent identity and the credential/handoff protocol remain open. New TaskCard signing, delegation, cross-protocol support and settlement handling are future hypotheses, not prerequisites for the agreed challenge journey. Prototype login remains excluded under DEC-019; production consent must be authenticated.
 
 The product claim is: **Leash enforces customer-confirmed permissions against available checkout evidence and exposes uncertainty.** It does not guarantee knowledge of unstated intent, merchant honesty or delivery, and the research below does not prove that Leash is the first or only product with these capabilities.
 
@@ -485,6 +490,8 @@ Its conclusion — **"the payment mandate becomes the new control point"** rathe
 3. **Issuer-native placement.** Swiss law puts the liability on the institution and the control point on the mandate. Leash is the mandate control point for an issuer that is already live on agentic rails.
 
 **Demo.** Keep round 1's semantic-drift demo, and add one step that lands the new wedge: after the blocked substitution, show the **receipt answering a dispute** — what the customer asked for, what was shown, what the agent proposed, what changed, which rule fired, what authority remains. Then the jury line becomes: *a signed instruction can still be the wrong purchase — and today nobody can prove which it was.*
+
+**Status of these three consequences, 2026-09-25: none of them is ticketed.** The demo receipt and the CPV renaming exist only in this document. They are research direction, not planned work, until someone writes the tickets.
 
 **Terminology.** Adopt the CPV taxonomy (authority creep, threshold laundering, cumulative sum violation, context collapse) as the names of our check families, with attribution. Free credibility, and it makes the check list look like engineering instead of invention.
 

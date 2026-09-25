@@ -10,18 +10,13 @@
 // this device's clock may be off, so the platform decides (a late answer gets its recorded outcome).
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { deliveryNote, statusOf } from "./status";
 import { ApiError, api, type Ask, type Payment } from "../api/client";
 
 const ARM_MS = 800;
 const ANSWER_TIMEOUT_MS = 15_000;
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const OUTCOME: Record<Payment["final_state"], string> = {
-  approved: "The payment was made.",
-  declined: "The payment was not made: it was declined.",
-  timed_out: "The payment was not made: the time to answer ran out.",
-  waiting: "The payment is still waiting for an answer.",
-  not_sent: "The payment was not made: the agent's permission was revoked before it was sent.",
-};
+const outcomeText = (p: Payment) => `${statusOf(p)[0]}. ${deliveryNote(p)}`.trim();
 
 type Notice = { text: string } | { lookup: string; name: string };
 
@@ -141,7 +136,7 @@ export function StepUp({ asks }: { asks: Ask[] }) {
   if (notice) {
     const text = "text" in notice ? notice.text : notice.name + (outcome.isError
       ? "Your answer arrived too late, and I couldn't load what the platform recorded. Check the payment in your list."
-      : outcome.data ? OUTCOME[outcome.data.final_state] : "Checking what the platform recorded…");
+      : outcome.data ? outcomeText(outcome.data) : "Checking what the platform recorded…");
     return (
       <div className="prompt" role="dialog" aria-modal="true" aria-label="Payment waiting for your answer" tabIndex={-1}
            ref={dialog}>
@@ -169,7 +164,7 @@ export function StepUp({ asks }: { asks: Ask[] }) {
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("no answer")), ANSWER_TIMEOUT_MS)),
       ]);
       setDone((d) => new Set(d).add(id));
-      setNotice({ text: name + (OUTCOME[recorded.final_state] ?? "Your answer was sent.") });
+      setNotice({ text: name + outcomeText(recorded) });
     } catch (error) {
       if (error instanceof ApiError && error.code === "cannot_approve") {
         setRefused((r) => ({ ...r, [id]: error.message.replace(/^cannot_approve: /, "") }));

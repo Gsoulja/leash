@@ -1,6 +1,6 @@
 # LEASH-135: Safe production database migrations
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: infra
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 129-T6
 **Blocked by**: none
 **Blocks**: LEASH-139, LEASH-142, LEASH-143
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Make every schema change safe on populated databases, beginning with migration `0002`, which adds a non-null column without a backfill.

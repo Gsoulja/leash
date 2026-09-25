@@ -1,6 +1,6 @@
 # LEASH-131: Crash-safe authorization claims
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 129-T2
 **Blocked by**: none
 **Blocks**: LEASH-128, LEASH-142, LEASH-143
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Replace the in-memory meaning of `in_flight` with a durable processing claim that can be reclaimed after a worker dies.

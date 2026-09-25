@@ -24,12 +24,14 @@ answer (or its deadline passed), so a step_up waiting for the customer doesn't h
 
 import asyncio
 import csv
+import json
 import time
 import uuid
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -54,6 +56,15 @@ def _num(value: Decimal) -> float:
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
+
+
+def bad_evidence(body: Any) -> bool:
+    """The hosted API validates `evidence` as a list of objects and 422s on a list of strings
+    (`dict_type`, measured 2026-09-25). A fake that accepts strings hides that until event day."""
+    evidence = body.get("evidence") if isinstance(body, Mapping) else None
+    if evidence is None:
+        return False
+    return not isinstance(evidence, list) or any(not isinstance(e, Mapping) for e in evidence)
 
 
 @dataclass
@@ -110,7 +121,7 @@ class FakeViseca:
                  queue_delay_seconds: float = 0, delivery_lag_seconds: float = 0, repeat: Iterable[str] = (),
                  api_version: str = "fake-1", data_version: str = "fake-pack",
                  decision_delay_seconds: float = 0, poll_delay_seconds: float = 0,
-                 fail_decisions: Mapping[str, int] | None = None):
+                 fail_decisions: Mapping[str, int] | None = None, state_file: Path | None = None):
         self.pack, self.api_key, self.clock = pack, api_key, clock
         self.decision_seconds, self.human_window_seconds = decision_seconds, human_window_seconds
         self.queue_delay = timedelta(seconds=queue_delay_seconds)
@@ -128,11 +139,68 @@ class FakeViseca:
         self.runs: dict[str, Run] = {}
         self.live: dict[str, tuple[Run, LiveAuthorization]] = {}
         self._authorities = self._load_authorities()
+        self.state_file = state_file
+        if state_file is not None and state_file.exists():
+            self._restore(json.loads(state_file.read_text()))
         self.app = self._build()
+
+    def _restore(self, state: dict[str, Any]) -> None:
+        """Restore our own local snapshot; malformed state fails startup instead of being discarded."""
+        if state["version"] != 1:
+            raise ValueError("unknown fake-platform state version")
+        self.mandates = {row["mandate_id"]: Mandate(**row) for row in state["mandates"]}
+        for row in state["runs"]:
+            run = Run(row["run_id"], row["scenario_id"], row["mandate"],
+                      self.pack.attempts(row["scenario_id"]), datetime.fromisoformat(row["started_at"]))
+            attempts = {a.purchase.authorization_id: a for a in run.attempts}
+            for raw in row["queued"]:
+                values = dict(raw)
+                attempt = attempts[values.pop("source_id")]
+                for key in ("queued_at", "deadline_at", "human_expires_at", "decided_at"):
+                    values[key] = datetime.fromisoformat(values[key]) if values[key] else None
+                live = LiveAuthorization(attempt=attempt, **values)
+                run.queued.append(live)
+                self.live[live.live_id] = run, live
+            self.runs[run.run_id] = run
+        self.received, self.resolutions, self.rejected = state["received"], state["resolutions"], state["rejected"]
+
+    def _save(self) -> None:
+        if self.state_file is None:
+            return
+        runs = []
+        for run in self.runs.values():
+            queued = []
+            for live in run.queued:
+                row = {key: getattr(live, key) for key in
+                       ("live_id", "deliveries", "decision", "answer", "late")}
+                row["source_id"] = live.attempt.purchase.authorization_id
+                for key in ("queued_at", "deadline_at", "human_expires_at", "decided_at"):
+                    value = getattr(live, key)
+                    row[key] = _iso(value) if value else None
+                queued.append(row)
+            runs.append({"run_id": run.run_id, "scenario_id": run.scenario_id, "mandate": run.mandate,
+                         "started_at": _iso(run.started_at), "queued": queued})
+        state = {"version": 1, "mandates": [vars(m) for m in self.mandates.values()], "runs": runs,
+                 "received": self.received, "resolutions": self.resolutions, "rejected": self.rejected}
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.state_file.with_suffix(".tmp")
+        temporary.write_text(json.dumps(state))
+        temporary.replace(self.state_file)
 
     def _load_authorities(self) -> dict[str, dict[str, str]]:
         with (self.pack.data_dir / "scenario_authorities.csv").open(encoding="utf-8", newline="") as f:
             return {r["authority_id"]: r for r in csv.DictReader(f)}
+
+    def _scenarios(self) -> list[dict[str, Any]]:
+        """The pack's scenarios in the hosted API's shape: id, name, instruction and event count."""
+        counts: dict[str, int] = {}
+        for a in self.pack.attempts():
+            counts[a.scenario_id] = counts.get(a.scenario_id, 0) + 1
+        with (self.pack.data_dir / "scenario_catalogue.csv").open(encoding="utf-8", newline="") as f:
+            return [{"scenario_id": r["scenario_id"], "scenario_name": r["scenario_name"],
+                     "cardholder_instruction": r["cardholder_instruction"],
+                     "event_count": counts.get(r["scenario_id"], 0)}
+                    for r in csv.DictReader(f) if r["scenario_id"] in counts]
 
     # --- queue -------------------------------------------------------------------------------------
 
@@ -181,11 +249,19 @@ class FakeViseca:
 
     # --- event -------------------------------------------------------------------------------------
 
-    def _approved_spend(self, run: Run, current: LiveAuthorization) -> float:
-        now = self.clock()
+    def _approved_spend(self, run: Run, current: LiveAuthorization) -> float | None:
+        # The wire has one counter but no window identifier. Only report it when the confirmed
+        # snapshot names exactly one period; null leaves Leash's own rolling ledger authoritative.
+        days = {r.get("period_days") for r in run.mandate["hard_rules"]
+                if r.get("field") == "authorization.billing_amount_chf"
+                and r.get("scope") == "period" and type(r.get("period_days")) is int
+                and r["period_days"] > 0}
+        if len(days) != 1:
+            return None
+        now, window = self.clock(), timedelta(days=days.pop())
         total = sum((q.purchase.billing_amount_chf for q in run.queued
                      if q is not current and q.status(now) == "approved"
-                     and q.purchase.sim_time <= current.purchase.sim_time), Decimal("0"))
+                     and current.purchase.sim_time.within(q.purchase.sim_time, window)), Decimal("0"))
         return _num(total)
 
     def _recent(self, run: Run, current: LiveAuthorization) -> list[dict[str, Any]]:
@@ -250,6 +326,9 @@ class FakeViseca:
                     request.headers.get("authorization") != f"Bearer {self.api_key}":
                 return _error(401, "unauthorized", "missing or wrong bearer key")
             response: Response = await call_next(request)
+            # ponytail: one local simulator process; atomic JSON snapshots suffice for the 45-event pack.
+            # Use a transactional store if multiple simulator workers are ever needed.
+            self._save()
             return response
 
         @app.get("/healthz")
@@ -261,7 +340,9 @@ class FakeViseca:
             return {"data": {"api_version": self.api_version, "data_version": self.data_version,
                              "timeouts": {"decision_timeout_seconds": self.decision_seconds,
                                           "human_window_seconds": self.human_window_seconds},
-                             "scenarios": sorted({a.scenario_id for a in self.pack.attempts()}),
+                             # objects, as the hosted API sends them: a bare list of IDs let a client
+                             # look fine locally and then find no instruction to compile on event day
+                             "scenarios": self._scenarios(),
                              "limits": {}, "features": {"team_reset": True}}}
 
         @app.post("/v1/mandates")
@@ -377,6 +458,9 @@ class FakeViseca:
             if body.get("authorization_id") != authorization_id or \
                     body.get("decision") not in ("approve", "decline", "step_up"):
                 return self._reject(authorization_id, body, 422, "invalid_decision", "authorization_id must match; decision approve|decline|step_up")
+            if bad_evidence(body):
+                return self._reject(authorization_id, body, 422, "validation_error",
+                                    "evidence must be a list of objects")
             run, live = found
             if self.decision_delay:
                 await asyncio.sleep(self.decision_delay)
@@ -402,6 +486,9 @@ class FakeViseca:
         @app.post("/v1/authorizations/{authorization_id}/resolve")
         async def resolve(authorization_id: str, request: Request) -> Any:
             body = await request.json()
+            if bad_evidence(body):
+                return self._reject(authorization_id, body, 422, "validation_error",
+                                    "evidence must be a list of objects")
             found = self.live.get(authorization_id)
             if found is None:
                 return self._reject(authorization_id, body, 404, "not_found", "unknown live authorization ID")
@@ -422,7 +509,7 @@ class FakeViseca:
 
         @app.get("/v1/authorizations")
         async def authorizations() -> dict[str, Any]:
-            return {"data": [self._view(live) for _, live in self.live.values()]}
+            return {"data": [self._view(live, run) for run, live in self.live.values()]}
 
         @app.post("/v1/team/reset")
         async def reset() -> dict[str, Any]:
@@ -436,10 +523,29 @@ class FakeViseca:
         self.rejected.append({"authorization_id": authorization_id, "body": body, "status": status, "error": code})
         return _error(status, code, message)
 
-    def _view(self, live: LiveAuthorization) -> dict[str, Any]:
+    def _view(self, live: LiveAuthorization, run: "Run | None" = None) -> dict[str, Any]:
+        """One authorization as the hosted API lists it: `run_id` present, `decision` an object.
+
+        Both were missing here, and both matter: a client filtering this list by `run_id` silently
+        matched nothing against the fake, and read `decision.decision` off a bare string.
+        """
         return {"authorization_id": live.live_id, "source_authorization_id": live.purchase.authorization_id,
-                "decision": live.decision, "customer_answer": live.answer, "status": live.status(self.clock()),
-                "deadline_at": _iso(live.deadline_at)}
+                "run_id": run.run_id if run is not None else self._run_of(live),
+                "decision": self._decision_view(live), "customer_answer": live.answer,
+                "status": live.status(self.clock()), "deadline_at": _iso(live.deadline_at)}
+
+    def _run_of(self, live: LiveAuthorization) -> str | None:
+        found = self.live.get(live.live_id)
+        return found[0].run_id if found else None
+
+    def _decision_view(self, live: LiveAuthorization) -> dict[str, Any] | None:
+        """The last body accepted for this purchase, as the platform echoes it back."""
+        if live.decision is None:
+            return None
+        bodies = [b for b in self.received if b.get("authorization_id") == live.live_id]
+        answers = [r for r in self.resolutions if r.get("authorization_id") == live.live_id]
+        body = dict(answers[-1] if answers else bodies[-1] if bodies else {"decision": live.decision})
+        return {**body, "decision_source": "human" if answers else "team"}
 
     def _counters(self, run: Run) -> dict[str, int]:
         now = self.clock()

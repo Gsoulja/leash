@@ -207,3 +207,26 @@ def test_a_lost_reply_is_stored_only_when_viseca_holds_exactly_the_change_on_an_
     viseca.client.patch_mandate, viseca.client.get_mandate = lost, read_back
     response = http.post(f"/api/mandates/{mandate['mandate_id']}/tighten", json={"add_hard_rules": [per_order(350)]})
     assert response.status_code == 502 and versions(url, mandate["mandate_id"]) == [1]
+
+
+def test_review_is_read_only_and_confirmation_rejects_a_stale_version(api):
+    http, fake, viseca, url, mandate = api
+    path = f"/api/mandates/{mandate['mandate_id']}/tighten"
+    change = {"add_hard_rules": [per_order(350)], "expected_version": 1}
+    reviewed = http.post(path + "?preview=true", json=change)
+    assert reviewed.status_code == 200
+    proposal = valid(reviewed.json(), "Mandate")
+    assert proposal["version"] == 2
+    assert any("350.00" in rule for rule in proposal["review"]["must_follow"])
+    assert viseca.patches == 0 and versions(url, mandate["mandate_id"]) == [1]
+    assert fake.mandates[mandate["mandate_id"]].body["hard_rules"] == mandate["hard_rules"]
+    applied = http.post(path, json=change)
+    assert applied.status_code == 200 and applied.json()["review"] == proposal["review"]
+    assert viseca.patches == 1
+    stale = http.post(path, json={"uncertainty_policy": "decline", "expected_version": 1})
+    assert stale.status_code == 409 and stale.json()["error"]["code"] == "stale_version"
+    assert viseca.patches == 1 and versions(url, mandate["mandate_id"]) == [1, 2]
+    for invalid in (None, True, 0, "2"):
+        assert http.post(path, json={"uncertainty_policy": "decline", "expected_version": invalid}).status_code == 422
+    snapshot = http.get(f"/api/mandates/{mandate['mandate_id']}/versions").json()["versions"][0]
+    assert snapshot["review"] == mandate["review"]

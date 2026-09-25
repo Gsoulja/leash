@@ -1,0 +1,155 @@
+# Leash permission assistant API (contract-first, LEASH-175). The surface the chat talks to.
+# Validated against real responses by solution/assistant/tests/test_service.py.
+#
+# This service holds no authority. It reads the customer's turns, builds their background itself and
+# asks the model; every rule is validated and appended by the policy service (DEC-045), and only the
+# customer's confirmation there activates anything. There is deliberately no endpoint here for
+# confirming, submitting, activating or paying.
+openapi: 3.1.0
+info:
+  title: Leash permission assistant
+  version: '1'
+  description: >-
+    Turns a customer conversation into a validated draft permission. A caller sends only the newest
+    words: the rest of the conversation is read back from the stored draft, and the background is built
+    here from the
+    card this process is configured for — a caller can neither supply background nor choose whose
+    background is read (DEC-034). The prototype has no login (DEC-019), so there is one customer per
+    process; authenticated consent belongs to LEASH-140/143.
+paths:
+  /api/permission/drafts:
+    post:
+      operationId: createAssistantDraft
+      summary: Read the conversation so far and return the draft it produces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      responses:
+        '200':
+          description: The draft the policy service produced, and what the customer is asked to agree to.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantDraft'
+        '404':
+          description: No such card in this dataset. Never another persona's rows.
+        '422':
+          description: >-
+            Malformed turns, a missing card, or a caller trying to supply background or an instruction.
+        '503':
+          description: >-
+            The model or policy service could not produce a draft. Model failures return
+            model_unavailable or model_invalid_response before any policy write. Retry the
+            same task; no clarification answer or permission is invented.
+  /api/permission/drafts/{draft_id}/turns:
+    post:
+      operationId: addAssistantTurn
+      summary: One more thing the customer said, on the draft the conversation already has
+      description: >-
+        The model reads the whole transcript again, because a later sentence can change how an earlier
+        one should be read, but only the newest words are added to the draft. A conversation has exactly
+        one draft: creating a second would abandon the revisions the customer has already reviewed.
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      responses:
+        '200':
+          description: The updated draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantDraft'
+        '404':
+          description: No such card, or no such draft.
+        '422':
+          description: Malformed turns, or a caller trying to supply background.
+        '503':
+          description: The model or policy service could not produce a draft. A model failure preserves the existing draft; retry the same turn.
+  /healthz:
+    get:
+      operationId: assistantHealth
+      summary: The process is alive
+      responses:
+        '200':
+          description: ok
+components:
+  schemas:
+    ConversationRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      properties:
+        scenario_id:
+          type: string
+          description: Supplied scenario ID, accepted only when local simulation is explicitly enabled.
+        replace_instruction:
+          type: boolean
+          description: On an existing unsubmitted draft, explicitly replace its task and review afresh.
+        text:
+          type: string
+          minLength: 1
+          description: >-
+            The customer's own words, and only the newest ones. Everything said earlier is read back
+            from the stored draft, so the transcript stays derived and a caller cannot replay words the
+            customer never said.
+    AssistantDraft:
+      type: object
+      additionalProperties: false
+      required:
+      - draft
+      - consent_text
+      - questions
+      - status
+      properties:
+        kind:
+          type: string
+          enum: [permission, history]
+        reply:
+          type: [string, 'null']
+          description: Sourced history answer; never permission or a checkout verdict.
+        draft:
+          type: [object, 'null']
+          description: The policy service's own draft view (PolicyDraft in policy-api.yaml), unaltered.
+        consent_text:
+          type: array
+          description: >-
+            One sentence per rule, generated from the Rule object and never from model prose (DEC-045).
+            This is what the customer is asked to agree to.
+          items:
+            type: string
+        questions:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - text
+            properties:
+              text:
+                type: string
+              field:
+                type:
+                - string
+                - 'null'
+        status:
+          type: string
+          enum:
+          - ready
+          - needs_answers
+        model:
+          type: string
+        prompt_version:
+          type: string

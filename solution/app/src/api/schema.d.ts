@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/policies/drafts/{draft_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a sourced chat exchange without changing permission or revision */
+        post: operations["recordDraftMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/policies/drafts/{draft_id}/answers": {
         parameters: {
             query?: never;
@@ -32,6 +49,26 @@ export interface paths {
         put?: never;
         /** Answer clarifying questions; accepted answers add to the draft */
         post: operations["answerDraftQuestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/policies/drafts/{draft_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add what the customer said next; the whole instruction is read again (LEASH-145)
+         * @description A conversation turn, not an answer to a question. The text is added to the customer's own words and the draft is recompiled as a new revision; an earlier answer whose question is no longer open is dropped from the replay and asked again, never applied to another question.
+         */
+        post: operations["addDraftTurn"];
         delete?: never;
         options?: never;
         head?: never;
@@ -152,6 +189,23 @@ export interface paths {
         put?: never;
         /** Append stricter rules or switch uncertainty to decline */
         post: operations["tightenMandate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the scenario catalogue from the connected simulator */
+        get: operations["listScenarios"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -299,6 +353,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ScenarioList: {
+            scenarios: {
+                scenario_id: string;
+                scenario_name: string;
+                cardholder_instruction: string;
+                event_count: number;
+            }[];
+        };
+        PermissionReview: {
+            must_follow: string[];
+            may_choose: string[];
+            must_ask: string[];
+        };
+        AssistantAssessment: {
+            history_checked?: string;
+            model?: string;
+            prompt_version?: string;
+            status?: string;
+            questions?: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /** @description Decimal amount as a string, two decimals (never a JSON number). */
         Money: string;
         /** @description Same shape as the Viseca API's errors. */
@@ -334,12 +410,28 @@ export interface components {
             text: string;
             options?: string[];
             blocking: boolean;
+            /** @description The rule this question is about, when it is about one. It lets a caller ask the question in the customer's own terms; answering it is what may create a rule. */
+            field?: string | null;
         };
         CreateDraftRequest: {
             instruction: string;
+            /** @description Rules the permission assistant read from the customer's words (DEC-045). They are appended like any other rule, so the strictest per field still wins and a draft can only get tighter. Each is validated against the registry here; anything unreadable is refused, never stored. */
+            rules?: components["schemas"]["HardRule"][];
         };
         /** @description Local draft: not yet sent to Viseca (DEC-003, LEASH-123). */
         PolicyDraft: {
+            messages?: {
+                text: string;
+                reply: string;
+                revision: number;
+                context: {
+                    [key: string]: unknown;
+                };
+            }[];
+            simulation_scenario?: string;
+            confirmed_mandate?: components["schemas"]["Mandate"];
+            review?: components["schemas"]["PermissionReview"];
+            assistant?: components["schemas"]["AssistantAssessment"];
             draft_id: string;
             /** @description Which revision of this draft you are looking at (LEASH-101). A correction before activation creates the next revision and marks the previous one superseded; submit and confirm may name the revision that was reviewed and refuse a stale one. */
             revision: number;
@@ -351,7 +443,33 @@ export interface components {
             /** @enum {string} */
             uncertainty_policy: "ask" | "decline" | "approve";
             notes: string[];
+            /** @description The rules the caller supplied when the draft was created, remembered so a later turn or answer recompiles with them (DEC-045). Forgetting them would silently drop restrictions the customer has already seen, which is a loosening. */
+            proposed?: components["schemas"]["HardRule"][];
+            /** @description The rules this service read from the instruction and answers on its own, without the `rules` the caller supplied (DEC-045). A caller gets its own proposal back inside `hard_rules`, so only this shows whether the deterministic reading agreed independently. */
+            independently_read?: components["schemas"]["HardRule"][];
+            /** @description Registry fields this draft places no rule on (DEC-045). The model reads the customer's words, so a restriction it silently drops leaves every rule shown correct and the omission invisible; the review names these so the customer can spot what is missing. */
+            unrestricted?: string[];
+            /** @description The answers this draft view was actually built from, in replay order (LEASH-145). A turn can drop an earlier answer when its question closed or was re-asked under another id, so a transcript must render answered points from here rather than from what it remembers. */
+            answers?: {
+                question_id: string;
+                /** @description The question as it was worded when it was answered. */
+                question: string;
+                answer: string;
+            }[];
             open_questions: components["schemas"]["Question"][];
+        };
+        TurnRequest: {
+            /** @description Background evidence read for this revision; never grants authority. */
+            context?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Replace the unsubmitted task; earlier revisions remain in the audit record. */
+            replace_instruction?: boolean;
+            assessment?: components["schemas"]["AssistantAssessment"];
+            /** @description The customer's own words. Never agent or merchant text. */
+            text: string;
+            /** @description Rules the assistant read from this turn (DEC-045). Appended to what the draft already holds, so an earlier reading the customer has seen is never replaced, and validated here like any other rule. */
+            rules?: components["schemas"]["HardRule"][];
         };
         AnswersRequest: {
             answers: {
@@ -361,6 +479,7 @@ export interface components {
         };
         /** @description Exactly what was posted to Viseca; shown to the customer before confirming. */
         PlatformDraft: {
+            review?: components["schemas"]["PermissionReview"];
             draft_id: string;
             platform_draft_id: string;
             instruction: string;
@@ -382,6 +501,7 @@ export interface components {
             revision?: number;
         };
         Mandate: {
+            review?: components["schemas"]["PermissionReview"];
             mandate_id: string;
             version: number;
             /** @enum {string} */
@@ -400,6 +520,8 @@ export interface components {
         };
         /** @description Only stricter changes: rules are appended, uncertainty can only move to decline (DEC-006). */
         TightenRequest: {
+            /** @description Reject with stale_version if the permission changed since review. */
+            expected_version?: number;
             add_hard_rules?: components["schemas"]["HardRule"][];
             /** @constant */
             uncertainty_policy?: "decline";
@@ -476,9 +598,21 @@ export interface components {
             detail: string;
             reason_code?: string | null;
         };
+        /** @description One check as a fact supporting the decision, in the words the customer was shown. */
+        Evidence: {
+            /** @description The check's stable key, e.g. "price". */
+            check: string;
+            label: string;
+            /** @enum {string} */
+            status: "pass" | "fail" | "warn" | "integrity";
+            agreed: string;
+            actual: string;
+            reason_code: string | null;
+        };
         PaymentDetail: components["schemas"]["Payment"] & {
             checks: components["schemas"]["Check"][];
-            evidence: string[];
+            /** @description One object per non-info check, exactly as sent to the platform, which validates this field as a list of objects and refuses a list of strings. */
+            evidence: components["schemas"]["Evidence"][];
             /** @description Merchant text: untrusted, render as plain text. */
             shop_texts: {
                 item_id: string;
@@ -534,6 +668,7 @@ export interface components {
             current_mandate_id: string | null;
         };
         MandateVersion: {
+            review?: components["schemas"]["PermissionReview"];
             version: number;
             /** @enum {string} */
             change: "confirmed" | "tightened" | "revoked" | "expired";
@@ -641,6 +776,52 @@ export interface operations {
             };
         };
     };
+    recordDraftMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    text: string;
+                    reply: string;
+                    context: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Unchanged permission with the appended exchange */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDraft"];
+                };
+            };
+            /** @description Draft not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid exchange */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     answerDraftQuestions: {
         parameters: {
             query?: never;
@@ -684,6 +865,59 @@ export interface operations {
                 };
             };
             /** @description Bad body, not an open question, not one of its options, an empty answer, or an answer that doesn't answer its question (unclear, or gives nothing for that question); the reason is in the message */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    addDraftTurn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TurnRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDraft"];
+                };
+            };
+            /** @description Unknown draft */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The draft is already at Viseca and can no longer change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Invalid request body */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -919,7 +1153,10 @@ export interface operations {
     };
     tightenMandate: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Validate and render the proposed change without storing it or contacting the platform. */
+                preview?: boolean;
+            };
             header?: never;
             path: {
                 mandate_id: string;
@@ -976,6 +1213,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+        };
+    };
+    listScenarios: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The platform's test stories, without creating a mandate or run */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioList"];
+                };
+            };
+            /** @description Platform unavailable or invalid catalogue */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -19,6 +19,16 @@ def rules_of(draft):
     return set(draft.mandate.rules)
 
 
+def test_exact_catalogue_answer_is_understood_without_guessing_or_ignoring_negation():
+    draft = compile_instruction("Buy only catalogue item IT0017.", catalogue=CATALOGUE)
+    assert Rule(m.F_ITEM_ID, "in", ("IT0017",)) in rules_of(draft)
+    assert not any(q.field == "instruction" for q in draft.questions)
+    for words in ("Buy only catalogue item IT9999.", "Do not buy catalogue item IT0017."):
+        refused = compile_instruction(words, catalogue=CATALOGUE)
+        assert not any(r.field == m.F_ITEM_ID for r in refused.mandate.rules)
+        assert refused.questions
+
+
 def test_extracts_chf_200_and_size_43():
     draft = compile_instruction("Buy running shoes in size 43 for no more than CHF 200. Ask me when uncertain.",
                                 catalogue=CATALOGUE)

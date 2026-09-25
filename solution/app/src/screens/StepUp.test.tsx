@@ -125,7 +125,7 @@ describe("Step-up prompt", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reject" }));
     await settle();
     // the answer is confirmed first; the next payment only appears after OK
-    expect(screen.getByRole("dialog")).toHaveTextContent(/not made/i);
+    expect(screen.getByRole("dialog")).toHaveTextContent(/not authorized/i);
     expect(screen.queryByRole("button", { name: "Confirm payment" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
     await settle();
@@ -187,7 +187,7 @@ describe("Step-up prompt", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
     await settle();
     await settle();
-    expect(screen.getByRole("dialog")).toHaveTextContent(/not made: the time to answer ran out/i);
+    expect(screen.getByRole("dialog")).toHaveTextContent(/time to answer ran out/i);
   });
 
   it("when a hard rule now fails, only Reject remains, with the reason", () => {
@@ -228,7 +228,7 @@ describe("Step-up prompt", () => {
     expect(screen.getByRole("dialog")).not.toHaveTextContent(/no longer waiting/i);
     await act(async () => { release(new Response(JSON.stringify(payment("AZ-1", { final_state: "approved" })), { status: 200 })); });
     await settle();
-    expect(screen.getByRole("dialog")).toHaveTextContent(/PixelHarbor AZ-1.*The payment was made/);
+    expect(screen.getByRole("dialog")).toHaveTextContent(/PixelHarbor AZ-1.*platform accepted the authorization/);
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
     await settle();
     expect(screen.getByRole("dialog")).toHaveTextContent("PixelHarbor AZ-2");

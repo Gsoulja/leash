@@ -31,17 +31,19 @@ from leash.adapters.http.query_api import PAYMENT_COLUMNS, payment_view
 from leash.adapters.postgres.mandates import StoredMandates
 from leash.adapters.postgres.repository import PostgresRepository
 from leash.adapters.postgres.unit_of_work import LockTimeout, ResolutionTransaction
-from leash.adapters.viseca_api.client import VisecaApiError
+from leash.adapters.viseca_api.client import BootstrapSettings, VisecaApiError
 from leash.application.resolve import ResolveAsk
 from leash.domain import mandate as m
 from leash.domain.mandate import LooseningError, Rule
 from leash.domain.money import fmt_chf
 from leash.domain.states import IllegalTransition
-from leash.application.clarify import AnswerError, clarify
+from leash.application.clarify import AnswerError, clarify, question_id
+from leash.policy.compiler import Question
 from leash.policy.compiler import CatalogueItem
 from leash.policy.hard_rules import (AppendOnlyError, HardRulesError, check_append_only, mandate_from_api,
                                      mandate_to_api, rule_from_api, rule_to_api)
-from leash.policy.registry import describe_field
+from leash.policy.registry import describe_field, problems
+from leash.policy.render import permission_review
 
 log = logging.getLogger("leash.policy")
 _UNANSWERED = datetime(2000, 1, 1, tzinfo=timezone.utc)  # a call that ended without an answer, not in progress
@@ -95,8 +97,57 @@ async def _mandate_view(conn: asyncpg.Connection, mandate_id: str) -> dict[str, 
     return {"mandate_id": row["mandate_id"], "version": row["version"], "status": row["status"],
             "instruction": row["instruction"], "rules": compiled.get("rules", []),
             "hard_rules": json.loads(row["hard_rules"]), "uncertainty_policy": row["uncertainty_policy"],
+            "review": permission_review([rule_from_api(r) for r in json.loads(row["hard_rules"])], row["uncertainty_policy"]),
             "applies_from": "next run",
             "revocation": None if row["status"] == "active" else {"platform_confirmed": True, "note": None}}
+
+
+def _proposed(stored: Any) -> list[Rule]:
+    """The rules the assistant read, recovered from the stored draft (DEC-045).
+
+    A recompile that forgot them would drop restrictions the customer already saw — invisible, and a
+    loosening. Anything unreadable is dropped rather than guessed at, and the draft is then stricter
+    than before, never looser.
+    """
+    view = stored if isinstance(stored, Mapping) else {}
+    out = []
+    for raw in view.get("proposed", []) or []:
+        try:
+            out.append(rule_from_api(raw))
+        except Exception:  # noqa: BLE001
+            continue
+    return out
+
+
+def _still_answered(instruction: str, answers: list[Any], items: Sequence[CatalogueItem],
+                    proposed: Sequence[Rule] = ()) -> list[Any]:
+    """The answers that still answer an open question, in order. The rest are re-asked, not applied.
+
+    ponytail: replays the prefix once per answer, so it is O(n^2) in a conversation's answers. A draft
+    holds a handful; make `clarify` incremental if a conversation ever runs to hundreds.
+    """
+    kept: list[Any] = []
+    for answer in answers:
+        try:
+            clarify(instruction, [*kept, answer], items, proposed=proposed)
+        except AnswerError:
+            continue  # its question closed or changed: asking again is safe, assuming an answer is not
+        kept.append(answer)
+    return kept
+
+
+def _assessed(view: dict[str, Any], assessment: Any) -> dict[str, Any]:
+    """Persist the assistant's unresolved questions; a reload or direct submit cannot bypass them."""
+    if not isinstance(assessment, dict):
+        return view
+    view["assistant"] = assessment
+    for text in assessment.get("questions", []):
+        if isinstance(text, str) and text.strip() and not any(q["text"] == text for q in view["open_questions"]):
+            view["open_questions"].append({"question_id": "A" + question_id(Question("instruction", text)),
+                                            "text": text, "field": "instruction", "blocking": True})
+    if any(q["blocking"] for q in view["open_questions"]):
+        view["status"] = "needs_answers"
+    return view
 
 
 def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
@@ -107,13 +158,31 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
     @router.post("/api/policies/drafts", status_code=201)
     async def create_draft(body: dict[str, Any] = Body(...)) -> Any:
         instruction = body.get("instruction")
-        if not isinstance(instruction, str) or not instruction.strip() or set(body) - {"context"} != {"instruction"}:
+        if not isinstance(instruction, str) or not instruction.strip() \
+                or set(body) - {"context", "rules"} != {"instruction"}:
             return _error(422, "invalid_request", "Send exactly one non-empty instruction.")
         if "context" in body and not isinstance(body["context"], dict):
             return _error(422, "invalid_request", "context must be an object.")
+        # DEC-045: rules the assistant read from the customer's words. Read here through the same
+        # anti-corruption path as any API rule — one we cannot read is refused, never stored as a
+        # permission nobody can enforce.
+        raw_rules = body.get("rules", [])
+        if not isinstance(raw_rules, list):
+            return _error(422, "invalid_request", "rules must be a list.")
+        try:
+            proposed = [rule_from_api(r) for r in raw_rules]
+        except Exception:  # noqa: BLE001 — an unreadable rule is a bad request, never a silent drop
+            return _error(422, "invalid_request", "A proposed rule could not be read.")
+        unsupported = problems(proposed)
+        if unsupported:
+            return _error(422, "invalid_request", f"A proposed rule can't be enforced: {unsupported[0]}")
         draft_id = f"LD-{uuid.uuid4().hex[:12]}"
-        view = {"draft_id": draft_id, "revision": 1, **clarify(instruction, [], items)}
+        instruction = instruction.strip()  # every stored instruction is a prefix of its successors
+        view = {"draft_id": draft_id, "revision": 1, **clarify(instruction, [], items, proposed=proposed)}
         context = body.get("context") if isinstance(body.get("context"), dict) else {}
+        view = _assessed(view, context.get("assistant"))
+        if context.get("simulation_scenario"):
+            view["simulation_scenario"] = context["simulation_scenario"]
         async with pool().acquire() as conn, conn.transaction():
             await conn.execute("insert into policy_drafts (draft_id, instruction, draft, revision) "
                                "values ($1, $2, $3::jsonb, 1)", draft_id, instruction, json.dumps(view))
@@ -125,8 +194,13 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
     @router.get("/api/policies/drafts/{draft_id}")
     async def get_draft(draft_id: str) -> Any:
         async with pool().acquire() as conn:
-            draft = await conn.fetchval("select draft from policy_drafts where draft_id = $1", draft_id)
-        return json.loads(draft) if draft else _error(404, "draft_not_found", "No draft with this ID.")
+            row = await conn.fetchrow("select draft, mandate_id from policy_drafts where draft_id = $1", draft_id)
+            if row is None:
+                return _error(404, "draft_not_found", "No draft with this ID.")
+            view = json.loads(row["draft"])
+            if row["mandate_id"]:
+                view["confirmed_mandate"] = await _mandate_view(conn, row["mandate_id"])
+            return view
 
     @router.post("/api/policies/drafts/{draft_id}/answers")
     async def answer_questions(draft_id: str, body: Any = Body(...)) -> Any:
@@ -136,7 +210,7 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 and all(isinstance(v, str) for v in a.values()) for a in given):
             return _error(422, "invalid_request", 'Send {"answers": [{"question_id": …, "answer": …}]}.')
         async with pool().acquire() as conn, conn.transaction():
-            row = await conn.fetchrow("select instruction, answers, platform_draft_id, revision from policy_drafts "
+            row = await conn.fetchrow("select instruction, answers, platform_draft_id, mandate_id, confirmed_mandate_id, confirm_started_at, revision, draft from policy_drafts "
                                       "where draft_id = $1 for update", draft_id)
             if row is None:
                 return _error(404, "draft_not_found", "No draft with this ID.")
@@ -145,8 +219,15 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                               "This draft is already at Viseca; start a new one to change it.")
             answers = list(json.loads(row["answers"])) + given
             revision = int(row["revision"]) + 1
+            proposed = _proposed(json.loads(row["draft"]) if row["draft"] else None)
             try:
-                view = {"draft_id": draft_id, "revision": revision, **clarify(row["instruction"], answers, items)}
+                view = {"draft_id": draft_id, "revision": revision,
+                        **clarify(row["instruction"], answers, items, proposed=proposed)}
+                view = _assessed(view, json.loads(row["draft"]).get("assistant"))
+                if messages := json.loads(row["draft"]).get("messages"):
+                    view["messages"] = messages
+                if scenario := json.loads(row["draft"]).get("simulation_scenario"):
+                    view["simulation_scenario"] = scenario
             except AnswerError as exc:
                 return _error(422, "invalid_answer", str(exc))
             await conn.execute("update policy_drafts set answers = $2::jsonb, draft = $3::jsonb, revision = $4 "
@@ -156,9 +237,96 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                                draft_id, revision)
             await conn.execute(
                 "insert into draft_revisions (draft_id, revision, draft, answers, context) "
-                "values ($1, $2, $3::jsonb, $4::jsonb, coalesce((select context from draft_revisions "
+                "values ($1, $2, $3::jsonb, $4::jsonb, coalesce($5::jsonb, (select context from draft_revisions "
                 "where draft_id = $1 and revision = $2 - 1), '{}'::jsonb))",
-                draft_id, revision, json.dumps(view), json.dumps(answers))
+                draft_id, revision, json.dumps(view), json.dumps(answers),
+                json.dumps(body["context"]) if body.get("context") is not None else None)
+            return view
+
+    @router.post("/api/policies/drafts/{draft_id}/messages")
+    async def record_message(draft_id: str, body: dict[str, Any] = Body(...)) -> Any:
+        """Append a sourced chat exchange without changing permission, revision or confirmation."""
+        if set(body) != {"text", "reply", "context"} or not isinstance(body["context"], dict) or not all(
+                isinstance(body[k], str) and body[k].strip() for k in ("text", "reply")):
+            return _error(422, "invalid_request", "Send a question, reply and source context.")
+        async with pool().acquire() as conn, conn.transaction():
+            row = await conn.fetchrow("select draft, revision, mandate_id from policy_drafts where draft_id = $1 for update", draft_id)
+            if row is None:
+                return _error(404, "draft_not_found", "No draft with this ID.")
+            view = json.loads(row["draft"])
+            message = {**body, "revision": row["revision"]}
+            view.setdefault("messages", []).append(message)
+            await conn.execute("update policy_drafts set draft = $2::jsonb where draft_id = $1", draft_id, json.dumps(view))
+            await conn.execute("update draft_revisions set context = jsonb_set(coalesce(context, '{}'::jsonb), "
+                               "'{messages}', coalesce(context->'messages', '[]'::jsonb) || $3::jsonb) "
+                               "where draft_id = $1 and revision = $2", draft_id, row["revision"], json.dumps([message]))
+            if row["mandate_id"]:
+                view["confirmed_mandate"] = await _mandate_view(conn, row["mandate_id"])
+            return view
+
+    @router.post("/api/policies/drafts/{draft_id}/turns")
+    async def add_turn(draft_id: str, body: Any = Body(...)) -> Any:
+        """One more thing the customer said (LEASH-145), as words rather than an answer to a question.
+
+        A chat turn is not an answer: it adds to what the customer asked for, so the whole instruction
+        is read again. An earlier answer whose question is no longer open is dropped from the replay —
+        never applied to a different question, and never assumed. Whatever stays open is simply asked
+        again, which is the safe direction: more questions, never fewer.
+        """
+        if not isinstance(body, dict) or set(body) - {"rules", "assessment", "replace_instruction", "context"} != {"text"}:
+            return _error(422, "invalid_request", 'Send {"text": "…"} with the customer\'s own words.')
+        if body.get("context") is not None and not isinstance(body["context"], dict):
+            return _error(422, "invalid_request", "context must be an object.")
+        text = body.get("text")
+        replacing = body.get("replace_instruction", False)
+        if not isinstance(replacing, bool):
+            return _error(422, "invalid_request", "replace_instruction must be a boolean.")
+        if not isinstance(text, str) or not text.strip():
+            return _error(422, "invalid_request", 'Send {"text": "…"} with the customer\'s own words.')
+        # DEC-045: what the assistant read from *this* turn, validated here like any other rule.
+        raw_added = body.get("rules", [])
+        if not isinstance(raw_added, list):
+            return _error(422, "invalid_request", "rules must be a list.")
+        try:
+            added = [rule_from_api(r) for r in raw_added]
+        except Exception:  # noqa: BLE001
+            return _error(422, "invalid_request", "A proposed rule could not be read.")
+        unsupported = problems(added)
+        if unsupported:
+            return _error(422, "invalid_request", f"A proposed rule can't be enforced: {unsupported[0]}")
+        async with pool().acquire() as conn, conn.transaction():
+            row = await conn.fetchrow("select instruction, answers, platform_draft_id, mandate_id, confirmed_mandate_id, confirm_started_at, revision, draft from policy_drafts "
+                                      "where draft_id = $1 for update", draft_id)
+            if row is None:
+                return _error(404, "draft_not_found", "No draft with this ID.")
+            if row["mandate_id"] or row["confirmed_mandate_id"] or row["confirm_started_at"] or (row["platform_draft_id"] is not None and not replacing):
+                return _error(409, "already_submitted",
+                              "This draft is already at Viseca; start a new one to change it.")
+            instruction = text.strip() if replacing else f"{row['instruction']} {text.strip()}".strip()
+            # Appended, never replaced: an earlier reading the customer has already seen stays.
+            proposed = added if replacing else [*_proposed(json.loads(row["draft"])), *added]
+            answers = [] if replacing else _still_answered(instruction, list(json.loads(row["answers"])), items, proposed)
+            revision = int(row["revision"]) + 1
+            view = {"draft_id": draft_id, "revision": revision,
+                    **clarify(instruction, answers, items, proposed=proposed)}
+            view = _assessed(view, body.get("assessment") or json.loads(row["draft"]).get("assistant"))
+            if messages := json.loads(row["draft"]).get("messages"):
+                view["messages"] = messages
+            if scenario := json.loads(row["draft"]).get("simulation_scenario"):
+                view["simulation_scenario"] = scenario
+            if replacing:
+                await conn.execute("update policy_drafts set platform_draft_id = null, platform_body = null where draft_id = $1", draft_id)
+            await conn.execute("update policy_drafts set instruction = $2, answers = $3::jsonb, "
+                               "draft = $4::jsonb, revision = $5 where draft_id = $1",
+                               draft_id, instruction, json.dumps(answers), json.dumps(view), revision)
+            await conn.execute("update draft_revisions set superseded = true where draft_id = $1 and revision < $2",
+                               draft_id, revision)
+            await conn.execute(
+                "insert into draft_revisions (draft_id, revision, draft, answers, context) "
+                "values ($1, $2, $3::jsonb, $4::jsonb, coalesce($5::jsonb, (select context from draft_revisions "
+                "where draft_id = $1 and revision = $2 - 1), '{}'::jsonb))",
+                draft_id, revision, json.dumps(view), json.dumps(answers),
+                json.dumps(body["context"]) if body.get("context") is not None else None)
             return view
 
     @router.post("/api/policies/drafts/{draft_id}/submit")
@@ -186,7 +354,8 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 platform_id = _pick(await viseca.create_mandate(body), "draft_id")
             except (VisecaApiError, httpx.HTTPError, ValueError) as exc:
                 return _error(502, "platform_error", f"Viseca did not take the draft ({exc}).")
-            posted = {"draft_id": draft_id, "platform_draft_id": platform_id, **body}
+            posted = {"draft_id": draft_id, "platform_draft_id": platform_id, **body,
+                      "review": draft.get("review", {})}
             await conn.execute("update policy_drafts set platform_draft_id = $2, platform_body = $3::jsonb "
                                "where draft_id = $1", draft_id, platform_id, json.dumps(posted))
             return posted
@@ -418,6 +587,7 @@ _FAILED = frozenset({"stopped", "failed", "cancelled", "canceled", "expired"})
 
 
 class RunApi(Protocol):
+    async def bootstrap(self) -> BootstrapSettings: ...
     async def start_run(self, scenario_id: str, mandate_id: str) -> Any: ...
 
     async def get_run(self, run_id: str) -> Any: ...
@@ -446,6 +616,20 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
     rules, or a new one), and a snapshot that differs from our latest version is logged for a person."""
     router = APIRouter()
     repo_of = PostgresRepository
+
+    @router.get("/api/scenarios")
+    async def scenarios() -> Any:
+        try:
+            bootstrap = await viseca.bootstrap()
+        except (VisecaApiError, httpx.HTTPError, OSError):
+            return _error(502, "platform_unavailable", "The platform's scenarios could not be loaded. Please retry.")
+        rows = bootstrap.scenarios
+        required = ("scenario_id", "scenario_name", "cardholder_instruction")
+        if not all(isinstance(row, Mapping) and all(isinstance(row.get(k), str) and row[k] for k in required)
+                   and isinstance(row.get("event_count"), int) and not isinstance(row["event_count"], bool)
+                   and row["event_count"] >= 0 for row in rows):
+            return _error(502, "platform_error", "The platform returned an unreadable scenario catalogue.")
+        return {"scenarios": [{k: row[k] for k in (*required, "event_count")} for row in rows]}
 
     async def platform_status(run_id: str) -> tuple[str, dict[str, int]]:
         try:
@@ -477,6 +661,29 @@ def runs_router(pool: Callable[[], asyncpg.Pool], viseca: RunApi, scenario_cards
             return _error(404, "mandate_not_found", "No mandate with this ID.")
         if local["status"] != "active":
             return _error(409, "mandate_not_active", "Only an active mandate can start a run.")
+        async with pool().acquire() as conn:
+            existing = await conn.fetchrow(
+                "select run_id, scenario_id, mandate_id, mandate_version from runs "
+                "where mandate_id = $1 and scenario_id = $2 and mandate_version = $3 "
+                "order by started_at desc limit 1",
+                mandate_id, scenario, local["version"])
+        if existing is not None:
+            # A retried handoff is the same handoff (LEASH-102). A dropped response or a refreshed tab
+            # must not mint a second run: two runs against one confirmed permission are two sets of
+            # counters, and a spending limit enforced twice over is a limit enforced once. Checked
+            # before the platform call, so a retry never starts anything there either.
+            #
+            # The version is part of the key, and has to be: tightening keeps the same mandate_id and
+            # only adds a version, so keying on (mandate, scenario) alone would hand the customer the
+            # OLD run at the looser version while the app told them a new one had started — which is
+            # what LEASH-133's journey starts a second SCEN0004 run to prove (app/e2e/journey.spec.ts,
+            # step 7). Same version means a retry; a new version means a new permission to run under.
+            #
+            # ponytail: application-level check, so two simultaneous starts can still both miss it and
+            # mint two runs. A unique index on runs(mandate_id, scenario_id, mandate_version) is the
+            # real fix; it needs a migration, which is more than this ticket asked for. Harmless today
+            # — one customer, one button — and it fails towards an extra run, never a lost one.
+            return await view(existing)
         try:
             started = _data(await viseca.start_run(scenario, mandate_id))
         except VisecaApiError as exc:
@@ -580,9 +787,13 @@ def mandate_changes_router(pool: Callable[[], asyncpg.Pool], viseca: MandateChan
     router = APIRouter()
 
     @router.post("/api/mandates/{mandate_id}/tighten")
-    async def tighten(mandate_id: str, body: Any = Body(...)) -> Any:
-        if not isinstance(body, dict) or not body or set(body) - {"add_hard_rules", "uncertainty_policy"}:
+    async def tighten(mandate_id: str, body: Any = Body(...), preview: bool = False) -> Any:
+        if (not isinstance(body, dict) or not ({"add_hard_rules", "uncertainty_policy"} & body.keys())
+                or set(body) - {"add_hard_rules", "uncertainty_policy", "expected_version"}):
             return _error(422, "invalid_request", "Send add_hard_rules and/or uncertainty_policy.")
+        expected = body.get("expected_version")
+        if "expected_version" in body and (type(expected) is not int or expected < 1):
+            return _error(422, "invalid_request", "expected_version must be a positive whole number.")
         raw = body.get("add_hard_rules")
         if "add_hard_rules" in body and (not isinstance(raw, list) or not raw):  # null is not "not sent"
             return _error(422, "invalid_request", "add_hard_rules must be a non-empty list.")
@@ -603,6 +814,8 @@ def mandate_changes_router(pool: Callable[[], asyncpg.Pool], viseca: MandateChan
             latest = await conn.fetchrow("select version, hard_rules, uncertainty_policy, compiled "
                                          "from mandate_versions "
                                          "where mandate_id = $1 order by version desc limit 1", mandate_id)
+            if expected is not None and expected != latest["version"]:
+                return _error(409, "stale_version", "This permission changed. Review the current version before confirming.")
             before = json.loads(latest["hard_rules"])
             current, _ = mandate_from_api({"instruction": row["instruction"] or "(stored mandate)",
                                            "hard_rules": before,
@@ -618,6 +831,11 @@ def mandate_changes_router(pool: Callable[[], asyncpg.Pool], viseca: MandateChan
                                                    "Create a new permission to loosen it.")
             hard_rules = before + [rule_to_api(r) for r in new_rules]
             check_append_only(before, hard_rules)
+            if preview:
+                view = await _mandate_view(conn, mandate_id)
+                return {**view, "version": latest["version"] + 1, "hard_rules": hard_rules,
+                        "uncertainty_policy": after.uncertainty,
+                        "review": permission_review(after.rules, after.uncertainty)}
             change: dict[str, Any] = {"hard_rules": hard_rules}
             if policy is not None:
                 change["uncertainty_policy"] = policy

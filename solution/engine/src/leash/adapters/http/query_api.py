@@ -19,6 +19,8 @@ import asyncpg
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
 
+from leash.policy.render import permission_review
+from leash.policy.hard_rules import rule_from_api
 from leash.adapters.postgres.repository import PostgresRepository, purchase_from_json
 from leash.application.resolve import MandateSource
 from leash.domain.clock import SimTime
@@ -231,6 +233,7 @@ def query_router(pool: Callable[[], asyncpg.Pool], mandates: MandateSource, cloc
         return {"mandate_id": mandate_id, "versions": [
             {"version": r["version"], "change": "confirmed" if r["version"] == 1 else "tightened",
              "hard_rules": json.loads(r["hard_rules"]), "uncertainty_policy": r["uncertainty_policy"],
+             "review": permission_review([rule_from_api(x) for x in json.loads(r["hard_rules"])], r["uncertainty_policy"]),
              "created_at": _iso(r["created_at"])} for r in rows]}
 
     return router

@@ -23,6 +23,7 @@ No surprises during judging (team reset is disabled then).
 ## Acceptance Criteria
 - [ ] All scenarios run with decisions before deadlines.
 - [ ] Demo script works end to end on the live system.
+- [ ] `connection_check.py --live` against the hosted sandbox prints "connection check passed" and exits 0 (carried over from LEASH-158, which could not verify it offline: a `--live` run is scored).
 - [ ] Defects found become tickets; the rehearsal passes when every scenario completes and the demo script runs end to end.
 
 ## Technical Approach

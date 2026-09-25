@@ -80,15 +80,27 @@ async function dismissAsks(page: Page) {
 test("the customer controls the agent from instruction to revoke", async ({ page, request }) => {
   await page.goto("/");
 
-  // 1. Instruction → clarification → the exact platform draft → confirm.
+  // 1. Conversation → clarification → the exact platform draft → confirm (LEASH-145).
   await page.getByRole("button", { name: "Agent" }).click();
-  await page.getByLabel("What may the agent buy?").fill(INSTRUCTION);
-  await page.getByRole("button", { name: "Read my instruction" }).click();
+  const composer = page.getByRole("region", { name: "Say something" });
+  await expect(page.getByText(/I'm Leash, your permission assistant/)).toBeVisible();
+  await composer.getByRole("textbox").fill(INSTRUCTION);
+  await composer.getByRole("button", { name: "Send" }).click();
+  // the customer's own words stay on screen as their message, beside how Leash read them
+  await expect(page.locator(".bubble.me .message").first()).toHaveText(INSTRUCTION);
   const rules = page.getByRole("list", { name: "Rules as I read them" });
   await expect(rules.getByText(/At most CHF 400.00 per order/)).toBeVisible();
-  const split = page.getByRole("group", { name: /split in two/ });
+  // Clarifications come one at a time (AC4), so the shop question is asked before the split check.
+  // Each is answered without leaving the conversation, and stays in the transcript afterwards.
+  const shop = page.getByRole("group", { name: /kind of shop/ });
+  await shop.getByRole("button", { name: "Any kind of shop" }).click();
+  await expect(shop).toBeHidden();
+  await expect(composer.getByRole("textbox")).toBeVisible();          // never left the conversation
+  await expect(page.locator(".bubble.me .message").filter({ hasText: "Any kind of shop" })).toBeVisible();
+  const split = page.getByRole("group", { name: /split in two/ });    // only now does the next one appear
   await split.getByRole("button", { name: "Yes, ask me" }).click();
   await expect(split).toBeHidden();
+  await expect(page.locator(".bubble.me .message").filter({ hasText: "Yes, ask me" })).toBeVisible();
   await page.getByRole("button", { name: "Review what Viseca will receive" }).click();
   const posted = page.getByRole("region", { name: "What Viseca received" });
   await expect(posted.getByText("items.item_id in IT0017")).toBeVisible();
@@ -123,7 +135,9 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   // 5. The Cockpit shows the outcomes; the manipulated order's detail shows the shop's text as untrusted.
   await page.getByRole("button", { name: "Cockpit" }).click();
   await expect(page.getByRole("button", { name: /PixelHarbor.*CHF 289.00.*You declined/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Paid · you approved/ })).toBeVisible();
+  // "Approved", never "Paid": the platform accepting a decision says nothing about settlement, which is
+  // why LEASH-130 removed that label. This assertion still expected it (the e2e could not run here).
+  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Approved · you approved/ })).toBeVisible();
   await page.getByRole("button", { name: /PixelHarbor.*CHF 520.00.*Blocked/ }).click();
   const detail = page.getByRole("dialog", { name: "Payment details" });
   await expect(detail.getByText("Engine: declined")).toBeVisible();
@@ -155,9 +169,9 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   const runPicker = page.getByLabel("Run", { exact: true });
   await runPicker.selectOption(later.run_id);
   await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Blocked/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Paid · you approved/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Approved · you approved/ })).toHaveCount(0);
   await runPicker.selectOption(first.run_id);
-  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Paid · you approved/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Approved · you approved/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /PixelHarbor.*CHF 289.00.*You declined/ })).toBeVisible();
   await expect(runPicker).toHaveValue(first.run_id);
   await page.getByRole("button", { name: "Permission" }).click();

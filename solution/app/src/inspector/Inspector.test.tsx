@@ -50,7 +50,7 @@ function detail(id: string, extra: Partial<PaymentDetail> = {}): PaymentDetail {
       { key: "dup", label: "Duplicate", status: "warn", agreed: "One order at a time", actual: "Same as 11:40 order",
         detail: "Same shop, items and price as the order at 11:40.", reason_code: "possible_duplicate" },
     ],
-    evidence: ["Price: CHF 289.00"],
+    evidence: [{ check: "price", label: "Price", status: "pass", agreed: "At most CHF 400.00 per order", actual: "CHF 289.00", reason_code: null }],
     shop_texts: [{ item_id: "IT0017", text: "27-inch IPS panel; returns within 14 days" }],
     sent_to_viseca: { authorization_id: id, decision: "approve", reason_codes: [] } as unknown as PaymentDetail["sent_to_viseca"],
     engine_version: "leash-0.1.0",

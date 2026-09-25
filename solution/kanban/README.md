@@ -90,8 +90,10 @@ Every ticket follows the TDD rules in [`../../CLAUDE.md`](../../CLAUDE.md): writ
 
 Updated 2026-09-24 from the product agreement. Existing ticket IDs and filenames are retained for link stability; their titles and scope now describe Leash as a permission layer for external shopping agents. No implementation stage was advanced by this planning update.
 
-- Context and history: [LEASH-154](backlog/LEASH-154-customer-context-for-permission-clarification.md).
-- Permission extraction, evidence and draft corrections: [LEASH-101](backlog/LEASH-101-assistant-chat-with-mandate-drafting.md).
+- Context and history: [LEASH-154](done/LEASH-154-customer-context-for-permission-clarification.md) — done.
+- Permission extraction, evidence and draft corrections: [LEASH-101](done/LEASH-101-assistant-chat-with-mandate-drafting.md) — done, which unblocks LEASH-174, LEASH-175 and LEASH-102.
+- The chat reaches the model at all: [LEASH-175](backlog/LEASH-175-serve-the-permission-assistant.md). The assistant's HTTP surface and the engine's forwarding route exist in the working tree (`assistant/service.py`, `adapters/http/assistant_proxy.py`, `contracts/assistant-api.yaml`, both with tests) but are uncommitted and the ticket has not been advanced.
+- Natural-language reading moves to the model; code validates, renders and freezes: [LEASH-174](backlog/LEASH-174-model-reads-code-validates-and-renders.md) (DEC-045). Its two required compensating controls are the unrestricted-fields list in LEASH-146 and omission checking in LEASH-155.
 - Conversation and exact revision review: LEASH-145 and [LEASH-146](backlog/LEASH-146-human-readable-permission-review.md).
 - External-agent handoff and checkout binding: [LEASH-102](backlog/LEASH-102-assistant-purchases-through-the-engine.md), with customer launch in LEASH-147.
 - Platform outcome truth: LEASH-130; UI projection: LEASH-148 and LEASH-150.

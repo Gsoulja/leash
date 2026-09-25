@@ -1,6 +1,6 @@
 # LEASH-097: Engine inspector panel
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P2
 **Type**: feature
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 007-T8
 **Blocked by**: LEASH-091
 **Blocks**: LEASH-103
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Side panel for judges: every purchase with engine and final verdict, the checks for the selected one, facts read and the JSON sent to the API.

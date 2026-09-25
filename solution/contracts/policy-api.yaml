@@ -92,6 +92,60 @@ paths:
                 value:
                   instruction: Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less.
                     Do not add anything I did not ask for. Ask me when uncertain.
+  /api/policies/drafts/{draft_id}/messages:
+    post:
+      operationId: recordDraftMessage
+      summary: Record a sourced chat exchange without changing permission or revision
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text, reply, context]
+              properties:
+                text: {type: string, minLength: 1}
+                reply: {type: string, minLength: 1}
+                context: {type: object, additionalProperties: true}
+            examples:
+              history:
+                value:
+                  text: Check my history
+                  reply: 151 approved purchases on this card. Permission unchanged.
+                  context: {scope: {card_id: CA0023}, summary: {completed_purchases: 151}}
+      responses:
+        '200':
+          description: Unchanged permission with the appended exchange
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PolicyDraft'}
+              examples:
+                history:
+                  value:
+                    draft_id: LD-history
+                    revision: 1
+                    instruction: Buy clothing up to CHF 250 per order. Ask me when uncertain.
+                    status: needs_answers
+                    rules: []
+                    hard_rules: []
+                    uncertainty_policy: ask
+                    notes: []
+                    open_questions: []
+                    messages:
+                    - text: Check my history
+                      reply: 151 approved purchases on this card. Permission unchanged.
+                      revision: 1
+                      context: {scope: {card_id: CA0023}, summary: {completed_purchases: 151}}
+        '404':
+          description: Draft not found
+        '422':
+          description: Invalid exchange
   /api/policies/drafts/{draft_id}/answers:
     post:
       operationId: answerDraftQuestions
@@ -206,6 +260,87 @@ paths:
                   answers:
                   - question_id: Q1
                     answer: 'Yes'
+      parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/policies/drafts/{draft_id}/turns:
+    post:
+      operationId: addDraftTurn
+      summary: Add what the customer said next; the whole instruction is read again (LEASH-145)
+      description: >-
+        A conversation turn, not an answer to a question. The text is added to the customer's own
+        words and the draft is recompiled as a new revision; an earlier answer whose question is no
+        longer open is dropped from the replay and asked again, never applied to another question.
+      tags:
+      - policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDraft'
+              examples:
+                corrected:
+                  value:
+                    draft_id: LD-01
+                    revision: 2
+                    instruction: Buy groceries for CHF 50 or less. Ask me when unsure. Actually, make it CHF 30.
+                    status: ready
+                    rules:
+                    - text: At most CHF 30.00 per order, delivery included
+                      source: customer
+                      decision: null
+                      tightened: true
+                    hard_rules:
+                    - field: authorization.billing_amount_chf
+                      operator: <=
+                      value: 30
+                      currency: CHF
+                      scope: purchase
+                    uncertainty_policy: ask
+                    notes:
+                    - At most CHF 30.00 per order, delivery included.
+                    - When unsure, I ask you.
+                    answers: []
+                    open_questions: []
+        '409':
+          description: The draft is already at Viseca and can no longer change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example:
+                  value:
+                    error:
+                      code: already_submitted
+                      message: This draft is already at Viseca; start a new one to change it.
+        '422':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Unknown draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurnRequest'
+            examples:
+              correction:
+                value:
+                  text: Actually, make it CHF 30.
       parameters:
       - name: draft_id
         in: path
@@ -934,11 +1069,38 @@ paths:
                 value:
                   uncertainty_policy: decline
       parameters:
+      - name: preview
+        in: query
+        description: Validate and render the proposed change without storing it or contacting the platform.
+        schema:
+          type: boolean
+          default: false
       - name: mandate_id
         in: path
         required: true
         schema:
           type: string
+  /api/scenarios:
+    get:
+      operationId: listScenarios
+      summary: Read the scenario catalogue from the connected simulator
+      responses:
+        '200':
+          description: The platform's test stories, without creating a mandate or run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioList'
+              examples:
+                supplied:
+                  value:
+                    scenarios:
+                      - scenario_id: SCEN0000
+                        scenario_name: Connection check
+                        cardholder_instruction: Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.
+                        event_count: 1
+        '502':
+          description: Platform unavailable or invalid catalogue
   /api/runs:
     post:
       operationId: startRun
@@ -1250,9 +1412,18 @@ paths:
                       detail: Same shop, items and price as the order at 11:40 (already paid).
                       reason_code: possible_duplicate
                     evidence:
-                    - 'Price: CHF 289.00'
-                    - 'Known shop: 7 earlier payments'
-                    - 'Duplicate: Same as 11:40 order'
+                    - check: price
+                      label: Price
+                      status: pass
+                      agreed: At most CHF 400.00 per order
+                      actual: CHF 289.00
+                      reason_code: null
+                    - check: dup
+                      label: Duplicate
+                      status: warn
+                      agreed: One purchase
+                      actual: Same as 11:40 order
+                      reason_code: possible_duplicate
                     shop_texts:
                     - item_id: IT0017
                       text: 27-inch IPS panel, 2-year seller warranty; returns accepted within 14 days
@@ -1263,7 +1434,12 @@ paths:
                       - possible_duplicate
                       customer_message: 'Please check: same shop, items and price as the order at 11:40 (already paid).'
                       evidence:
-                      - 'Duplicate: Same as 11:40 order'
+                      - check: dup
+                        label: Duplicate
+                        status: warn
+                        agreed: One purchase
+                        actual: Same as 11:40 order
+                        reason_code: possible_duplicate
                       engine_version: leash-0.1.0
                     engine_version: leash-0.1.0
                     reader:
@@ -1598,6 +1774,44 @@ paths:
                     '
 components:
   schemas:
+    ScenarioList:
+      type: object
+      required: [scenarios]
+      properties:
+        scenarios:
+          type: array
+          items:
+            type: object
+            required: [scenario_id, scenario_name, cardholder_instruction, event_count]
+            properties:
+              scenario_id: {type: string}
+              scenario_name: {type: string}
+              cardholder_instruction: {type: string}
+              event_count: {type: integer, minimum: 0}
+    PermissionReview:
+      type: object
+      required: [must_follow, may_choose, must_ask]
+      properties:
+        must_follow:
+          type: array
+          items: {type: string}
+        may_choose:
+          type: array
+          items: {type: string}
+        must_ask:
+          type: array
+          items: {type: string}
+    AssistantAssessment:
+      type: object
+      properties:
+        history_checked: {type: string}
+        model: {type: string}
+        prompt_version: {type: string}
+        status: {type: string}
+        questions:
+          type: array
+          items: {type: string}
+      additionalProperties: true
     Money:
       type: string
       pattern: ^-?\d+\.\d{2}$
@@ -1715,6 +1929,13 @@ components:
             type: string
         blocking:
           type: boolean
+        field:
+          type:
+          - string
+          - 'null'
+          description: >-
+            The rule this question is about, when it is about one. It lets a caller ask the
+            question in the customer's own terms; answering it is what may create a rule.
     CreateDraftRequest:
       type: object
       required:
@@ -1724,6 +1945,14 @@ components:
         instruction:
           type: string
           minLength: 1
+        rules:
+          type: array
+          description: >-
+            Rules the permission assistant read from the customer's words (DEC-045). They are appended
+            like any other rule, so the strictest per field still wins and a draft can only get tighter.
+            Each is validated against the registry here; anything unreadable is refused, never stored.
+          items:
+            $ref: '#/components/schemas/HardRule'
     PolicyDraft:
       type: object
       additionalProperties: false
@@ -1739,6 +1968,24 @@ components:
       - open_questions
       description: 'Local draft: not yet sent to Viseca (DEC-003, LEASH-123).'
       properties:
+        messages:
+          type: array
+          items:
+            type: object
+            required: [text, reply, revision, context]
+            properties:
+              text: {type: string}
+              reply: {type: string}
+              revision: {type: integer}
+              context: {type: object, additionalProperties: true}
+        simulation_scenario:
+          type: string
+        confirmed_mandate:
+          $ref: '#/components/schemas/Mandate'
+        review:
+          $ref: '#/components/schemas/PermissionReview'
+        assistant:
+          $ref: '#/components/schemas/AssistantAssessment'
         draft_id:
           type: string
         revision:
@@ -1772,10 +2019,82 @@ components:
           type: array
           items:
             type: string
+        proposed:
+          type: array
+          description: >-
+            The rules the caller supplied when the draft was created, remembered so a later turn or
+            answer recompiles with them (DEC-045). Forgetting them would silently drop restrictions the
+            customer has already seen, which is a loosening.
+          items:
+            $ref: '#/components/schemas/HardRule'
+        independently_read:
+          type: array
+          description: >-
+            The rules this service read from the instruction and answers on its own, without the
+            `rules` the caller supplied (DEC-045). A caller gets its own proposal back inside
+            `hard_rules`, so only this shows whether the deterministic reading agreed independently.
+          items:
+            $ref: '#/components/schemas/HardRule'
+        unrestricted:
+          type: array
+          description: >-
+            Registry fields this draft places no rule on (DEC-045). The model reads the customer's
+            words, so a restriction it silently drops leaves every rule shown correct and the omission
+            invisible; the review names these so the customer can spot what is missing.
+          items:
+            type: string
+        answers:
+          type: array
+          description: >-
+            The answers this draft view was actually built from, in replay order (LEASH-145). A turn
+            can drop an earlier answer when its question closed or was re-asked under another id, so a
+            transcript must render answered points from here rather than from what it remembers.
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - question_id
+            - question
+            - answer
+            properties:
+              question_id:
+                type: string
+              question:
+                type: string
+                description: The question as it was worded when it was answered.
+              answer:
+                type: string
         open_questions:
           type: array
           items:
             $ref: '#/components/schemas/Question'
+    TurnRequest:
+      type: object
+      required:
+      - text
+      additionalProperties: false
+      properties:
+        context:
+          type: [object, 'null']
+          additionalProperties: true
+          description: Background evidence read for this revision; never grants authority.
+        replace_instruction:
+          type: boolean
+          description: Replace the unsubmitted task; earlier revisions remain in the audit record.
+        assessment:
+          $ref: '#/components/schemas/AssistantAssessment'
+        text:
+          type: string
+          minLength: 1
+          description: The customer's own words. Never agent or merchant text.
+        rules:
+          type: array
+          description: >-
+            Rules the assistant read from this turn (DEC-045). Appended to what the draft already holds,
+            so an earlier reading the customer has seen is never replaced, and validated here like any
+            other rule.
+          items:
+            $ref: '#/components/schemas/HardRule'
     AnswersRequest:
       type: object
       required:
@@ -1808,6 +2127,8 @@ components:
       - guidance
       description: Exactly what was posted to Viseca; shown to the customer before confirming.
       properties:
+        review:
+          $ref: '#/components/schemas/PermissionReview'
         draft_id:
           type: string
         platform_draft_id:
@@ -1867,6 +2188,8 @@ components:
       - hard_rules
       - uncertainty_policy
       properties:
+        review:
+          $ref: '#/components/schemas/PermissionReview'
         mandate_id:
           type: string
         version:
@@ -1915,6 +2238,10 @@ components:
       additionalProperties: false
       description: 'Only stricter changes: rules are appended, uncertainty can only move to decline (DEC-006).'
       properties:
+        expected_version:
+          type: integer
+          minimum: 1
+          description: Reject with stale_version if the permission changed since review.
         add_hard_rules:
           type: array
           minItems: 1
@@ -2135,6 +2462,38 @@ components:
           type:
           - string
           - 'null'
+    Evidence:
+      type: object
+      additionalProperties: false
+      description: One check as a fact supporting the decision, in the words the customer was shown.
+      required:
+      - check
+      - label
+      - status
+      - agreed
+      - actual
+      - reason_code
+      properties:
+        check:
+          type: string
+          description: The check's stable key, e.g. "price".
+        label:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - fail
+          - warn
+          - integrity
+        agreed:
+          type: string
+        actual:
+          type: string
+        reason_code:
+          type:
+          - string
+          - 'null'
     PaymentDetail:
       allOf:
       - $ref: '#/components/schemas/Payment'
@@ -2153,8 +2512,10 @@ components:
               $ref: '#/components/schemas/Check'
           evidence:
             type: array
+            description: One object per non-info check, exactly as sent to the platform, which
+              validates this field as a list of objects and refuses a list of strings.
             items:
-              type: string
+              $ref: '#/components/schemas/Evidence'
           shop_texts:
             type: array
             description: 'Merchant text: untrusted, render as plain text.'
@@ -2313,6 +2674,8 @@ components:
       - created_at
       additionalProperties: false
       properties:
+        review:
+          $ref: '#/components/schemas/PermissionReview'
         version:
           type: integer
           minimum: 1

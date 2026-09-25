@@ -18,11 +18,11 @@ before it is offered to the customer at all:
 3. **No looser than what is already confirmed** — checked with `CompiledMandate.tighten`, which
    refuses anything that is not stricter.
 
-Everything the model cannot do safely falls the same way: towards a question. A timeout, an exception,
-malformed output or an empty answer all produce zero candidates and a visible clarification, never a
-partial draft that could be mistaken for a reviewed one.
+Unclear rules become questions. A timeout, exception or unreadable response produces a retryable
+failure before any policy write, never a partial draft mistaken for a reviewed one.
 """
 
+import logging
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -32,11 +32,13 @@ from typing import Any, Literal, Protocol, cast, get_args
 from leash.domain import mandate as m
 from leash.domain.mandate import CompiledMandate, LooseningError, Operator, Rule
 from leash.policy.compiler import compile_instruction
+from leash.policy.hard_rules import rule_to_api
 from leash.policy.registry import REGISTRY, problems
+from leash.policy.render import describe_rule
 
-#: Wording shown when the model could not be reached or could not be understood. Model unavailability
-#: is informational: it never approves anything, it only means the customer is asked instead.
+#: Model failures ask for a retry, not a new instruction or permission.
 MODEL_UNAVAILABLE = "I couldn't draft that automatically just now"
+log = logging.getLogger("leash.assistant")
 
 #: Bumped whenever the prompt changes, so a stored draft says which prompt produced it.
 PROMPT_VERSION = "pa-1"
@@ -83,10 +85,17 @@ class CandidateRule:
     """A rule the model proposed, validated and traced back to the customer's own words."""
 
     rule: Rule
-    says: str  # the exact excerpt the customer wrote
+    says: str  # the excerpt the model attributed to the customer
     turn_id: str
     #: Always False here. Only the customer-facing policy workflow can confirm anything.
     confirmed: bool = False
+    #: The quoted words carry the rule's value literally. False for a text value the customer wrote in
+    #: their own language ("nur Lieferung" never contains `delivery`) — kept, but asked about, and shown
+    #: as our reading rather than their words.
+    evidenced: bool = True
+    #: The deterministic compiler read the same rule from the same words. Corroboration, never a gate
+    #: (DEC-045): it reads no German, French or Italian, so its silence proves nothing.
+    corroborated: bool = False
 
 
 @dataclass(frozen=True)
@@ -110,6 +119,8 @@ class Proposal:
     model: str = ""
     prompt_version: str = PROMPT_VERSION
     tool_calls: tuple[ToolCall, ...] = ()
+    failure: str | None = None
+    intent: Literal["permission", "history"] = "permission"
 
     @property
     def status(self) -> Status:
@@ -119,12 +130,13 @@ class Proposal:
     def as_draft(self) -> dict[str, Any]:
         """The draft as it goes to the policy service: rules, questions and provenance only."""
         return {
-            "rules": [{"field": c.rule.field, "operator": c.rule.operator, "value": str(c.rule.value)}
-                      for c in self.candidates],
+            "rules": [rule_to_api(c.rule) for c in self.candidates],
             "questions": [q.text for q in self.questions],
             "status": self.status,
             "provenance": [{"field": c.rule.field, "turn_id": c.turn_id, "says": c.says,
-                            "confirmed": c.confirmed} for c in self.candidates],
+                            "confirmed": c.confirmed, "evidenced": c.evidenced,
+                            "corroborated": c.corroborated}
+                           for c in self.candidates],
             "model": self.model,
             "prompt_version": self.prompt_version,
             "tool_calls": [call.as_dict() for call in self.tool_calls],
@@ -132,7 +144,12 @@ class Proposal:
 
 
 def _value(field_name: str, raw: Any) -> Any:
-    """Registry value kinds: a number stays exact (Decimal, never float), text stays text."""
+    """Registry value kinds: a number stays exact (Decimal, never float), text stays text.
+
+    A model answers in JSON, so a set of allowed values arrives as a list — every `in` and `not_in`
+    rule. `Rule` takes a tuple, so converting here is this adapter's job; without it the most common
+    shape of rule the model can propose would always become a question.
+    """
     spec = REGISTRY.get(field_name)
     if spec is None:
         return raw
@@ -140,6 +157,8 @@ def _value(field_name: str, raw: Any) -> Any:
         if isinstance(raw, float):
             raise ValueError("amounts must not arrive as float")
         return Decimal(str(raw))
+    if isinstance(raw, list):
+        return tuple(str(v) for v in raw)
     return raw
 
 
@@ -150,25 +169,201 @@ def _spans(needle: str, haystack: str) -> bool:
     return re.search(rf"(?<![0-9A-Za-z]){re.escape(needle.strip())}(?![0-9A-Za-z])", haystack) is not None
 
 
-def _excerpt_is_the_customers(says: str, turns: Sequence[Turn], turn_id: str) -> bool:
-    """True when `says` is an exact excerpt of that customer turn. Paraphrase does not count."""
-    for turn in turns:
-        if turn.turn_id == turn_id and turn.speaker == "customer":
-            return _spans(says, turn.text)
-    return False
+_WORD = re.compile(r"[0-9A-Za-z\u00c0-\u024f']+")
+_SENTENCES = re.compile(r"(?<=[.!?;])\s+|\n")
+
+#: Words that carry no evidence on their own, so a restatement may add or drop them. "only clothing"
+#: is the customer's "clothing"; the "only" is the model's summary of the sentence around it.
+_FUNCTION_WORDS = frozenset("""a an and any are as at be been but by can do does for from have has i if
+in is it its me more my no nor not of on only or our per she that the their them they this to up us
+was we with you your""".split())
+
+
+def _pattern(phrase: str) -> str:
+    """The phrase as the customer may have typed it: any punctuation or spacing between its words.
+
+    A model normalises whitespace and punctuation ("at most  CHF 50" quoted back as "at most CHF 50"),
+    which a literal substring search calls a different sentence.
+    """
+    words = _WORD.findall(phrase)
+    return (rf"(?<![0-9A-Za-z]){'[^0-9A-Za-z]+'.join(map(re.escape, words))}(?![0-9A-Za-z])"
+            if words else "")
+
+
+def _sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENTENCES.split(text) if s.strip()]
+
+
+def _word_in(word: str, text: str) -> bool:
+    """A number matches exactly ("50" never inside "500"); a word may be inflected ("return" in "returned")."""
+    if word.isdigit():
+        return _spans(word, text)
+    return re.search(rf"(?<![0-9A-Za-z]){re.escape(word)}[A-Za-z\u00c0-\u024f']*", text, re.I) is not None
+
+
+def _restated(says: str, text: str) -> str | None:
+    """The customer's own sentence behind a quote that restates rather than copies.
+
+    A model quotes the meaning far more often than a span: "one item" for "one ordinary grocery item",
+    "only clothing" for "may buy clothing for me", "At most CHF 30 per order" for "Actually make it
+    30." Measured live on 2026-09-25 against the five challenge instructions: 14 of the 19 rules
+    Apertus read correctly were dropped here, corrections included.
+
+    Requiring every content word of the quote to appear in one sentence the customer wrote keeps what
+    the gate is for — the words are the customer's, not the background's and not the model's
+    invention (DEC-034, DEC-048) — without demanding a transcription. What is returned is always the
+    customer's own sentence, never the model's string.
+    """
+    words = [w.lower() for w in _WORD.findall(says)]
+    content = [w for w in words if w not in _FUNCTION_WORDS]
+    if not content:
+        return None
+    for sentence in _sentences(text):
+        if all(_word_in(w, sentence) for w in content):
+            return sentence
+    return None
+
+
+def _customer_excerpt(says: str, turns: Sequence[Turn], turn_id: str) -> str | None:
+    """The customer's own words behind the model's quote, or None if they never wrote them.
+
+    Their exact span where the model copied one, otherwise the sentence a restatement came from. A
+    different speaker, a turn that does not exist, or words the customer never wrote: never.
+    """
+    if not says.strip():
+        return None
+    text = next((t.text for t in turns if t.turn_id == turn_id and t.speaker == "customer"), None)
+    if text is None:
+        return None
+    pattern = _pattern(says)
+    match = re.search(pattern, text, re.I) if pattern else None
+    return match.group(0) if match else _restated(says, text)
 
 
 def _value_is_evidenced(rule: Rule, says: str) -> bool:
-    """The quoted words must actually carry the value the rule claims.
+    """The quoted words must actually carry the *number* the rule claims.
 
     Quoting "CHF 50" and attaching it to a CHF 500 limit is model output posing as the customer's
-    words: the excerpt is genuine but it does not say what the rule says. Item IDs are exempt —
-    they come from a recorded catalogue lookup, not from the customer's typing.
+    words: the excerpt is genuine but it does not say what the rule says. Digits survive translation,
+    so this holds in any language.
+
+    It is deliberately **not** applied to text values. Those are the registry's canonical terms —
+    `delivery`, `electronics` — and a customer writing "nur Lieferung" or "solo consegna" never types
+    them, so requiring the term in the quote would reject every non-English categorical rule (LEASH-175).
+    What stands in its place is DEC-045's gate: the customer approves "For delivery only.", generated
+    from the rule, and rejects it if that is not what they meant. The quote must still be the
+    customer's own words — that check is unchanged, and it is what keeps background text out.
+
+    Item IDs are exempt for a different reason: they come from a recorded catalogue lookup, not from
+    the customer's typing.
     """
     if rule.field == m.F_ITEM_ID:
         return True
+    # Reuse the independent compiler for "one item", "used before", "no extras", and category
+    # wording. A quote must support this exact rule, not merely contain the same number elsewhere.
+    parsed = compile_instruction(says).mandate.rules
+    if any((r.field, r.operator, r.value, r.period_days) ==
+           (rule.field, rule.operator, rule.value, rule.period_days) for r in parsed):
+        return True
     values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
-    return all(_spans(str(v), says.lower()) or _spans(str(v), says) for v in values)
+    if rule.period_days is not None and not _carried(rule.period_days, says):
+        return False  # "across 30 days" from "any seven days" is a number the customer never wrote
+    return all(_carried(v, says) for v in values)
+
+
+#: Small numbers as a customer writes them. A quantity or a count is spelled far more often than an
+#: amount is, and "one item" carries the number 1 exactly as "1 item" does (DEC-048).
+_WRITTEN_OUT: Mapping[str, int] = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+                                   "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+                                   "twelve": 12, "fourteen": 14, "thirty": 30}
+
+
+def _carried(value: Any, says: str) -> bool:
+    """The quoted words carry this value, in digits or written out."""
+    if _spans(str(value), says.lower()) or _spans(str(value), says):
+        return True
+    try:
+        wanted = int(Decimal(str(value)))
+    except (ArithmeticError, InvalidOperation, TypeError, ValueError):
+        return False
+    return any(_WRITTEN_OUT.get(word) == wanted for word in _WORD.findall(says.lower()))
+
+
+#: A number written right after a currency is an amount, whatever rule quotes it.
+_MONEY_BOUND = re.compile(r"(?:CHF|EUR|USD|GBP|fr\.?|francs?|\u20ac|\$|\u00a3)\s*$", re.I)
+#: Any currency but ours next to a number. The engine's limits are CHF and it converts nothing here.
+_OTHER_MONEY = re.compile(r"\b(EUR|USD|GBP|JPY|euros?|dollars?|pounds?|yen)\b|[\u20ac$\u00a3]", re.I)
+
+
+def _turn_text(turns: Sequence[Turn], turn_id: str) -> str:
+    return next((t.text for t in turns if t.turn_id == turn_id and t.speaker == "customer"), "")
+
+
+def _value_anchor(rule: Rule, text: str) -> str | None:
+    """The customer's own sentence carrying this rule's number, when the model restated the rest.
+
+    "Actually make it 30." is a whole correction in four words: the customer typed the number and
+    nothing else, so the model's quote ("At most CHF 30 per order") shares no other word with it.
+    Measured live on 2026-09-25: both tightening and loosening corrections were dropped here, which
+    loses a tightening the customer asked for.
+
+    A number written straight after a currency is an amount and may only evidence the amount field —
+    "CHF 2" is two francs, never two earlier purchases at a shop.
+    """
+    spec = REGISTRY.get(rule.field)
+    if spec is None or spec.value_kind != "number":
+        return None
+    wanted = {str(rule.value)}
+    if isinstance(rule.value, Decimal) and rule.value == rule.value.to_integral_value():
+        wanted.add(str(int(rule.value)))
+    for sentence in _sentences(text):
+        for needle in wanted:
+            for found in re.finditer(rf"(?<![0-9A-Za-z]){re.escape(needle)}(?![0-9A-Za-z])", sentence):
+                if _MONEY_BOUND.search(sentence[:found.start()]) and rule.field != m.F_BILLING_CHF:
+                    continue
+                return sentence
+    return None
+
+
+def _wrong_currency(field_name: str, says: str) -> str | None:
+    """A currency the engine does not limit in. Converting it ourselves would invent a limit.
+
+    Measured live on 2026-09-25: Apertus read "at most USD 450 per order" as `billing_amount_chf <=
+    450`, which is CHF 450 against an intended cap of about CHF 391 — a looser rule than the customer
+    asked for, and the one direction a mandate may never move.
+    """
+    if field_name != m.F_BILLING_CHF:
+        return None
+    found = _OTHER_MONEY.search(says)
+    return found.group(0) if found else None
+
+
+#: What the engine can actually match a text value against. The event's own vocabulary, not the
+#: model's: `fulfillment_method = "lieferung"` is enforceable in form and unmatchable in fact.
+#: ponytail: merchant categories and sizes are not here — they come from the pack, which this process
+#: reads only through the catalogue. Add them when the vocabulary reaches the assistant.
+_VOCABULARY: Mapping[str, frozenset[str]] = {
+    m.F_FULFILLMENT: frozenset({"delivery", "pickup", "digital"}),
+    m.F_SPLIT_CHECK: frozenset({"on"}),
+}
+
+
+def _unknown_values(rule: Rule, catalogue: Any) -> tuple[str, ...]:
+    """Values outside the field's vocabulary, which no purchase could ever satisfy."""
+    known = _VOCABULARY.get(rule.field)
+    if known is None and rule.field == m.F_ITEM_CATEGORY:
+        items = _items(catalogue)
+        known = frozenset(i.category.strip().lower() for i in items) if items else None
+    if known is None:
+        return ()
+    values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
+    return tuple(str(v) for v in values if str(v).strip().lower() not in known)
+
+
+def _items(catalogue: Any) -> tuple[Any, ...]:
+    if hasattr(catalogue, "search"):
+        return tuple(catalogue.search(name="").candidates)
+    return tuple(catalogue or ())
 
 
 class PermissionAssistant:
@@ -182,25 +377,46 @@ class PermissionAssistant:
         self._model = model
 
     def draft(self, turns: Sequence[Turn], *, context: Mapping[str, Any] | None = None,
-              catalogue: Sequence[Any] = (), confirmed: CompiledMandate | None = None) -> Proposal:
+              catalogue: Sequence[Any] | None = None,
+              confirmed: CompiledMandate | None = None) -> Proposal:
         """Ask the model, then keep only what is enforceable, traceable and no looser than confirmed."""
-        request = ProposalRequest(tuple(turns), dict(context or {}), ())
+        items = tuple(catalogue.search(name="").candidates) if hasattr(catalogue, "search") else tuple(catalogue or ())
+        request = ProposalRequest(tuple(turns), dict(context or {}), items)
         try:
             reply = self._model.propose(request)
-        except Exception:  # noqa: BLE001 — any model failure means "ask the customer", never "proceed"
-            return self._fallback(f"{MODEL_UNAVAILABLE}. Could you say the rule in your own words?")
+        except Exception as exc:  # noqa: BLE001 — a failed extraction never permits proceeding
+            # Exception text may contain request data or credentials; record only its type.
+            log.warning("Permission model failed: %s", type(exc).__name__)
+            return self._fallback(f"{MODEL_UNAVAILABLE}. Please retry; you do not need to reword your task.",
+                                  "model_unavailable")
         return self._read(reply, tuple(turns), confirmed, catalogue, dict(context or {}))
 
-    def _fallback(self, text: str) -> Proposal:
-        return Proposal(questions=(Question(text),), model=getattr(self._model, "name", ""))
+    def _fallback(self, text: str, failure: str) -> Proposal:
+        return Proposal(questions=(Question(text),), model=getattr(self._model, "name", ""), failure=failure)
 
     def _read(self, reply: Any, turns: tuple[Turn, ...], confirmed: CompiledMandate | None,
               catalogue: Any, context: Mapping[str, Any]) -> Proposal:
         name = getattr(self._model, "name", "")
+        if isinstance(reply, Mapping) and reply.get("intent") == "history":
+            if reply.get("rules") != []:
+                return self._fallback("The model mixed a history answer with permission changes. Please retry.",
+                                      "model_invalid_response")
+            return Proposal(model=name, prompt_version=str(getattr(self._model, "prompt_version", PROMPT_VERSION)),
+                            intent="history")
         if not isinstance(reply, Mapping) or not isinstance(reply.get("rules"), list):
-            return self._fallback(f"{MODEL_UNAVAILABLE}. Could you say the rule in your own words?")
+            log.warning("Permission model returned an invalid proposal")
+            return self._fallback("The model returned an unreadable proposal. Please retry; you do not need to reword your task.",
+                                  "model_invalid_response")
+        asked = reply.get("questions", [])
+        if not isinstance(asked, list) or not all(isinstance(q, str) for q in asked):
+            # Not pedantry: a bare string iterates into one question per character, and `None` or a
+            # number raises. Either way the customer gets a broken chat instead of a retry, so an
+            # unreadable `questions` is the same failure as an unreadable `rules` (DEC-047).
+            log.warning("Permission model returned unreadable questions")
+            return self._fallback("The model returned an unreadable proposal. Please retry; you do not need to reword your task.",
+                                  "model_invalid_response")
         candidates: list[CandidateRule] = []
-        questions: list[Question] = [Question(str(q)) for q in reply.get("questions", []) if str(q).strip()]
+        questions: list[Question] = [Question(q) for q in asked if q.strip()]
         calls: list[ToolCall] = []
         for raw in reply["rules"]:
             candidate, question = self._one(raw, turns, confirmed, catalogue, calls)
@@ -208,11 +424,13 @@ class PermissionAssistant:
                 candidates.append(candidate)
             if question is not None:
                 questions.append(question)
-        questions += _omitted(turns, candidates)
+        questions += _omitted(turns, candidates, catalogue)
         questions += _context_gaps(context)
         if not candidates and not questions:
-            questions.append(Question(f"{MODEL_UNAVAILABLE}. Could you say the rule in your own words?"))
-        return Proposal(tuple(candidates), tuple(dict.fromkeys(questions)), name, PROMPT_VERSION,
+            return self._fallback("The model returned no proposal. Please retry; you do not need to reword your task.",
+                                  "model_invalid_response")
+        version = str(getattr(self._model, "prompt_version", PROMPT_VERSION))
+        return Proposal(tuple(candidates), tuple(dict.fromkeys(questions)), name, version,
                         tuple(calls))
 
     def _one(self, raw: Any, turns: tuple[Turn, ...], confirmed: CompiledMandate | None,
@@ -228,29 +446,77 @@ class PermissionAssistant:
         if "value" not in raw:
             return None, Question(f"I couldn't read a value for {field_name or 'a rule'}. What should it be?")
         try:
-            rule = Rule(field_name, cast(Operator, operator), _value(field_name, raw["value"]))
+            days = raw.get("period_days")
+            if days is not None and (type(days) is not int or days <= 0):
+                raise ValueError("period_days must be a positive integer")
+            rule = Rule(field_name, cast(Operator, operator), _value(field_name, raw["value"]),
+                        currency=raw.get("currency"), scope="period" if days is not None else raw.get("scope"),
+                        period_days=days)
         except (ValueError, TypeError, ArithmeticError, InvalidOperation):
             return None, Question(f"I couldn't read the value for {field_name or 'a rule'}. What should it be?")
 
         # 0. a product the customer named in words, not by ID: look it up rather than invent one
         if field_name == m.F_ITEM_ID:
+            requested = rule.value if isinstance(rule.value, tuple) else (rule.value,)
             rule, unresolved = _resolve_item(rule, catalogue, calls)
             if unresolved is not None:
                 return None, unresolved
+            # A real catalogue ID is not evidence that the customer selected it. Require their
+            # quoted name/ID or an independent resolution of the quote to the same product.
+            if not all(_spans(str(v).lower(), says.lower()) for v in requested):
+                items = tuple(catalogue.search(name="").candidates) if hasattr(catalogue, "search") else tuple(catalogue or ())
+                read = compile_instruction(says, catalogue=items)
+                if not any(r.field == m.F_ITEM_ID and r.value == rule.value for r in read.mandate.rules):
+                    return None, Question("Which exact catalogue product do you want? I cannot infer a selection from your history.", m.F_ITEM_ID)
 
         # 1. enforceable exactly as written, or it becomes a question
         found = problems([rule])
         if found:
             return None, Question(f"I can't enforce that as written ({'; '.join(found)}). "
                                   "Could you say it as a simple rule?", field_name)
-        # 2. traceable to the customer's own words
-        if not _excerpt_is_the_customers(says, turns, turn_id):
+        # 2. traceable to the customer's own words. DEC-045 moved the *reading* to the model, not the
+        # provenance: a rule still has to come from something the customer actually wrote, or the model
+        # could launder a background preference into authority (DEC-034).
+        unknown = _unknown_values(rule, catalogue)
+        if unknown:
+            return None, Question(f"I don't know \"{unknown[0]}\" as a value for {_label(field_name)}, so I "
+                                  "can't enforce it. Which of the shop's own terms do you mean?", field_name)
+        excerpt = _customer_excerpt(says, turns, turn_id) or _value_anchor(rule, _turn_text(turns, turn_id))
+        if excerpt is None:
             return None, Question("I drafted a rule you didn't say in those words, so it stays an "
                                   f"unconfirmed suggestion: {field_name}. Do you want it?", field_name)
-        if not _value_is_evidenced(rule, says):
-            return None, Question(f'You said "{says}", which doesn\'t give me {rule.value} for '
-                                  f"{_label(field_name)}. It stays an unconfirmed suggestion — "
-                                  "what should the value be?", field_name)
+        says = excerpt
+        wrong = _wrong_currency(field_name, says)
+        if wrong:
+            return None, Question(f'You said "{says}". My limits are in CHF and I must not convert '
+                                  f"{wrong} myself — what is the limit in CHF?", field_name)
+        # A number that is not in the quoted words is the model putting its own figure in the
+        # customer's mouth, and digits survive translation — so that stays a refusal. A *text* value is
+        # the registry's canonical term (`delivery`, `electronics`), which a customer writing "nur
+        # Lieferung" never types: refusing there would be refusing the language, not the reading. So it
+        # is kept, marked as our wording, and asked about (LEASH-175).
+        evidenced = _value_is_evidenced(rule, says)
+        spec = REGISTRY.get(field_name)
+        numeric = spec is not None and spec.value_kind == "number"
+        if not evidenced and numeric:
+            # A model may quote a noun phrase ("shops I have used before") without the "from"
+            # that makes it a complete instruction. Check the original customer turn, keeping the
+            # expanded quote as evidence; never treat an unrelated digit as corroboration.
+            original = next(t.text for t in turns if t.turn_id == turn_id and t.speaker == "customer")
+            if any((r.field, r.operator, r.value, r.period_days) ==
+                   (rule.field, rule.operator, rule.value, rule.period_days)
+                   for r in compile_instruction(original).mandate.rules):
+                says, evidenced = original, True
+        if not evidenced and numeric:
+            missing = (f"{rule.period_days} days as the period"
+                       if rule.period_days is not None and not _spans(str(rule.period_days), says)
+                       else f"{rule.value} for {_label(field_name)}")
+            return None, Question(f'You said "{says}", which doesn\'t give me {missing}. It stays an '
+                                  "unconfirmed suggestion — what should it be?", field_name)
+        unevidenced: Question | None = None
+        if not evidenced:
+            unevidenced = Question(f'I read "{says}" as {_label(field_name)}: {describe_rule(rule)} '
+                                   "Those are my words, not yours — did you mean that?", field_name)
         # 3. no looser than a permission already confirmed
         if confirmed is not None:
             try:
@@ -262,7 +528,7 @@ class PermissionAssistant:
             except Exception:  # noqa: BLE001 — an unusable rule is a question, never a silent pass
                 return None, Question(f"I couldn't check that against your confirmed permission "
                                       f"({field_name}). Could you say it again?", field_name)
-        return CandidateRule(rule, says, turn_id), None
+        return CandidateRule(rule, says, turn_id, evidenced=evidenced), unevidenced
 
 
 def _resolve_item(rule: Rule, catalogue: Any, calls: list[ToolCall]) -> tuple[Rule, Question | None]:
@@ -297,7 +563,7 @@ def _known_item(value: str, catalogue: Any) -> bool:
     return any(c.item_id == value for c in catalogue.search(name="").candidates)
 
 
-def _omitted(turns: Sequence[Turn], candidates: Sequence[CandidateRule]) -> list[Question]:
+def _omitted(turns: Sequence[Turn], candidates: Sequence[CandidateRule], catalogue: Any = None) -> list[Question]:
     """Restrictions the customer stated that the model left out.
 
     The deterministic compiler reads the customer's own words independently of the model. Anything
@@ -308,7 +574,8 @@ def _omitted(turns: Sequence[Turn], candidates: Sequence[CandidateRule]) -> list
     if not said.strip():
         return []
     try:
-        read = compile_instruction(said)
+        items = tuple(catalogue.search(name="").candidates) if hasattr(catalogue, "search") else tuple(catalogue or ())
+        read = compile_instruction(said, catalogue=items)
     except Exception:  # noqa: BLE001 — the cross-check is advisory; it must never break the draft
         return []
     # Keyed by field *and* period: "CHF 120 per order" and "CHF 300 across seven days" are the same
@@ -321,11 +588,64 @@ def _omitted(turns: Sequence[Turn], candidates: Sequence[CandidateRule]) -> list
     # A sentence the compiler could not turn into a rule at all (a foreign currency, "no
     # subscriptions") carries a restriction that would otherwise vanish: the draft has no field for
     # it, so it must be asked rather than dropped.
-    questions += [Question(q.text, "instruction") for q in read.questions if q.field == "instruction"]
+    #
+    # Unless the model read that same sentence (DEC-045). The compiler reads no German, French or
+    # Italian, so its silence about "höchstens CHF 50 pro Bestellung" proves nothing — asking there
+    # would make every non-English instruction unanswerable, which is the grammar deciding what may
+    # become a rule by the back door. The excerpt is verbatim from the customer's turn, so a rule the
+    # model read out of this sentence shows up inside the question's own quotation of it.
+    # ponytail: substring match on the quoted sentence. A `says` spanning two sentences matches
+    # neither and the question stands — the safe direction. Carry the sentence on the compiler's
+    # Question if that ever needs to be exact.
+    questions += [Question(q.text, "instruction") for q in read.questions
+                  if q.field == "instruction" and not _accounted_for(q.about, candidates)]
     if read.mandate.uncertainty != _DEFAULT_UNCERTAINTY:
         questions.append(Question(f'You said what I should do when I am unsure ("{read.mandate.uncertainty}"), '
                                   "which is not part of this draft. Shall I add it?", "uncertainty_policy"))
     return questions
+
+
+#: Where one restriction ends and the next begins, in any of the four national languages. Punctuation
+#: first, then the conjunctions; deliberately generous, because over-splitting asks one more question
+#: while under-splitting drops a restriction.
+_CLAUSE = re.compile(r",(?=\s)|;|:|\b(?:and|but|or|und|aber|oder|et|mais|ou|oppure|e|ma|o)\b", re.I)
+
+
+def _clauses(sentence: str) -> list[str]:
+    return [c for c in _CLAUSE.split(sentence) if _WORD.search(c)]
+
+
+def _accounted_for(sentence: str, candidates: Sequence[CandidateRule]) -> bool:
+    """Did the model read everything in a sentence the compiler's grammar could not read?
+
+    Its quote alone cannot answer that. A model that quotes the whole sentence accounts for all of it
+    while reading one restriction out of three, and an excerpt recovered from the customer's own turn
+    (DEC-054) is the whole sentence by construction — so "covered" can be manufactured by expansion.
+    Found in review on 2026-09-25: "Buy me a jacket, at most CHF 120 per order, and no subscriptions."
+    kept the limit and lost "no subscriptions" with no question at all, and neither other net sees it —
+    the grammar produced no rule to miss, and "no subscriptions" maps to no registry field, so
+    `unrestricted` cannot show it either.
+
+    So the comparison is per clause, which needs no grammar and no language: the sentence is accounted
+    for only when at least as many rules were read from it as it has clauses.
+
+    ponytail: two restrictions inside one clause with no conjunction ("keine Abos höchstens CHF 50")
+    still count as one. Much narrower than the hole it replaces; counting restrictions instead would
+    need exactly the reading this design says we cannot have.
+    """
+    clauses = _clauses(sentence or "")
+    if not clauses:
+        return False
+    return len([c for c in candidates if _reads(c, sentence)]) >= len(clauses)
+
+
+def _reads(candidate: CandidateRule, sentence: str) -> bool:
+    """This rule came out of this sentence: its quote overlaps it, or its value is written in it."""
+    quote, low = candidate.says.strip().lower(), sentence.strip().lower()
+    if quote and (quote in low or low in quote):
+        return True
+    values = candidate.rule.value if isinstance(candidate.rule.value, tuple) else (candidate.rule.value,)
+    return any(_carried(v, sentence) for v in values)
 
 
 #: What the compiler assumes when the customer says nothing, so only a stated choice is flagged.

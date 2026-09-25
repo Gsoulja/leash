@@ -1,6 +1,6 @@
 # LEASH-066: Start a scenario run with mandate snapshot
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: S
@@ -11,7 +11,7 @@
 **Task ID**: 005-T7
 **Blocked by**: LEASH-061
 **Blocks**: LEASH-128
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Start a run at the API and store which mandate version it uses.

@@ -1,6 +1,6 @@
 # LEASH-034: Property tests for safety
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: test
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 002-T5
 **Blocked by**: LEASH-027, LEASH-013, LEASH-072, LEASH-120
 **Blocks**: LEASH-128
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Randomised tests proving the safety properties.

@@ -1,5 +1,5 @@
 # Leash: one command starts everything (LEASH-127). See solution/RUNBOOK.md.
-#   docker compose -f solution/docker-compose.yml --profile fake up -d --build   # local, against the fake platform
+#   docker compose -p leash-local -f solution/docker-compose.yml -f solution/docker-compose.local.yml --profile fake up -d --build  # local
 #   docker compose -f solution/docker-compose.yml up -d --build                  # event day (set .env first)
 # Order: db healthy → migrate (migrations + pack seed, idempotent) → api and worker. Readiness (/readyz) fails
 # until migrations and the seed are done. The worker talks to LEASH_BASE_URL; the default is the local fake,
@@ -20,6 +20,9 @@ x-engine: &engine
     LEASH_BASE_URL: ${LEASH_BASE_URL:-http://fake:9000}
     LEASH_CORS_ORIGINS: ${LEASH_CORS_ORIGINS:-http://localhost:5173}
     LEASH_LOG_LEVEL: ${LEASH_LOG_LEVEL:-INFO}
+    # Where the chat's calls go on to (LEASH-175). Unset means no assistant in this deployment, and the
+    # chat is told so plainly rather than shown a 404.
+    LEASH_ASSISTANT_URL: ${LEASH_ASSISTANT_URL:-http://assistant:8100}
 
 services:
   db:
@@ -76,6 +79,38 @@ services:
 
   # LEASH-151: one command, and it refuses to touch anything but a local demo database.
   #   docker compose -f solution/docker-compose.yml --profile reset run --rm reset
+  # The permission assistant (LEASH-175): reads the customer's words with the model and hands what
+  # survives validation to `api`, which validates every rule again and is the only thing that stores or
+  # activates one. It holds no database credential and no platform key.
+  #   LEASH_ASSISTANT_MODEL=offline runs it without a model, for rehearsals and CI. It then reads with
+  #   the deterministic compiler, which is a test double and not a fallback: a model being *down* must
+  #   become questions for the customer, never a quiet second-best reading.
+  assistant:
+    <<: *engine
+    command: ["python", "-m", "assistant.service"]
+    environment:
+      <<: *engine-env
+      DATABASE_URL: ""  # it holds no database credential, and nothing in it reads one
+      TEAM_API_KEY: ""  # nor the platform key: it cannot reach the control layer (DEC-044)
+      APERTUS_API_KEY: ${APERTUS_API_KEY:-}
+      LEASH_ASSISTANT_MODEL: ${LEASH_ASSISTANT_MODEL:-apertus}
+      LEASH_POLICY_URL: ${LEASH_POLICY_URL:-http://api:8080}
+      LEASH_CARD_ID: ${LEASH_CARD_ID:-CA0001}
+      LEASH_SIM_CUTOFF: ${LEASH_SIM_CUTOFF:-2026-08-09T00:00:00Z}
+      LEASH_PACK_DIR: ${LEASH_PACK_DIR:-/repo/data}  # where the image puts the pack (see LEASH_DATA_DIR)
+      PORT: "8100"
+      HOST: "0.0.0.0"
+    ports:
+      - "${LEASH_ASSISTANT_PORT:-8100}:8100"
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
   reset:
     <<: *engine
     profiles: ["reset"]

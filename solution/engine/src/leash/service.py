@@ -26,6 +26,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from leash.adapters.http.assistant_proxy import assistant_router
+
 from leash.adapters.http.events import EventHub, events_router
 from leash.adapters.http.policy_api import (MandateChanges, PlatformMandates, ResolveApi, RunApi, asks_router,
                                             mandate_changes_router, policy_router, runs_router)
@@ -235,6 +237,9 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
     app.include_router(mandate_changes_router(lambda: state["pool"], viseca))
     app.include_router(query_router(lambda: state["pool"], mandates, lambda: datetime.now(timezone.utc)))
     app.include_router(events_router(hub))
+    # The chat's calls go on to the permission assistant, a separate process (LEASH-175). HTTP only:
+    # nothing from `solution/assistant/` is imported into the process that decides payments.
+    app.include_router(assistant_router(os.environ.get("LEASH_ASSISTANT_URL")))
     if app_dist is not None and (app_dist / "index.html").exists():
         app.mount("/", StaticFiles(directory=app_dist, html=True), name="app")
     return app

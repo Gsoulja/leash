@@ -24,11 +24,11 @@ function Shell() {
   return (
     <div className="shell">
       <PhoneFrame>
-        <main className="view">
-          <h1>{label}</h1>
-          {tab === "home" ? <Cockpit selection={selection} /> : tab === "rules" ? <Permission /> : <Agent />}
+        <main className={`view${tab === "agent" ? " chat-view" : ""}`}>
+          {tab !== "agent" && <h1>{label}</h1>}
+          {tab === "home" ? <Cockpit selection={selection} onPermission={() => setTab("rules")} onChat={() => setTab("agent")} /> : tab === "rules" ? <Permission selectedRun={selection.run} onChat={() => setTab("agent")} onRunStarted={(id) => { selection.select(id); setTab("home"); }} /> : <Agent onBack={() => setTab("home")} onRunStarted={(id) => { selection.select(id); setTab("home"); }} />}
         </main>
-        <TabBar current={tab} onSelect={setTab} />
+        {tab !== "agent" && <TabBar current={tab} onSelect={setTab} />}
         <Asks />
       </PhoneFrame>
       <Inspector runId={selection.runId} />

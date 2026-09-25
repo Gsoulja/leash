@@ -1,6 +1,6 @@
 # LEASH-151: Deterministic demo reset and delivery
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: infra
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 144-T7
 **Blocked by**: none
 **Blocks**: LEASH-149, LEASH-153
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Guarantee that every rehearsal starts from the same clean data and that localhost serves the frontend bundle built from the current source revision.

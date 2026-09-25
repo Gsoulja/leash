@@ -208,12 +208,19 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
     "leash.adapters.http.events": "change notifications for the app, derived from decision_events",
     "leash.adapters.http.query_api": "read-only views for the app; its can_approve re-check mirrors application.resolve",
     "leash.application.clarify": "turns the customer's answers into a recompiled draft; readings come from the compiler",
+    "leash.policy.render": "reads a compiled rule back to the customer in one sentence (DEC-045). Presentation "
+                           "only: changing the wording changes what a customer was shown, never what is "
+                           "enforced, so it must not move any field's fingerprint",
     "leash.service": "process wiring: routers, background loops, health and readiness",
     "leash.adapters.postgres.migrate": "runs the migrations and the pack seed; the seed itself is hashed",
     "leash.adapters.postgres.reset": "clears demo tables and reloads the pack for a rehearsal (LEASH-151); "
                                      "it writes no decision state and is never on the live path",
     "leash.adapters.http.policy_api": "draft, submit and confirm endpoints; rules pass through hard_rules and the compiler, "
                                       "never evaluated here",
+    "leash.adapters.http.assistant_proxy": "passes the chat's calls on to the permission assistant, a "
+                                           "separate process (LEASH-175). Forwarding only: it reads, "
+                                           "validates and stores nothing, so it cannot change what any "
+                                           "field means",
     "leash.adapters.viseca_api.client": "HTTP transport",
     "leash.adapters.viseca_api.worker": "polling loop and process wiring; every verdict comes from DecidePurchase",
     "leash.adapters.viseca_api.event_schema": "structural validation only: rejects, never changes a value",

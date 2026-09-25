@@ -22,6 +22,8 @@ Make delegated purchasing understandable and enforceable without giving the perm
 - [ ] LEASH-154 (008-T5): Relevant customer context with provenance and scope.
 - [ ] LEASH-155 (008-T6): Evaluate Laya permission verification; fine-tune only if justified.
 - [ ] LEASH-156 (008-T7): Reviewed permission corpus and complete-journey acceptance evidence.
+- [ ] LEASH-174 (008-T8): The model reads, deterministic code validates and renders (DEC-045).
+- [ ] LEASH-175 (008-T9): Serve the permission assistant, so the chat reaches the model at all.
 
 ## Delivery order
 Context → permission conversation and editable drafts → exact review → external-agent handoff → checkout and platform outcome → acceptance evidence. LEASH-145–153 own presentation. Laya verification is an optional evaluated enhancement and does not block the first complete journey. Catalogue lookup is optional: unresolved references can always become customer questions.

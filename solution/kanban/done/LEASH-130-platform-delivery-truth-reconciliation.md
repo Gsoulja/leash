@@ -1,6 +1,6 @@
 # LEASH-130: Platform delivery truth reconciliation
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: L
@@ -11,7 +11,7 @@
 **Task ID**: 129-T1
 **Blocked by**: none
 **Blocks**: LEASH-128, LEASH-132, LEASH-137, LEASH-142, LEASH-143, LEASH-148, LEASH-150, LEASH-156
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Separate the engine verdict from Viseca's accepted outcome. A decision rejected after the local commit must never remain displayed or counted as paid.

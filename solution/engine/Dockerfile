@@ -31,9 +31,14 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY solution/engine/ ./
 RUN uv sync --frozen --no-dev
 COPY data/ /repo/data/
+# The permission assistant runs from this image too, as its own process and its own command
+# (LEASH-175). Same image, separate process: the isolation that matters is that the engine imports
+# nothing from it, which `tests/adapters/test_assistant_proxy.py` and the assistant's own tests assert.
+COPY solution/assistant/ /repo/solution/assistant/
 COPY --from=app /repo/solution/app/dist /repo/solution/app/dist
 ENV LEASH_DATA_DIR=/repo/data LEASH_APP_DIST=/repo/solution/app/dist \
     LEASH_EVENT_SCHEMA=/repo/data/schemas/authorization_event.schema.json \
+    PYTHONPATH=/repo/solution \
     LEASH_APP_REVISION=$APP_REVISION
 RUN useradd --create-home leash
 USER leash

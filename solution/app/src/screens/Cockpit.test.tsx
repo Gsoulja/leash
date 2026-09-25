@@ -112,7 +112,7 @@ describe("Cockpit", () => {
 
   it("spending bar shows the rolling window and what's left", async () => {
     setup([[payment("A", "approved")]]);
-    expect(await screen.findByText("Agent spent · last 7 days")).toBeInTheDocument();
+    expect(await screen.findByText("Approved amount · last 7 days")).toBeInTheDocument();
     expect(screen.getByText("CHF 180.00")).toBeInTheDocument();
     expect(screen.getByText("Left in 7 days")).toBeInTheDocument();
     expect(screen.getByText("CHF 120.00")).toBeInTheDocument();
@@ -122,14 +122,15 @@ describe("Cockpit", () => {
 
   it("without a period limit there is no bar", async () => {
     setup([[payment("A", "approved")]], [{ ...SPENDING, period_days: null, limit_chf: null, remaining_chf: null }]);
-    expect(await screen.findByText("Agent spent")).toBeInTheDocument();
+    expect(await screen.findByText("Approved across this simulation")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
   it("groups payments by day, newest first", async () => {
     setup([[payment("A", "approved", { sim_time: "2026-08-11T09:00:00Z" }), payment("B", "approved", { sim_time: "2026-08-12T23:30:00Z" })]]);
-    const days = await screen.findAllByRole("heading", { level: 2 });
-    expect(days.map((d) => d.textContent)).toEqual(["13 Aug 2026", "11 Aug 2026"]);  // 23:30Z is the 13th in Zurich
+    await screen.findByRole("button", { name: /Shop B/ });
+    const days = screen.getAllByRole("heading", { level: 2 });
+    expect(days.filter((d) => d.classList.contains("glabel")).map((d) => d.textContent)).toEqual(["13 Aug 2026", "11 Aug 2026"]);  // 23:30Z is the 13th in Zurich
   });
 
   it("initial state comes from the read model; the stream only triggers a reload", async () => {
@@ -274,4 +275,28 @@ describe("Cockpit per run (LEASH-133)", () => {
     expect(await screen.findByText("Payments couldn't be loaded right now.")).toBeInTheDocument();
     expect(screen.queryByText(/No agent payments/)).toBeNull();
   });
+});
+
+it("shows the selected simulation's fixed limit separately from the current permission status", async () => {
+  const selected = run("RUN-01", "finished");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    const body = url === "/api/runs" ? { runs: [selected], current_run_id: selected.run_id }
+      : url === "/api/mandates/TM-1/versions" ? { mandate_id: "TM-1", versions: [{ version: 1,
+        hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=", value: 250 }], uncertainty_policy: "ask" }] }
+      : url === "/api/mandates/TM-1" ? { mandate_id: "TM-1", version: 2, status: "active",
+        hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=", value: 100 }] }
+      : url === "/api/scenarios" ? { scenarios: [{ scenario_id: "SCEN0001", scenario_name: "Household shopping" }] }
+      : url.startsWith("/api/payments") ? { payments: [payment("B", "waiting", { delivery: "pending" })] }
+      : { ...SPENDING, period_days: null, limit_chf: null, remaining_chf: null };
+    return new Response(JSON.stringify(body), { status: 200 });
+  }));
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><CockpitHarness /></QueryClientProvider>);
+  expect(await screen.findByText("Permission active")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Simulation finished" })).toBeInTheDocument();
+  expect(screen.getByText("CHF 250.00", { exact: false, selector: ".order-boundary" })).toBeInTheDocument();
+  expect(screen.queryByText("CHF 100.00", { exact: false })).toBeNull();
+  expect(screen.getAllByRole("button", { name: /Shop B/ })).toHaveLength(1);
+  expect(within(screen.getByRole("region", { name: "Needs your decision" })).getByRole("button", { name: /Shop B/ })).toBeInTheDocument();
 });

@@ -88,6 +88,28 @@ def test_a_local_draft_is_compiled_and_kept_apart_from_the_platform(api):
     assert http.get("/api/policies/drafts/LD-nope").status_code == 404
 
 
+def test_history_exchange_is_recorded_without_changing_or_confirming_permission(api):
+    http, viseca, _, _ = api
+    before = ready_draft(http)
+    path = f"/api/policies/drafts/{before['draft_id']}"
+    message = {"text": "check the history", "reply": "151 approved purchases. Permission unchanged.",
+               "context": {"scope": {"card_id": "CA0023"}, "summary": {"completed_purchases": 151}}}
+    response = http.post(path + "/messages", json=message)
+    assert response.status_code == 200, response.text
+    after = http.get(path).json()
+    assert {k: after[k] for k in before} == before
+    assert after["messages"][0]["text"] == message["text"]
+    assert after["messages"][0]["revision"] == before["revision"]
+    changed = http.post(path + "/turns", json={"text": "At most 1 item per order."}).json()
+    assert changed["messages"] == after["messages"]
+    assert viseca.creates == viseca.confirms == 0
+    http.post(path + "/submit", json={"revision": changed["revision"]})
+    confirmed = http.post(path + "/confirm", json={"confirmed": True, "revision": changed["revision"]}).json()
+    response = http.post(path + "/messages", json=message)
+    assert response.json()["confirmed_mandate"]["mandate_id"] == confirmed["mandate_id"]
+    assert viseca.confirms == 1
+
+
 def test_submit_posts_the_draft_to_viseca_and_shows_exactly_what_was_posted(api):
     http, viseca, fake, _ = api
     draft = ready_draft(http)
@@ -385,6 +407,27 @@ def test_a_new_draft_starts_at_revision_one(api):
     assert ready_draft(http)["revision"] == 1
 
 
+def test_model_questions_block_direct_submit_and_survive_reload(api):
+    http, viseca, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": CLEAR, "context": {
+        "assistant": {"model": "test", "questions": ["Which exact product?"], "status": "needs_answers"}
+    }}).json()
+    assert draft["status"] == "needs_answers"
+    assert http.get(f"/api/policies/drafts/{draft['draft_id']}").json()["assistant"]["model"] == "test"
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").status_code == 409
+    assert viseca.creates == 0
+
+
+def test_customer_can_replace_an_unconfirmed_task_and_stale_review_fails(api):
+    http, _, _, _ = api
+    draft = ready_draft(http)
+    updated = http.post(f"/api/policies/drafts/{draft['draft_id']}/turns", json={
+        "text": CLEAR.replace("400", "500"), "replace_instruction": True}).json()
+    assert updated["revision"] == 2
+    assert [r["value"] for r in updated["hard_rules"] if r["field"] == "authorization.billing_amount_chf"] == [500]
+    assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).status_code == 409
+
+
 def test_a_correction_creates_a_new_revision_and_supersedes_the_old_one(api):
     http, _, _, url = api
     draft = http.post("/api/policies/drafts", json={"instruction": GROCERIES}).json()
@@ -507,3 +550,207 @@ def test_a_malformed_revision_is_refused_rather_than_skipping_the_check(api):
     bad = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm",
                     json={"confirmed": True, "revision": 0})
     assert bad.status_code == 422 and viseca.confirms == 0
+
+
+# --- LEASH-145: free-text turns in the permission conversation ---------------------------------------------
+
+LIMIT = "Buy groceries for CHF 50 or less. Ask me when unsure."
+
+
+def turns_path(draft: dict) -> str:
+    return f"/api/policies/drafts/{draft['draft_id']}/turns"
+
+
+def test_a_free_text_turn_makes_a_new_revision_from_the_customers_words(api):
+    """A chat turn is not an answer to a question: it is more of what the customer wants."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": LIMIT}).json()
+    said = http.post(turns_path(draft), json={"text": "Only for delivery."})
+    assert said.status_code == 200, said.json()
+    view = valid(said.json(), "PolicyDraft")
+    assert view["revision"] == draft["revision"] + 1
+    assert "Only for delivery." in view["instruction"] and LIMIT in view["instruction"]
+    assert http.get(f"/api/policies/drafts/{draft['draft_id']}").json() == view  # stored, not just returned
+
+
+def test_the_transcript_keeps_every_turn_in_order(api):
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": LIMIT}).json()
+    http.post(turns_path(draft), json={"text": "Only for delivery."})
+    view = http.post(turns_path(draft), json={"text": "One item only."}).json()
+    assert view["revision"] == 3
+    assert view["instruction"].index("Only for delivery.") < view["instruction"].index("One item only.")
+
+
+def test_a_turn_that_moots_an_earlier_answer_does_not_break_the_draft(api):
+    """Adding words can close a question that was already answered. The answer is dropped, never
+    replayed against a question that no longer exists — and nothing 500s."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": "Buy groceries for CHF 50 or less."}).json()
+    unsure = next(q for q in draft["open_questions"] if "unsure" in q["text"])
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+              json={"answers": [{"question_id": unsure["question_id"], "answer": "Decline"}]})
+    said = http.post(turns_path(draft), json={"text": "Ask me when unsure."})
+    assert said.status_code == 200, said.json()
+    assert said.json()["uncertainty_policy"] == "ask"  # the customer's later words win
+
+
+def test_a_turn_is_refused_once_the_draft_is_at_viseca(api):
+    """Viseca has no draft update: a submitted draft is frozen, exactly as answering one is."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": LIMIT}).json()
+    http.post(f"/api/policies/drafts/{draft['draft_id']}/submit")
+    late = http.post(turns_path(draft), json={"text": "Only for delivery."})
+    assert late.status_code == 409 and late.json()["error"]["code"] == "already_submitted"
+
+
+def test_bad_turns(api):
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": LIMIT}).json()
+    assert http.post("/api/policies/drafts/LD-nope/turns", json={"text": "hello"}).status_code == 404
+    for body in ({}, {"text": ""}, {"text": "   "}, {"text": 7}, {"text": "ok", "extra": 1}, []):
+        response = http.post(turns_path(draft), json=body)
+        assert response.status_code == 422 and valid(response.json(), "Error"), body
+
+
+def test_the_draft_says_which_answers_it_was_actually_built_from(api):
+    """A turn can drop an answer whose question closed or was re-asked. The view must say so, or a
+    transcript keeps showing a settled point the draft no longer holds (LEASH-145 AC8)."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": "Buy groceries for CHF 50 or less."}).json()
+    assert draft["answers"] == []
+    unsure = next(q for q in draft["open_questions"] if "unsure" in q["text"])
+    answered = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+                         json={"answers": [{"question_id": unsure["question_id"], "answer": "Decline"}]}).json()
+    assert [a["answer"] for a in answered["answers"]] == ["Decline"]
+    assert answered["answers"][0]["question"] == unsure["text"]  # as it was worded when it was answered
+
+    # The customer now says the policy in words. The question is no longer asked, so the answer is gone.
+    said = http.post(f"/api/policies/drafts/{draft['draft_id']}/turns", json={"text": "Ask me when unsure."}).json()
+    assert said["answers"] == []
+    assert said["uncertainty_policy"] == "ask"
+
+
+def test_a_conflicting_answer_is_not_reported_as_one_the_draft_was_built_from(api):
+    """A free-text answer that clashes is told to the customer and the question stays open. Reporting
+    it as replayed would let a transcript show a settled point that was in fact refused (LEASH-145)."""
+    http, _, _, _ = api
+    body = {"instruction": "Buy groceries for CHF 50, for delivery. Decline when unsure."}
+    draft = http.post("/api/policies/drafts", json=body).json()
+    spend = next((q for q in draft["open_questions"] if "most I may spend" in q["text"]), None)
+    assert spend is not None, [q["text"] for q in draft["open_questions"]]
+    said = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+                     json={"answers": [{"question_id": spend["question_id"],
+                                        "answer": "At most CHF 50, pick up only."}]})
+    assert said.status_code in (200, 422)
+    if said.status_code == 200:
+        view = said.json()
+        still_open = {q["question_id"] for q in view["open_questions"]}
+        for answer in view["answers"]:
+            assert answer["question_id"] not in still_open, answer
+
+
+def test_an_accepted_free_text_answer_is_reported_as_one_the_draft_was_built_from(api):
+    """The other half of the rule: an answer that IS applied must be reported, or the transcript loses
+    a settled pair the draft does hold (LEASH-145). Pins the free-text branch, not only the option one."""
+    http, _, _, _ = api
+    body = {"instruction": "Buy groceries for CHF 50, for delivery. Decline when unsure."}
+    draft = http.post("/api/policies/drafts", json=body).json()
+    spend = next((q for q in draft["open_questions"] if "most I may spend" in q["text"]), None)
+    assert spend is not None, [q["text"] for q in draft["open_questions"]]
+    view = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+                     json={"answers": [{"question_id": spend["question_id"],
+                                        "answer": "At most CHF 30 per order."}]}).json()
+    assert [a["answer"] for a in view["answers"]] == ["At most CHF 30 per order."]
+    assert view["answers"][0]["question_id"] == spend["question_id"]
+    assert spend["question_id"] not in {q["question_id"] for q in view["open_questions"]}  # it was applied
+
+
+def test_a_stored_instruction_is_always_a_prefix_of_the_next_one(api):
+    """Turns are appended, so a reader can tell what each one added by difference — but only if the
+    first instruction is stored the same way the joins are (LEASH-145)."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": "  Buy groceries for CHF 50 or less.  "}).json()
+    assert draft["instruction"] == "Buy groceries for CHF 50 or less."
+    after = http.post(f"/api/policies/drafts/{draft['draft_id']}/turns", json={"text": "Only for delivery."}).json()
+    assert after["instruction"].startswith(draft["instruction"])
+    assert after["instruction"][len(draft["instruction"]):].strip() == "Only for delivery."
+
+
+# ----- DEC-045: rules the model read must survive the rest of the conversation ---------------------
+
+GERMAN_RULE = {"field": "authorization.billing_amount_chf", "operator": "<=", "value": 50,
+               "currency": "CHF", "scope": "purchase"}
+
+
+def test_a_rule_the_model_read_survives_a_later_turn(api):
+    """Recompiling from the instruction alone would silently drop it, which is a loosening (DEC-006)."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts",
+                      json={"instruction": "höchstens CHF 50 pro Bestellung",
+                            "rules": [GERMAN_RULE]}).json()
+    assert [r["field"] for r in draft["hard_rules"]] == [GERMAN_RULE["field"]]
+    view = http.post(turns_path(draft), json={"text": "Only for delivery."}).json()
+    assert GERMAN_RULE["field"] in [r["field"] for r in view["hard_rules"]], view["hard_rules"]
+
+
+def test_a_rule_the_model_read_survives_an_answer(api):
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts",
+                      json={"instruction": "höchstens CHF 50 pro Bestellung",
+                            "rules": [GERMAN_RULE]}).json()
+    question = next(q for q in draft["open_questions"] if q["blocking"])
+    view = http.post(f"/api/policies/drafts/{draft['draft_id']}/answers",
+                     json={"answers": [{"question_id": question["question_id"], "answer": "Ask me"}]})
+    if view.status_code == 200:
+        assert GERMAN_RULE["field"] in [r["field"] for r in view.json()["hard_rules"]]
+
+
+def test_a_later_turn_can_add_a_rule_the_model_read(api):
+    """Otherwise only the first message in a conversation can carry the model's reading."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts",
+                      json={"instruction": "höchstens CHF 50 pro Bestellung", "rules": [GERMAN_RULE]}).json()
+    said = http.post(turns_path(draft),
+                     json={"text": "nur Lieferung",
+                           "rules": [{"field": "authorization.fulfillment_method", "operator": "in",
+                                      "value": ["delivery"]}]})
+    assert said.status_code == 200, said.json()
+    fields = [r["field"] for r in said.json()["hard_rules"]]
+    assert "authorization.fulfillment_method" in fields and GERMAN_RULE["field"] in fields, fields
+
+
+def test_correcting_reviewed_but_unconfirmed_draft_requires_fresh_review(api):
+    http, viseca, fake, _ = api
+    draft = ready_draft(http)
+    path = f"/api/policies/drafts/{draft['draft_id']}"
+    first = http.post(f"{path}/submit", json={"revision": 1}).json()
+    changed = http.post(f"{path}/turns", json={"text": CLEAR.replace("400", "500"), "replace_instruction": True})
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["revision"] == 2
+    assert fake.mandates[first["platform_draft_id"]].status == "draft"
+    assert http.post(f"{path}/confirm", json={"confirmed": True, "revision": 1}).status_code == 409
+    second = http.post(f"{path}/submit", json={"revision": 2}).json()
+    assert second["platform_draft_id"] != first["platform_draft_id"]
+    confirmed = http.post(f"{path}/confirm", json={"confirmed": True, "revision": 2})
+    assert confirmed.status_code == 200, confirmed.text
+    assert http.get(path).json()["confirmed_mandate"]["mandate_id"] == confirmed.json()["mandate_id"]
+    assert http.post(f"{path}/turns", json={"text": CLEAR, "replace_instruction": True}).status_code == 409
+
+
+def test_each_model_turn_retains_the_background_it_actually_read(api):
+    http, _, _, url = api
+    draft = ready_draft(http)
+    evidence = {"scope": {"card_id": "CA0001"}, "instruction": "Only groceries.", "entries": []}
+    response = http.post(turns_path(draft), json={"text": "Only groceries.", "context": evidence})
+    assert response.status_code == 200
+
+    async def read_context():
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetchval("select context from draft_revisions where draft_id = $1 and revision = 2", draft["draft_id"])
+        finally:
+            await conn.close()
+    with ThreadPoolExecutor() as pool:
+        stored = pool.submit(asyncio.run, read_context()).result()
+    assert json.loads(stored) == evidence

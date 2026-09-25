@@ -239,7 +239,9 @@ def invalid_event_response(authorization_id: str, error: str, *, engine_version:
                   "I couldn't read this purchase request safely, so I'm asking you.", INVALID_EVENT)
     decision = Decision("step_up", (check,), (INVALID_EVENT,))
     body = explain(decision, authorization_id=authorization_id, engine_version=engine_version)
-    body["evidence"] = [*body["evidence"], html.escape(f"Error: {error}")[:300]]
+    body["evidence"] = [*body["evidence"],
+                        {"check": "event", "label": "Parse error", "status": "integrity", "agreed": "A readable event",
+                         "actual": html.escape(error)[:300], "reason_code": INVALID_EVENT}]
     return body
 
 

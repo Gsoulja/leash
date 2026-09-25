@@ -21,7 +21,7 @@ Design: solution/docs/laya-training-pipeline.html.
 - [ ] LEASH-070 (006-T1) [M1]: Question bank v1 · S
 - [ ] LEASH-071 (006-T2) [M1]: Regex fact reader · M
 - [ ] LEASH-072 (006-T3) [M2]: Timeout, fallback and circuit breaker for readers · M
-- [ ] LEASH-073 (006-T4) [M6]: Data factory · L
+- [x] LEASH-073 (006-T4) [M6]: Data factory · L
 - [ ] LEASH-074 (006-T5) [M6]: Public data ingest · M
 - [ ] LEASH-075 (006-T6) [M6]: Splits by family and frozen eval sets · M
 - [ ] LEASH-076 (006-T7) [M6]: Regex baseline on eval sets · S

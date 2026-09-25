@@ -33,6 +33,10 @@ _NEGATION = re.compile(r"\b(not|never|no|don't|dont|do not|doesn't|except|withou
 class Question:
     field: str  # the hard_rule field (or "uncertainty_policy") the answer decides
     text: str
+    #: The customer's own sentence this question is about, when it is about one. A reader that can
+    #: read what this grammar cannot (DEC-045) needs the sentence itself to tell whether anything in
+    #: it went unread — quoting it back out of `text` would be reparsing our own message.
+    about: str = ""
 
 
 @dataclass(frozen=True)
@@ -347,6 +351,11 @@ class KeywordClassifier:
             else:
                 options = ", ".join(i.name for i in matches[:6]) or "nothing in the catalogue"
                 ask(Question(m.F_ITEM_ID, f'Which item is "{named.group(1).strip()}"? It matches {options}.'))
+        for item in catalogue:
+            if re.search(rf"\bcatalogue item {re.escape(item.item_id)}\b", t, re.I):
+                item_mode = True
+                add(Reading(Rule(m.F_ITEM_ID, "in", (item.item_id,)),
+                            f'Only catalogue item {item.item_id}: {item.name}.'))
         if item_mode or re.search(r"(?:do not|don't) add anything|nothing extra|only what i asked", t):
             add(Reading(Rule(m.F_UNREQUESTED_ITEMS, "=", Decimal("0")),
                         "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for."))
@@ -360,7 +369,7 @@ class KeywordClassifier:
                 prefix = clause[:match.start()]
                 if re.search(r"chf\s*$", prefix) or re.search(r"\b(per|each)\b", match.group(0)):
                     continue
-                if re.search(r"\b(?:sizes?|eu|at most)\s*$", prefix):  # "size 43 items", "at most 2 …": not a count
+                if re.search(r"\b(?:sizes?|eu)\s*$", prefix):  # "size 43 items", "at most 2 …": not a count
                     continue
                 clause_read = True
                 if _negated(clause, match.start()) or re.search(r"(more than|over|at least|than)\s*$", prefix):
@@ -391,7 +400,7 @@ class KeywordClassifier:
         if once:
             add(Reading(Rule(m.F_MAX_PURCHASES, "<=", Decimal("1")), "One purchase in total (DEC-013)."))
         # a frequency ("2 orders per week") is asked below; any other "at most N orders" is read
-        for count in re.findall(r"\bat most\s+([\w-]+)\s+(?:orders|purchases)\b"
+        for count in re.findall(r"\bat most\s+([\w-]+)\s+(?:orders?|purchases?)\b"
                                 r"(?!\s+(?:per|a|each|every)\s+(?:day|week|month|year)\b)", t):
             total = _number(count)
             if total is None or total < 1:  # a count no reader knows is asked, never dropped
@@ -437,14 +446,19 @@ class KeywordClassifier:
                                            r"(?:used|bought from|shopped at|paid)(?:\s+\w+)?\s+before", t)
         never = re.search(rf"\b{shop_words}\b[\w\s']{{0,25}}\b(?:never|not)\b[\w\s']{{0,15}}\b(?:used|bought|shopped)", t)
         vague = re.search(rf"\b(?:familiar|usual|known|trusted|favou?rite)\s+{shop_words}", t)
-        if regular_neg or before_neg or never or (regular and before) or (vague and not (regular or before)):
+        explicit_prior = re.search(r"by a regular shop i mean at least (\d+) earlier purchases on this card", t)
+        if explicit_prior:
+            n = int(explicit_prior.group(1))
+            add(Reading(Rule(m.F_PRIOR_PURCHASES, ">=", Decimal(n)),
+                        f"Only shops with at least {n} earlier purchases on this card."))
+        elif regular_neg or before_neg or never or (regular and before) or (vague and not (regular or before)):
             ask(Question(m.F_PRIOR_PURCHASES, "Which shops may I use: only ones you've paid before, or any shop?"))
         elif regular:
             add(Reading(Rule(m.F_PRIOR_PURCHASES, ">=", Decimal("3")),
                         '"A shop I use regularly" = at least 3 earlier purchases there on this card (DEC-014).'))
         elif before:
             add(Reading(Rule(m.F_PRIOR_PURCHASES, ">=", Decimal("1")),
-                        "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)."))
+                        "Only shops you have paid before on this card (an earlier approved purchase in the run counts)."))
 
         delivery, delivery_neg = _clause_match(r"\bfor delivery\b|\bdelivered\b|\bdelivery only\b", t)
         pickup, pickup_neg = _clause_match(r"\bpick[- ]?up\b|\bcollect(?:ion)?\b", t)
@@ -510,17 +524,18 @@ _PHRASES = [
     # a count only before "item(s)" or "book(s)", which the count reader reads; "two cosmetics" is asked
     r"(?:(?:one|two|a single) )?(?:ordinary |household |our |some )*(?:grocery items?|items? of clothing|items?|"
     r"books?)",
-    r"(?:ordinary |household |our |some )*(?:groceries|grocery|clothing(?: for me)?|clothes|cosmetics|shoes|"
+    r"(?:only )?(?:ordinary |household |our |some )*(?:groceries|grocery|clothing(?: for me)?|clothes|cosmetics|shoes|"
     r"running shoes)",
     r"a single (?:item of clothing|book|grocery item)",
     # amounts (the amount readers take the operator and period from these)
     rf"(?:for |and )?(?:pay |spend )?(?:no more than|not more than|at most|up to|at or below|under|less than|below) {_CHF}",
     rf"(?:for )?{_CHF}(?: or less| or below)?",
     rf"keep {_ORDER} (?:at or below|under|below) {_CHF}", r"(?:keep )?the (?:weekly )?total",
-    r"(?:(?:,\s*)?including delivery)", rf"{_ORDER}",
+    r"(?:(?:,\s*)?including delivery|delivery included)", rf"{_ORDER}",
     rf"(?:across |over |in |within )?any {_N} days", rf"over {_N} days", r"per week", r"weekly total",
     rf"(?:at or below|at most|up to) {_CHF}",
     # shops
+    r"only supermarkets?",
     rf"from (?:a |the )?{_SHOPS} (?:that )?i (?:use regularly|use regulary|often use|regularly use)",
     rf"from (?:a |the )?{_SHOPS} (?:that )?i(?:'ve| have)? (?:already )?(?:used|bought from|shopped at|paid)(?: at)? before",
     r"(?:buy )?(?:only )?from (?:a |the )?(?:specialist sports retailer|sports? (?:shop|store|retailer)|"
@@ -532,7 +547,8 @@ _PHRASES = [
     rf"(?:and )?(?:only )?if (?:it|the order|they) can be returned within {_N} (?:days?|weeks?)(?: or more)?",
     rf"returnable within (?:{_N} (?:days?|weeks?)|a fortnight)",
     # counts
-    r"(?:and )?only buy once", rf"at most {_N} (?:orders|purchases)",
+    r"(?:and )?only buy once", rf"at most {_N} (?:orders?|purchases?)", rf"at most {_N} items?",
+    rf"by a regular shop i mean at least {_N} earlier purchases on this card",
     # fixed sentences of the public instructions
     r"(?:do not|don't) add anything i (?:did not|didn't) ask for", r"nothing extra",
     r"pause anything that looks like someone other than me is driving the session",
@@ -551,6 +567,8 @@ def _grammar(catalogue: Sequence[CatalogueItem]) -> re.Pattern[str]:
     words = sorted({w for i in catalogue for w in re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", i.name.lower())},
                    key=len, reverse=True) or ["monitor"]
     phrases = _PHRASES + _chosen("|".join(re.escape(w) for w in words))
+    if catalogue:
+        phrases += [r"catalogue item (?:" + "|".join(re.escape(i.item_id) for i in catalogue) + r")"]
     return re.compile(rf"^\s*(?:(?:{'|'.join(phrases)})(?:\s+|\s*,\s*|$))+\s*$", re.I)
 
 
@@ -587,10 +605,12 @@ def compile_instruction(instruction: str, *, catalogue: Iterable[CatalogueItem] 
             understood.append(sentence)
             continue
         questions.append(Question("instruction", f'I\'m not sure how to read "{sentence}". Could you say it as a '
-                                                 "simple rule (for example: at most CHF 50 per order)?"))
+                                                 "simple rule (for example: at most CHF 50 per order)?",
+                                  about=sentence))
         for cue, field_name in _CUES:
             if re.search(cue, sentence, re.I):
-                questions.append(Question(field_name, f'Please confirm what "{sentence}" means for this rule.'))
+                questions.append(Question(field_name, f'Please confirm what "{sentence}" means for this rule.',
+                                          about=sentence))
     confident = " ".join(understood)
     more, asked = _amounts(confident)
     readings += more

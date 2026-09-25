@@ -1,0 +1,33 @@
+# Explicit local platform. Apply after docker-compose.yml; .env cannot redirect these services live.
+# docker compose -p leash-local -f solution/docker-compose.yml -f solution/docker-compose.local.yml --profile fake up -d --build
+services:
+  api:
+    environment:
+      LEASH_BASE_URL: http://fake:9000
+      TEAM_API_KEY: fake-team-key
+    depends_on:
+      fake: {condition: service_started}
+  worker:
+    environment:
+      LEASH_BASE_URL: http://fake:9000
+      TEAM_API_KEY: fake-team-key
+    depends_on:
+      fake: {condition: service_started}
+  migrate:
+    environment:
+      LEASH_BASE_URL: http://fake:9000
+      TEAM_API_KEY: fake-team-key
+  assistant:
+    environment:
+      LEASH_BASE_URL: http://fake:9000
+      LEASH_POLICY_URL: http://api:8080
+      LEASH_ASSISTANT_MODEL: apertus
+      LEASH_SIMULATION: "1"
+  fake:
+    environment:
+      LEASH_BASE_URL: http://fake:9000
+      TEAM_API_KEY: fake-team-key
+      FAKE_API_KEY: fake-team-key
+      FAKE_STATE_FILE: /state/platform.json
+    volumes:
+      - ../output/local-platform-state:/state

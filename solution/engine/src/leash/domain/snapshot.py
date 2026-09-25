@@ -95,6 +95,14 @@ class Snapshot:
     def known_country(self, country: str) -> bool:
         return country in self.baseline.countries or any(p.merchant.country == country for p in self._approved())
 
+    def has_purchase_history(self) -> bool:
+        """Whether this card shows any approved purchase at all — from history or earlier in this run.
+
+        False means we know nothing about where this customer shops, which is a missing fact. It is not
+        the same as knowing they have never used *this* shop (DEC-046).
+        """
+        return bool(self.baseline.merchant_purchases) or bool(self._approved())
+
     def familiar_merchants(self) -> dict[str, int]:
         """merchant_id → approved purchases, for every merchant this card has used (history or this run)."""
         ids = set(self.baseline.merchant_purchases) | {p.merchant.merchant_id for p in self._approved()}

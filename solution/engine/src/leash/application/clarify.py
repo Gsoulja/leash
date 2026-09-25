@@ -29,7 +29,9 @@ from typing import Any
 from leash.domain import mandate as m
 from leash.domain.mandate import CompiledMandate, Rule, Uncertainty
 from leash.policy.compiler import CatalogueItem, Draft, Question, compile_instruction
-from leash.policy.hard_rules import mandate_to_api
+from leash.policy.registry import REGISTRY
+from leash.policy.render import describe_rule, permission_review
+from leash.policy.hard_rules import mandate_to_api, rule_to_api
 
 def optional(q: Question) -> bool:
     """Only the two offers of an extra restriction are optional; a question about the customer's own words
@@ -125,11 +127,87 @@ def _as_strict(policy: Uncertainty) -> list[str]:
     return [k for k, v in _UNCERTAINTY.items() if _STRICT[v] >= _STRICT[policy]]
 
 
-def _build(base: Draft, stated_policy: Uncertainty | None, state: _State) -> _Built:
-    rules = list(dict.fromkeys([*base.mandate.rules, *(r for d in state.accepted for r in d.mandate.rules),
-                                *(r for r, _ in state.option_rules)]))
+def _restriction(rule: Rule) -> tuple[Any, ...]:
+    """What the rule actually restricts, without the bookkeeping two readers can spell differently.
+
+    The compiler reads "At most CHF 50 per order" with `currency="CHF", scope="purchase"`; the model
+    reads the same limit with neither. As whole `Rule` objects those are two rules, so the customer
+    reviewed one limit twice and both were submitted to the platform. A set written in another order
+    is the same restriction too.
+    """
+    value = rule.value
+    if isinstance(value, tuple):
+        value = frozenset(value)
+    elif isinstance(value, Decimal):
+        value = value.normalize()
+    return (rule.field, rule.operator, value, rule.period_days)
+
+
+def _once(rules: Sequence[Rule]) -> list[Rule]:
+    """The same restriction once, keeping the first reading (the one that named its scope)."""
+    seen: dict[tuple[Any, ...], Rule] = {}
+    for rule in rules:
+        seen.setdefault(_restriction(rule), rule)
+    return list(seen.values())
+
+
+#: Where one restriction ends and the next begins, in any of the four national languages. Generous on
+#: purpose: over-splitting asks one more question, under-splitting drops a restriction.
+_CLAUSE = re.compile(r",(?=\s)|;|:|\b(?:and|but|or|und|aber|oder|et|mais|ou|oppure|e|ma|o)\b", re.I)
+
+
+def _read_by_model(q: Question, proposed: Sequence[Rule]) -> bool:
+    """The compiler could not read this sentence, but the model read a rule out of it (DEC-045).
+
+    The grammar is English-only, so "I'm not sure how to read …" and "Please confirm what … means for
+    this rule" fire for every German, French and Italian sentence. Asking them there is the retired
+    grammar deciding what may become a rule by the back door: measured on 2026-09-25, a correctly read
+    German instruction carried six blocking questions and no answer could clear them, because a
+    free-text answer has to be readable by the same grammar.
+
+    Only a sentence the model actually read is covered. One it did not is still asked about, which is
+    what keeps the omission net (DEC-045's compensating control) intact.
+    """
+    about = (q.about or "").strip().lower()
+    if not about or not proposed:
+        return False
+    if q.field == "instruction":
+        # Per clause, not per sentence: one rule read out of "Buy me a jacket, at most CHF 120 per
+        # order, and no subscriptions." is not a reading of that sentence, and the restriction nobody
+        # read would vanish silently (found in review, 2026-09-25 — DEC-056 amended).
+        clauses = [c for c in _CLAUSE.split(about) if re.search(r"\w", c)]
+        return bool(clauses) and len([r for r in proposed if _states(r, about)]) >= len(clauses)
+    return any(r.field == q.field for r in proposed)
+
+
+def _states(rule: Rule, sentence: str) -> bool:
+    """The sentence carries this rule's value, so the rule was read out of these words."""
+    values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
+    for value in values:
+        text = str(value)
+        if isinstance(value, Decimal):
+            text = str(value.normalize())
+            if value == value.to_integral_value():
+                text = str(int(value))
+        if re.search(rf"(?<![0-9A-Za-z]){re.escape(text.lower())}(?![0-9A-Za-z])", sentence):
+            return True
+    return False
+
+
+def _build(base: Draft, stated_policy: Uncertainty | None, state: _State,
+           proposed: Sequence[Rule] = ()) -> _Built:
+    # `proposed` are rules the model read from the customer's words that the compiler did not read the
+    # same way — since DEC-045 that includes everything not written in the compiler's English grammar.
+    # They are appended like any other rule, so the strictest per field still wins and a draft can only
+    # get tighter. Their sentence is generated from the rule itself, never from the model's prose.
+    rules = _once([*base.mandate.rules, *(r for d in state.accepted for r in d.mandate.rules),
+                   *(r for r, _ in state.option_rules), *proposed])
+    independently_read = {_restriction(r) for r in base.mandate.rules}
     notes = [n for n in dict.fromkeys([*base.notes, *(n for d in state.accepted for n in d.notes),
-                                       *(n for _, n in state.option_rules)]) if n not in _POLICY_NOTES.values()]
+                                       *(n for _, n in state.option_rules),
+                                       *(describe_rule(r) for r in proposed
+                                         if _restriction(r) not in independently_read)])
+             if n not in _POLICY_NOTES.values()]
     policy: Uncertainty = state.policy or stated_policy or base.mandate.uncertainty
     decided = stated_policy is not None or state.policy is not None
     notes.append(_POLICY_NOTES[policy])
@@ -139,6 +217,8 @@ def _build(base: Draft, stated_policy: Uncertainty | None, state: _State) -> _Bu
     for q in base.questions:
         qid = question_id(q)
         if qid in state.closed or (q.field == "uncertainty_policy" and decided):
+            continue
+        if _read_by_model(q, proposed):
             continue
         if q.field in (m.F_ITEM_CATEGORY, m.F_MERCHANT_CATEGORY) and '"' not in q.text and not optional(q) \
                 and q.field in answered_fields:
@@ -194,8 +274,9 @@ def _clashing_rule(rules: Sequence[Rule], so_far: _Built, base: Draft,
     """The field of the first rule that can't be honoured next to everything so far, if any."""
     current = replace(base.mandate, rules=tuple(so_far.rules), uncertainty=so_far.policy)
     for rule in rules:
-        if rule in current.rules:
-            without = replace(current, rules=tuple(r for r in current.rules if r != rule))
+        same = lambda r: (r.field, r.operator, r.value, r.period_days) == (rule.field, rule.operator, rule.value, rule.period_days)
+        if any(same(r) for r in current.rules):
+            without = replace(current, rules=tuple(r for r in current.rules if not same(r)))
             if without._snapshot() == current._snapshot():  # a stricter rule overrides it: the answer can't apply
                 return rule.field
             continue
@@ -245,20 +326,22 @@ def _raise_conflict(state: _State, answer: str, clash: str) -> None:
 
 
 def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
-            catalogue: Sequence[CatalogueItem]) -> dict[str, Any]:
+            catalogue: Sequence[CatalogueItem], *, proposed: Sequence[Rule] = ()) -> dict[str, Any]:
     """The draft view (the contract's PolicyDraft without draft_id) for an instruction and its answers so far.
 
     Answers are replayed in order; each must answer a question that is open at that point."""
     base = compile_instruction(instruction, catalogue=catalogue)
     stated_policy = None if any(q.field == "uncertainty_policy" for q in base.questions) else base.mandate.uncertainty
     state = _State()
+    replayed: list[dict[str, str]] = []  # what a caller may truthfully show as answered (LEASH-145 AC8)
     for a in answers:
-        built = _build(base, stated_policy, state)
+        built = _build(base, stated_policy, state, proposed)
         qid, answer = a["question_id"], a["answer"].strip()
         found = next(((q, options) for i, q, options in built.open if i == qid), None)
         if found is None:
             raise AnswerError(f"{qid} is not an open question")
         q, options = found
+        record = {"question_id": qid, "question": q.text, "answer": answer}
         if options is not None and (answer in options or not _suggested(q)):
             if answer not in options:
                 raise AnswerError(f"answer one of: {', '.join(options)}")
@@ -279,6 +362,7 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
                         continue
                     state.option_rules.append((rule, f"Only shops in the category {kind.replace('_', ' ')}, "
                                                      "as you answered."))
+            replayed.append(record)
             state.closed.add(qid)
             state.conflicts.pop(qid, None)
             continue
@@ -295,9 +379,10 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
         state.accepted.append(alone)
         if _states_policy(alone, answer) and not built.decided:
             state.policy = alone.mandate.uncertainty
+        replayed.append(record)
         state.closed.add(qid)
         state.conflicts.pop(qid, None)
-    built = _build(base, stated_policy, state)
+    built = _build(base, stated_policy, state, proposed)
     mandate = replace(base.mandate, rules=tuple(built.rules), uncertainty=built.policy,
                       instruction=instruction, notes=tuple(built.notes))
     open_questions = []
@@ -308,11 +393,28 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
                                        "them. A draft can only add to what you wrote, so start a new draft.",
                                "blocking": True})
     for qid, q, options in built.open:
-        view: dict[str, Any] = {"question_id": qid, "text": q.text, "blocking": not optional(q)}
+        view: dict[str, Any] = {"question_id": qid, "text": q.text, "blocking": not optional(q),
+                                "field": q.field}
         if options:
             view["options"] = options
         open_questions.append(view)
     return {"instruction": instruction,
+            "review": permission_review(mandate.rules, mandate.uncertainty),
             "status": "needs_answers" if any(q["blocking"] for q in open_questions) else "ready",
             "rules": _rule_views(mandate.notes), "hard_rules": mandate_to_api(mandate)["hard_rules"],
-            "uncertainty_policy": mandate.uncertainty, "notes": list(mandate.notes), "open_questions": open_questions}
+            "uncertainty_policy": mandate.uncertainty, "notes": list(mandate.notes),
+            "open_questions": open_questions,
+            # DEC-045: what the customer did not limit. The model can silently drop a restriction and
+            # every rule shown will still be correct, so the omission has to be visible (LEASH-146).
+            "unrestricted": [name for name in REGISTRY if not any(r.field == name for r in mandate.rules)],
+            # What this compiler read on its own, without the proposal. A caller that handed us rules
+            # gets them back inside `hard_rules`, so only this tells it whether we agreed independently
+            # or are simply echoing it — "the compiler agreed" would otherwise mean nothing (DEC-045).
+            "independently_read": [rule_to_api(r) for r in _build(base, stated_policy, state).rules],
+            # What the caller supplied, kept so a later turn or answer recompiles with it. Dropping it
+            # would silently loosen the draft, which is the one direction a mandate may never move.
+            "proposed": [rule_to_api(r) for r in proposed],
+            # The answers this view was actually built from. A turn can drop one (its question closed or
+            # was re-asked under another id), and a transcript that kept showing it would be claiming a
+            # settled point the draft no longer holds.
+            "answers": replayed}

@@ -248,6 +248,16 @@ def test_reconciliation_fills_in_a_delivery_the_platform_has_decided(db):
     assert read(db, "AZ-1")["delivery"] == "accepted"
 
 
+def test_platform_waiting_for_customer_agrees_with_our_step_up(db):
+    add_authorization(db, "AZ-1", state="waiting")
+    rows = [{"authorization_id": "AZ-1", "status": "waiting_for_customer"}]
+    first = reconcile(db, rows)
+    assert first.repaired and not first.alerts
+    assert tuple(read(db, "AZ-1").values()) == ("waiting", "accepted", "waiting_for_customer")
+    again = reconcile(db, rows)
+    assert not again.repaired and not again.alerts
+
+
 def test_reconciliation_records_a_platform_refusal_as_not_sent(db):
     add_authorization(db, "AZ-1")
     reconcile(db, [{"authorization_id": "AZ-1", "status": "deadline_passed"}])

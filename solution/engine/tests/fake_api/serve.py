@@ -17,8 +17,10 @@ DATA = Path(__file__).resolve().parents[4] / "data"
 
 
 def create_app() -> Any:
+    state = os.environ.get("FAKE_STATE_FILE")
     fake = FakeViseca(Pack(Path(os.environ.get("LEASH_DATA_DIR", str(DATA)))),
                       api_key=os.environ.get("FAKE_API_KEY", "fake-team-key"),
+                      state_file=Path(state) if state else None,
                       human_window_seconds=float(os.environ.get("FAKE_HUMAN_WINDOW_SECONDS", "120")),
                       api_version="0.fake", data_version=os.environ.get("FAKE_DATA_VERSION", "saw26"))
     return fake.app

@@ -25,7 +25,7 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
         return;
       }
       if (e.key !== "Tab" || !dialog.current) return;
-      const focusable = [...dialog.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])")];
+      const focusable = [...dialog.current.querySelectorAll<HTMLElement>("button, summary, [href], [tabindex]:not([tabindex='-1'])")];
       if (!focusable.length) return;
       const first = focusable[0], last = focusable[focusable.length - 1];
       // Focus on the dialog itself (as on open) counts as outside the list, so both directions wrap.
@@ -70,6 +70,7 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
             </div>
             {p.customer_message && <p className="message">{p.customer_message}</p>}
             {deliveryNote(p) && <p className="small">{deliveryNote(p)}</p>}
+            <details className="context-details"><summary>Why this happened · checks and evidence</summary>
             {p.checks.length > 0 && (
               <table className="cmp" aria-label="What you agreed vs this payment">
                 <thead>
@@ -91,9 +92,10 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
                 <span>{t.text}</span>
               </div>
             ))}
-            <button type="button" className="link" onClick={onClose}>Close</button>
+            </details>
           </>
         )}
+        <button type="button" className="link" onClick={onClose}>Close</button>
       </div>
     </div>
   );

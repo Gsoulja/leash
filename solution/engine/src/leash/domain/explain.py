@@ -9,6 +9,7 @@ details can quote merchant text (DEC-025): no raw HTML ever reaches the customer
 import html
 from typing import Any
 
+from .checks import Check
 from .decide import Decision
 
 MAX_MESSAGE_CHARS = 1000
@@ -43,12 +44,26 @@ def _message(decision: Decision) -> str:
     return "All your rules passed."
 
 
+def _evidence(check: Check) -> dict[str, Any]:
+    """One check as a fact supporting the decision, with the same words the customer is shown."""
+    return {
+        "check": check.key,
+        "label": _safe(check.label, MAX_EVIDENCE_CHARS),
+        "status": check.status,
+        "agreed": _safe(check.agreed, MAX_EVIDENCE_CHARS),
+        "actual": _safe(check.actual, MAX_EVIDENCE_CHARS),
+        "reason_code": check.reason_code,
+    }
+
+
 def explain(decision: Decision, *, authorization_id: str, engine_version: str) -> dict[str, Any]:
     return {
         "authorization_id": authorization_id,
         "decision": decision.verdict,
         "reason_codes": list(decision.reason_codes),
         "customer_message": _safe(_message(decision), MAX_MESSAGE_CHARS),
-        "evidence": [_safe(f"{c.label}: {c.actual}", MAX_EVIDENCE_CHARS) for c in decision.checks if c.status != "info"],
+        # One object per check: the platform's /decision endpoint validates `evidence` as a list of
+        # objects and refuses a list of strings (`dict_type`, 422) — measured 2026-09-25.
+        "evidence": [_evidence(c) for c in decision.checks if c.status != "info"],
         "engine_version": engine_version,
     }

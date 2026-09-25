@@ -54,6 +54,13 @@ def fetch(url, sql, *args):
     return asyncio.run(go())
 
 
+def test_scenarios_come_from_the_connected_platform(api):
+    http, fake, _, _, _ = api
+    response = http.get("/api/scenarios")
+    assert response.status_code == 200
+    assert response.json()["scenarios"] == fake._scenarios()
+
+
 def test_run_keeps_starting_version(api):
     http, fake, _, url, mandate = api
     started = http.post("/api/runs", json={"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]})
@@ -155,3 +162,91 @@ def test_a_later_event_with_a_different_mandate_is_flagged_and_changes_nothing(a
         asyncio.run(event_arrives())
     assert valid(http.get(f"/api/runs/{run['run_id']}").json(), "Run")["mandate_version"] == 1
     assert any("INTEGRITY" in r.getMessage() and run["run_id"] in r.getMessage() for r in caplog.records)
+
+
+def test_live_shaped_run_reports_its_counts(api):
+    """LEASH-159: the hosted platform sends unwrapped top-level *_count fields and no `counters` object."""
+    http, _, viseca, _, mandate = api
+    run = http.post("/api/runs", json={"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]}).json()
+
+    async def live(run_id):
+        return {"run_id": run_id, "scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"], "status": "running",
+                "generated_event_count": 10, "delivered_event_count": 3, "finalized_event_count": 2,
+                "processed_event_count": 2, "pending_event_count": 1, "queued_event_count": 7,
+                "platform_rejected_count": 0}
+
+    viseca.get_run = live
+    view = valid(http.get(f"/api/runs/{run['run_id']}").json(), "Run")
+    assert view["status"] == "running"
+    assert view["counters"] == {"generated_event_count": 10, "delivered_event_count": 3, "finalized_event_count": 2,
+                                "processed_event_count": 2, "pending_event_count": 1, "queued_event_count": 7,
+                                "platform_rejected_count": 0}
+
+
+def test_fake_platform_counters_still_reported(api):
+    http, _, _, _, mandate = api
+    run = http.post("/api/runs", json={"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]})
+    assert run.json()["counters"], "the fake platform's nested counters must keep working"
+    assert valid(http.get(f"/api/runs/{run.json()['run_id']}").json(), "Run")["counters"]
+
+
+def test_live_shaped_start_reports_its_counts(api):
+    """LEASH-159: POST /api/runs answers from the platform's start response, which is live-shaped too."""
+    http, _, viseca, _, mandate = api
+    real = viseca.start_run
+
+    async def live(scenario_id, mandate_id):
+        started = dict(await real(scenario_id, mandate_id))  # the fake answers unwrapped here, like the live API
+        started.pop("counters", None)
+        return {**started, "generated_event_count": 10, "queued_event_count": 10, "delivered_event_count": 0}
+
+    viseca.start_run = live
+    started = valid(http.post("/api/runs", json={"scenario_id": "SCEN0004",
+                                                 "mandate_id": mandate["mandate_id"]}).json(), "Run")
+    assert started["counters"] == {"generated_event_count": 10, "queued_event_count": 10, "delivered_event_count": 0}
+
+
+def test_unusable_platform_counts_are_dropped_not_served(api):
+    """The platform is untrusted input: a junk `counters` must not 500, and a bool is not a count."""
+    http, _, viseca, _, mandate = api
+    run = http.post("/api/runs", json={"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]}).json()
+
+    async def junk(run_id):
+        return {"run_id": run_id, "status": "running", "counters": "not a mapping",
+                "queued_event_count": True, "delivered_event_count": 4}
+
+    viseca.get_run = junk
+    view = valid(http.get(f"/api/runs/{run['run_id']}").json(), "Run")
+    assert view["counters"] == {"delivered_event_count": 4}
+
+
+def test_a_repeated_start_returns_the_same_run_and_never_a_second_one(api):
+    """LEASH-102: a retried handoff is the same handoff, not a second one.
+
+    The customer presses once. A dropped response, a refreshed tab or a retrying client must not
+    hand the agent two runs against one confirmed permission — two runs mean two sets of counters,
+    and a spending limit enforced twice over is a limit enforced once.
+    """
+    http, _, _, url, mandate = api
+    body = {"scenario_id": "SCEN0004", "mandate_id": mandate["mandate_id"]}
+    first = http.post("/api/runs", json=body)
+    assert first.status_code == 201, first.text
+    again = http.post("/api/runs", json=body)
+    assert again.status_code in (200, 201), again.text
+    assert again.json()["run_id"] == first.json()["run_id"]
+    assert again.json()["mandate_version"] == first.json()["mandate_version"]
+    rows = fetch(url, "select run_id from runs where mandate_id = $1", mandate["mandate_id"])
+    assert len(rows) == 1, f"one retried start, one run: {rows}"
+
+    # But tightening is a new permission to run under, not a retry. LEASH-133's journey starts a
+    # second run on this same scenario after lowering the limit and requires the new version; keying
+    # idempotency on (mandate, scenario) alone silently handed back the old, looser run instead.
+    tightened = http.post(f"/api/mandates/{mandate['mandate_id']}/tighten",
+                          json={"add_hard_rules": [{"field": "authorization.billing_amount_chf", "operator": "<=",
+                                                    "value": "300", "currency": "CHF", "scope": "purchase"}]})
+    assert tightened.status_code == 200, tightened.text
+    later = http.post("/api/runs", json=body)
+    assert later.status_code == 201, later.text
+    assert later.json()["run_id"] != first.json()["run_id"]
+    assert later.json()["mandate_version"] > first.json()["mandate_version"]
+    assert len(fetch(url, "select run_id from runs where mandate_id = $1", mandate["mandate_id"])) == 2

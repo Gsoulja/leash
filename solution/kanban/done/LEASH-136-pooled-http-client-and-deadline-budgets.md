@@ -1,6 +1,6 @@
 # LEASH-136: Pooled HTTP client and deadline budgets
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P1
 **Type**: infra
 **Estimated Effort**: M
@@ -11,7 +11,7 @@
 **Task ID**: 129-T7
 **Blocked by**: none
 **Blocks**: LEASH-142, LEASH-143
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Reuse a bounded asynchronous HTTP connection pool and propagate the remaining decision budget through connect, read, write and pool timeouts.

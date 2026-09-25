@@ -33,6 +33,7 @@ export function statusOf(p: Payment): [string, Tone] {
       if (p.delivery !== "accepted") return [byCustomer ? "Approved · sending" : "Approved · sending", "warn"];
       return [byCustomer ? "Approved · you approved" : "Approved", "ok"];
     case "declined":
+      if (p.delivery !== "accepted") return [byCustomer ? "You declined · sending" : "Declined · sending", "warn"];
       return [byCustomer ? "You declined" : "Blocked", "bad"];
     case "waiting":
       return ["Waiting for you", "warn"];
@@ -49,7 +50,10 @@ export function deliveryNote(p: Payment): string {
     case "submitted":
       return "Sent to the bank; waiting for it to confirm.";
     case "accepted":
-      return "The bank accepted this decision. That is not confirmation that the order shipped.";
+      if (p.final_state === "timed_out") return "The time to answer ran out. This checkout was not authorized.";
+      return p.final_state === "approved"
+        ? "The platform accepted the authorization. This is not confirmation of a completed payment or delivery."
+        : "The platform confirmed the decline. This checkout was not authorized.";
     case "not_sent":
       return p.platform_outcome
         ? `The bank did not accept this decision (${p.platform_outcome}), so nothing was paid.`

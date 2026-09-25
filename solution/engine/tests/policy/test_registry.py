@@ -78,20 +78,36 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 # the engine waits to hand over an answer it has already decided, so every field moved for one reason and no
 # field's meaning changed. `leash.config`, `leash.service` and the viseca_api adapter are all in
 # NOT_A_FIELD_MEANING, so moving the pool settings into Settings contributes nothing to these hashes.
+#
+# Re-pinned 2026-09-25 (DEC-046 and the live 422). Three hashed modules changed:
+#   * `domain/snapshot.py` gained `has_purchase_history()` — a new accessor; nothing existing behaves
+#     differently, so every field moved on a signature change alone.
+#   * `domain/explain.py` now sends `evidence` as one object per check instead of one string. The hosted
+#     platform validates that field as a list of objects and refused **every** decision we sent with 422
+#     (measured 2026-09-25, 285 refusals in one run); `decision`, `reason_codes` and `customer_message` are
+#     untouched, so what the verdict says is unchanged — only how the supporting facts are encoded.
+#   * `domain/rules/familiar.py` — this one **is** a behaviour change, and deliberately so:
+#     `leash.merchant.prior_purchases.v1` still means "approved purchases at this merchant on this card",
+#     and a card with history that has never used this shop still fails. What changed is the missing-fact
+#     case: a card with no approved purchase anywhere now warns (uncertainty policy) instead of failing
+#     (decline). It is recorded as a re-pin of v1 rather than a new `.v2` on purpose — a `.v2` would make
+#     the `.v1` rules inside mandates already submitted to the platform *unsupported*, which never
+#     approves, so introducing it would decline more, not less. Deliberate, and the loosening is bounded
+#     to "we know nothing at all about this card": it can still never approve on its own.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "a6522843e351",
-    "authorization.fulfillment_method@v1": "114e9345918b",
-    "merchant.merchant_category@v1": "642243284277",
-    "items.item_category@v1": "1b44526a0289",
-    "items.item_id@v1": "5208ed8fd2a2",
-    "leash.items.size.v1@v1": "5dcc5359257c",
-    "leash.merchant.prior_purchases.v1@v1": "db50702d88a6",
-    "leash.order.return_days.v1@v1": "0b5a6293901d",
-    "leash.items.unrequested_count.v1@v1": "853a9323334b",
-    "leash.purchase.max_count.v2@v2": "d6a5919933a7",
-    "leash.items.max_quantity.v1@v1": "4c0d1a36e807",
-    "leash.session.risk_score.v1@v1": "a76b70645781",
-    "leash.orders.split_check.v1@v1": "108de4259e0d",
+    "authorization.billing_amount_chf@v1": "75889d72b86a",
+    "authorization.fulfillment_method@v1": "da68e6176fbc",
+    "merchant.merchant_category@v1": "3e29bb226d3d",
+    "items.item_category@v1": "cdbc86071085",
+    "items.item_id@v1": "b62fd14c37e3",
+    "leash.items.size.v1@v1": "b7443a18d79f",
+    "leash.merchant.prior_purchases.v1@v1": "73d1cdd51233",
+    "leash.order.return_days.v1@v1": "e87213bfbc91",
+    "leash.items.unrequested_count.v1@v1": "78d378461edb",
+    "leash.purchase.max_count.v2@v2": "35417d6613ff",
+    "leash.items.max_quantity.v1@v1": "e8d1c9b059f8",
+    "leash.session.risk_score.v1@v1": "5bcbfaf1b6f9",
+    "leash.orders.split_check.v1@v1": "54ea54887ce0",
 }
 
 

@@ -9,7 +9,7 @@ approvals used up the 7-day limit (refused, DEC-012, nothing sent).
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import asyncpg
@@ -146,7 +146,11 @@ def test_full_run(test_database_url):
     lost = next(q for q in run.queued if q.live_id == lost_live)
     assert lost.deliveries == 2 and states[LOST] == (lost_live, "approved")
     assert all(row["n"] == 1 for row in decided) and len(decided) == total
-    assert str(spend) == "300.00"  # the 7-day total the agreed replay reaches, not a cent counted twice
+    assert str(spend) == "388.00"  # the later CHF 88 order passes after old approvals leave the window
+    approved = [q.purchase for q in run.queued if q.status(fake.clock()) == "approved"]
+    for end in approved:
+        assert sum(p.billing_amount_chf for p in approved
+                   if end.sim_time.within(p.sim_time, timedelta(days=7))) <= 300
 
     # the customer's rejection reaches the platform through /resolve
     assert rejected.state == "declined"

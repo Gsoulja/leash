@@ -29,11 +29,37 @@ LEASH_CORS_ORIGINS=http://localhost:5173
 
 ## 2. Start
 
-Local, against the fake platform:
+Local platform simulation with the real Apertus chat model (set `APERTUS_API_KEY` in `solution/.env`):
 
 ```bash
-docker compose -f solution/docker-compose.yml --profile fake up -d --build --wait
+LEASH_DB_PORT=55443 LEASH_API_PORT=8090 LEASH_WORKER_HEALTH_PORT=8181 \
+LEASH_ASSISTANT_PORT=8100 LEASH_FAKE_PORT=19101 \
+docker compose -p leash-local -f solution/docker-compose.yml \
+  -f solution/docker-compose.local.yml --profile fake up -d --build --wait
 ```
+
+Open http://localhost:8090/, choose **Agent**, and select a supplied task. Send the customer instruction,
+answer clarifications, review **Must follow / May choose / Must ask**, explicitly confirm, then click
+**Start shopping simulation**. Confirmation alone does not start a run. The cockpit shows each actual
+checkout, the deterministic decision, customer intervention where needed, and the platform outcome.
+
+The override forces API/worker traffic to `http://fake:9000`, even if `.env` contains the hosted URL.
+`leash-local` has its own database volume. Stop any older app services using ports 8090/8181/8100 first;
+keep their volumes. The assistant still calls Apertus; it is not an offline language-model substitute.
+Scenario selection is enabled only in this local mode and derives the customer card from the supplied
+attempts. Background preferences remain context, not permission.
+
+The fake reads the original five scenarios and 45 purchases in `data/`; it does not rewrite them or
+supply an answer key. It follows the documented request schema, snapshots, queue, 8-second deadline,
+120-second customer window, decisions and outcomes. Unspecified hosted behavior is modeled conservatively
+in `tests/fake_api/app.py`, not claimed as observed hosted behavior. With the local override, simulator
+state is retained in `output/local-platform-state/platform.json`; permission references, runs and decisions
+survive restarts. The JSON file is for this single local simulator process, not a shared production store.
+The supplied `data/` remains read-only. For one explicitly declared rolling period, the counter uses that
+window and simulated timestamps; with no period or multiple periods it returns null instead of a misleading
+lifetime total. The engine still computes its own ledger independently. For app-only updates, restart just
+`api assistant worker` with `--no-deps` to avoid interrupting the decision queue.
+
 
 Event day, against Viseca (with `.env` set):
 
@@ -175,3 +201,50 @@ docker compose -f solution/docker-compose.yml logs -f worker api
 ```
 
 Logs are one JSON object per line: `time`, `level`, `logger`, `message`, and `authorization_id` for anything about one purchase. For each purchase, the worker logs every stage (`stage … took … ms`) and a final `handled <id>: <path>, verdict <verdict>` line. Secrets (the API key and the database password) never appear in any log line.
+
+## 8. The external-agent boundary, and what it does not prove (LEASH-102)
+
+Leash owns permission and the verdict. An external shopping agent owns product search and order
+preparation; in the challenge, Viseca's simulator plays it. What is demonstrated here is the
+**handoff and the payment path**, not an integration with a real shopping agent.
+
+**What the handoff carries.** `POST /api/runs` takes a `scenario_id` and a `mandate_id` and nothing
+else. The run stores the mandate snapshot the platform returns, and the version it used
+(`runs.mandate_version`), so a run keeps the permission it started with (DEC-003). Retrying the same
+start returns the run that already exists rather than minting a second one, so a dropped response does
+not produce two sets of counters. The key includes the mandate version, so tightening and starting
+again is a *new* run under the new version — that is the intended journey, not a retry. This is an
+application-level check with no unique index behind it, so two simultaneous starts can still both miss
+it; one customer pressing one button is not that case, and it fails towards an extra run, never a lost
+one.
+
+**Where authority is not.** Two real controls, and one thing that is *not* a control yet. The assistant
+runs as its own process with no database credential and no import of the decision path, and the
+browser-facing proxy forwards only `POST /api/permission/*`, so the chat screen's own calls cannot
+carry a start or an answer. What does **not** hold today is credential scope: the engine API has no
+authentication at all, and the assistant container already reaches it at `LEASH_POLICY_URL` to create
+drafts — nothing but the absence of a method on its client class stops that process from calling
+`/api/runs` on the same connection. That is a code-shape guarantee, not a reachability one; read the
+"credential scope" item below as the open hole it is. Nothing the agent writes changes the rules: the mandate inside the live event
+decides that purchase, the agent's task text is never re-interpreted, and merchant or item text is
+data. An event carrying a mandate that differs from the run's snapshot is logged as an INTEGRITY line
+and changes nothing.
+
+**What acceptance does not mean.** A verdict is a decision about permission, not a statement about the
+product, the merchant's honesty, or whether anything was delivered. A local `approve` is not platform
+acceptance, and platform acceptance is not settlement or fulfilment.
+
+**Open before production.** None of these are answered by simulator evidence:
+
+- **Agent identity.** The simulator is trusted because it is the platform. A real agent needs an
+  identity bound to the authority — a key, a registered agent, or an attested workload.
+- **Credential scope.** Today a run is started by a backend holding the team API key. A production
+  handoff needs a credential scoped to one task, one amount and one expiry, that the agent cannot
+  widen by presenting it elsewhere.
+- **Authoritative checkout source.** We are given the checkout by the platform. Outside the challenge,
+  something must establish that the cart presented for payment is the cart the merchant will fulfil.
+- **Payment-path bypass.** Here, every purchase arrives through the platform's queue, so there is no
+  other path. In production the control is only as good as the guarantee that no charge can reach the
+  card without passing through it.
+- **Authenticated consent.** The prototype has no login (DEC-019). Confirmation must be authenticated
+  before any of this is a real permission (LEASH-140, LEASH-143).

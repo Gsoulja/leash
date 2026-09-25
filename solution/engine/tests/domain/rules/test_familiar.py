@@ -54,3 +54,20 @@ def test_without_a_familiarity_rule_lookalike_warns_and_new_shop_is_info():
     assert (look.status, look.reason_code) == ("warn", "lookalike_merchant")
     [new] = at("ME0023", mm=mandate())
     assert new.status == "info"
+
+
+def test_a_card_with_no_purchase_history_asks_instead_of_declining():
+    """No history at all is a missing fact, not proof the shop is new to the customer (DEC-046).
+
+    The hosted pack's cards carry no history rows, so treating absence as established unfamiliarity
+    declined every first purchase of every scenario that says "shops I use".
+    """
+    [check] = at("ME0023", baseline=HistoryBaseline())
+    assert (check.status, check.reason_code) == ("warn", "merchant_history_unknown")
+    assert "no earlier payments" in check.detail.lower()
+
+
+def test_absence_is_still_unfamiliar_once_the_card_has_a_history():
+    """A card that shops elsewhere says something: this shop really is not one of them."""
+    [check] = at("ME0023")
+    assert (check.status, check.reason_code) == ("fail", "unfamiliar_merchant")

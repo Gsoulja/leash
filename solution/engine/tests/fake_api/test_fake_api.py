@@ -63,16 +63,17 @@ async def drain(client, decision="approve"):
     return seen
 
 
-def test_fake_api_serves_scenario_in_order(pack):
+@pytest.mark.parametrize("scenario", ["SCEN0000", "SCEN0001", "SCEN0002", "SCEN0003", "SCEN0004"])
+def test_fake_api_serves_scenario_in_order(pack, scenario):
     fake, client, _ = setup(pack)
 
     async def go():
-        started = await start(client)
+        started = await start(client, scenario)
         return started, await drain(client)
 
     started, seen = run(go())
     sources = [e["data"]["authorization"]["source_authorization_id"] for e in seen]
-    assert sources == [a.purchase.authorization_id for a in pack.attempts("SCEN0004")]
+    assert sources == [a.purchase.authorization_id for a in pack.attempts(scenario)]
     live = [e["data"]["authorization"]["authorization_id"] for e in seen]
     assert len(set(live)) == len(live) and not set(live) & set(sources)  # live IDs differ from pack IDs
     for e in seen:
@@ -259,7 +260,7 @@ def test_context_reflects_final_approvals_in_this_run(pack):
     fake, client, _ = setup(pack)
 
     async def go():
-        await start(client, "SCEN0001")
+        await start(client, "SCEN0001", rules=({**RULE, "scope": "period", "period_days": 7},))
         first = await client.next_decision_request(wait=0)
         a1 = first["data"]["authorization"]["authorization_id"]
         await client.post_decision(a1, {"authorization_id": a1, "decision": "approve"})
@@ -385,3 +386,63 @@ def test_rejected_posts_are_recorded_too(pack):
 
     run(go())
     assert fake.received == [] and [r["error"] for r in fake.rejected] == ["deadline_passed"]
+
+
+def test_string_evidence_is_refused_like_the_hosted_api(pack):
+    """The hosted /decision endpoint 422s on a list of strings (`dict_type`, measured 2026-09-25).
+    The fake accepted them, so every decision we sent live was refused and nothing caught it here."""
+    fake, client, _ = setup(pack)
+
+    async def go():
+        await start(client)
+        envelope = await client.next_decision_request(wait=0)
+        aid = envelope["data"]["authorization"]["authorization_id"]
+        with pytest.raises(VisecaApiError) as refused:
+            await client.post_decision(aid, {"authorization_id": aid, "decision": "step_up",
+                                             "evidence": ["Known shop: never paid here"]})
+        assert refused.value.status == 422
+        return await client.post_decision(aid, {"authorization_id": aid, "decision": "step_up",
+                                                "evidence": [{"check": "known", "actual": "never paid here"}]})
+
+    assert run(go())["data"]["status"] == "waiting_for_customer"
+
+
+def test_period_counter_expires_old_approvals_using_supplied_simulated_times(pack):
+    fake, client, _ = setup(pack)
+
+    async def go():
+        await start(client, "SCEN0001", rules=({**RULE, "scope": "period", "period_days": 7},))
+        return await drain(client)
+    events = run(go())
+    # AU0011 is Aug 19: the Aug 10/11 approvals are outside the last seven days.
+    last = events[-1]["data"]
+    assert last["authorization"]["source_authorization_id"] == "AU0011"
+    assert last["context"]["approved_spend_in_period_chf"] == 550.5
+    assert last["context"]["approved_spend_in_period_chf"] != 715.0  # lifetime total
+
+
+def test_ambiguous_period_counter_is_missing_not_a_lifetime_total(pack):
+    fake, client, _ = setup(pack)
+
+    async def go():
+        await start(client, rules=({**RULE, "scope": "period", "period_days": 7},
+                                 {**RULE, "scope": "period", "period_days": 30}))
+        return await client.next_decision_request(wait=0)
+    assert run(go())["data"]["context"]["approved_spend_in_period_chf"] is None
+
+
+def test_local_restart_preserves_confirmed_reference_checkout_and_outcome(pack, tmp_path):
+    path = tmp_path / "platform.json"
+    fake, client, clock = setup(pack, state_file=path)
+
+    async def go():
+        started = await start(client, "SCEN0000")
+        events = await drain(client)
+        return started, events[0]
+    started, event = run(go())
+    restored = FakeViseca(pack, clock=clock, state_file=path)
+    aid = event["authorization_id"]
+    assert restored.live[aid][1].status(clock()) == "approved"
+    assert restored.received == fake.received
+    assert restored.runs[started["run_id"]].mandate == fake.runs[started["run_id"]].mandate
+    assert restored.mandates[started["mandate"]["mandate_id"]].status == "active"

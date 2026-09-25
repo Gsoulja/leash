@@ -1,17 +1,17 @@
 # LEASH-101: Permission chat with evidenced drafts and revisions
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: L
 **Milestone**: M8 — Great demo
 **Rule source**: Engineering
-**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037
+**Decisions**: DEC-033, DEC-034, DEC-035, DEC-036, DEC-037, DEC-044
 **Parent**: LEASH-008
 **Task ID**: 008-T2
 **Blocked by**: LEASH-065, LEASH-117, LEASH-123, LEASH-154
 **Blocks**: LEASH-102, LEASH-145, LEASH-153, LEASH-156
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Add an LLM-powered permission assistant that clarifies customer intent using relevant context and proposes an enforceable mandate draft for an external shopping agent. The assistant is an untrusted client of the policy service: it can write a candidate rule draft, but it has no authority over the control layer.
@@ -27,7 +27,7 @@ Deliver a natural permission conversation without allowing probabilistic model o
 - [x] The LLM cannot evaluate an authorization, produce a final payment verdict, update counters or write to the decision log/outbox.
 - [x] The assistant has no tool or network path to the control-layer decision endpoint or database credentials.
 - [x] Confirmed mandates still pass through deterministic validation before the control layer can use them.
-- [x] Model failure, timeout or invalid structured output falls back to a safe clarification flow.
+- [x] Model failure, timeout or invalid structured output is a visible, retryable failure that writes no draft (DEC-047, corrected 2026-09-25 — the earlier wording said "falls back to a safe clarification flow", which the built surface never did).
 - [x] Merchant, product and tool text is treated as untrusted data and cannot change the assistant's authority or system instructions.
 - [x] The selected model, prompt version, tool calls and resulting draft are auditable without storing hidden reasoning.
 - [x] A model-generated proposal can never loosen an already confirmed permission.
@@ -61,6 +61,8 @@ Write first: `test_assistant_cannot_confirm_mandate`, `test_assistant_has_no_dec
 
 ## Related Files
 - `solution/assistant/agent.py`
+- `solution/assistant/apertus.py`
+- `solution/assistant/tests/test_apertus.py`
 - `solution/assistant/tests/test_agent.py`
 - `solution/engine/src/leash/policy/compiler.py`
 - `solution/engine/src/leash/domain/`
@@ -166,3 +168,70 @@ the conversation's card scope — no API change needed. Mutation testing: ignori
 fails 2 tests, dropping the speaker filter fails 3, forwarding non-blocking questions fails 1.
 
 Verification after round 2: 58 assistant tests, 1474 engine tests, `mypy` clean.
+
+### 2026-09-24 — round 3: the model is chosen and connected
+
+Round 1 left one thing open that no amount of code could close: *which model, reached how*. It is now
+decided — **Apertus** (`swiss-ai/Apertus-v1.5-70B`) on the Swiss {ai} Weeks OpenAI-compatible endpoint,
+recorded as **DEC-044**. The `AssistantModel` port held: nothing in `agent.py` or `conversation.py`
+changed to accommodate it.
+
+`solution/assistant/apertus.py` is the only file in the repository that talks to a model.
+
+- **The prompt's field list is generated from `REGISTRY`**, not written by hand, so it cannot drift from
+  what the engine can enforce. A test asserts the offered fields are exactly the registry's.
+- **`temperature=0`, no sampling knobs.** Reading a permission is extraction, not generation: the same
+  words must produce the same rules on a re-ask, or a customer who changed nothing watches the draft move.
+- **No streaming.** The assistant needs one complete JSON object before it can validate anything.
+- **Background stays in the user role.** `ProposalRequest.context_role = "data"` declared the intent;
+  the adapter is where it holds, and a test proves context text never reaches the system message.
+- **Credentials are separate.** `APERTUS_API_KEY`, never `TEAM_API_KEY` — the assistant holds no
+  control-layer credential (AC6). `LEASH_MODEL` / `LEASH_MODEL_BASE_URL` make the choice swappable.
+- An unreadable reply returns `{}` and an endpoint failure raises; both already end at a customer
+  question, because `draft()` treats any model failure as "ask", never "proceed".
+
+11 new tests, all offline behind a fake chat client. Verification: 69 assistant tests, `mypy` clean.
+
+**Not yet done, and not claimed:** no live call has been made — the Swiss {ai} Weeks key is not in this
+environment, so the prompt is unproven against the real endpoint. `python -m assistant.apertus "<words>"`
+is the smoke check waiting for that key. The `/conversations` (or `/turns`) route that would put this in
+front of a customer is LEASH-145's backend, still unbuilt: `PermissionConversation` continues to have no
+HTTP caller.
+
+### 2026-09-24 — independent agent review (round 3)
+
+AC3 `met`, AC6 `met` (but unguarded by tests), AC9 `met`, AC8 `met` except the timeout leg,
+AC10 **`not met`**. Four defects found; all four **fixed** and pinned.
+
+- **A product reference without a catalogue crashed instead of asking.** `draft()` defaulted
+  `catalogue=()`, and `_resolve_item` branches on `catalogue is None` — so `()` skipped the "which
+  exact product do you mean?" branch and called `().search(...)`. `AttributeError`, uncaught,
+  outside the `try`. Round 2 fixed exactly this in `conversation.py` by passing `None` through; the
+  default in `draft()` itself was missed, and round 3 added a caller that uses it — the adapter's own
+  documented smoke check. Fixed at the root: the default is now `None`.
+- **AC10: `prompt_version` could not change when the prompt did.** `PROMPT_VERSION = "pa-1"` is a
+  constant in `agent.py`, but round 3 put the real prompt in `apertus.py`. Editing the prompt, or
+  changing `LEASH_MODEL`, still recorded `"pa-1"`. Fixed: `apertus.prompt_version()` is a hash of the
+  prompt actually sent, so it moves when the registry-generated field list moves, and `_read` takes
+  the model's version when it states one.
+- **`timeout_seconds` was ignored whenever a client was injected** — it reached `OpenAI(...)` only on
+  the branch that builds its own. Fixed: the timeout goes on the request, so it applies either way.
+- **No structural guard on the one file that opens a socket.** The reviewer mutated the key lookup to
+  fall back to `TEAM_API_KEY` — the assistant picking up the control-layer credential — and all 69
+  tests passed. AC6 rested on prose. Fixed: `apertus.py` now has the same AST import test `agent.py`
+  and `conversation.py` carry, plus an assertion that `TEAM_API_KEY` appears nowhere in it.
+
+Also pinned after the reviewer showed the tests would survive their removal: a JSON reply that parses
+to a non-object, and one nested deeply enough to raise `RecursionError` rather than `ValueError`.
+
+**Known defect, left open and not in round 3's scope.** Provenance is checked per value, not per
+field: if the customer says only *"at most CHF 50 per order"*, a model returning both
+`billing_amount_chf <= 50` and `leash.items.max_quantity.v1 <= 50` — each quoting `says="50"` — passes
+`_value_is_evidenced`, because that checks the number appears in the quote, never that the quote was
+about *that field*. Result is `status="ready"` with a rule the customer never asked for. It only ever
+tightens, and `conversation.py`'s compiler cross-check demotes it to a suggestion in the real flow, so
+no money is loosened — but `draft()` used alone is exposed, and round 3's prompt explicitly invites
+multi-rule replies, which makes it reachable rather than theoretical.
+
+**Also noted:** `openai` now sits in the engine's `pyproject.toml` although only `assistant/apertus.py`
+imports it (lazily). Credentials stay separate per DEC-044; the dependency boundary does not.

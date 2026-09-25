@@ -26,7 +26,7 @@ from leash.adapters.viseca_api.client import (DEFAULT_BASE_URL, DEFAULT_CONNECT_
 from leash.domain.clock import WallTime
 
 EXPECTED_API_MAJOR = "0"
-EXPECTED_DATA_VERSION = "saw26"
+EXPECTED_DATA_VERSION = "saw26"  # the pack family; the hosted API adds a suffix ("saw26-hackaton-api")
 _ENV = {
     "team_api_key": "TEAM_API_KEY",
     "database_url": "DATABASE_URL",
@@ -200,8 +200,11 @@ def check_compatibility(api_version: str | None, data_version: str | None) -> No
         raise IncompatibleApi("api or data version unknown; refusing to run against an unidentified platform")
     if api_version.split(".")[0] != EXPECTED_API_MAJOR:
         raise IncompatibleApi(f"api version {api_version} is not {EXPECTED_API_MAJOR}.x")
-    if data_version != EXPECTED_DATA_VERSION:
-        raise IncompatibleApi(f"data version {data_version} is not {EXPECTED_DATA_VERSION}")
+    # The family, not the exact string: the practice pack reports "saw26" and the hosted one
+    # "saw26-hackaton-api". Pinning the full version refused the real platform (LEASH-158); pinning
+    # nothing would let us run against a pack we have never seen.
+    if not data_version.startswith(EXPECTED_DATA_VERSION):
+        raise IncompatibleApi(f"data version {data_version} is not a {EXPECTED_DATA_VERSION} pack")
 
 
 @dataclass(frozen=True)

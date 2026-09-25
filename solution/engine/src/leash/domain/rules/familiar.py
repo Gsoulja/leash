@@ -52,6 +52,13 @@ def familiar_rule(purchase: Purchase, mandate: CompiledMandate, snapshot: Snapsh
             return [Check("known", "Known shop", "pass", agreed, _count_text(count),
                           f"{shop.name}: {_count_text(count).lower()} on this card.")]
         how = "before" if need == 1 else "regularly"
+        if count == 0 and not snapshot.has_purchase_history():
+            # Nothing is known about this card's shopping at all, so "new shop" is not established: it is
+            # a missing fact, and missing facts follow the uncertainty policy rather than declining (DEC-046).
+            return [Check("known", "Known shop", "warn", agreed, "No purchase history",
+                          f"This card has no earlier payments on record, so I can't tell whether "
+                          f"{shop.name} is one of your usual shops.{look_text}",
+                          "merchant_history_unknown")]
         return [Check("known", "Known shop", "fail", agreed, _count_text(count),
                       f"You haven't paid {shop.name} {how} ({_count_text(count).lower()}).{look_text}",
                       "lookalike_merchant" if look else "unfamiliar_merchant")]

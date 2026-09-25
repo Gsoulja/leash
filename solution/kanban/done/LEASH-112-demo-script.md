@@ -1,6 +1,6 @@
 # LEASH-112: Demo script
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: docs
 **Estimated Effort**: S
@@ -11,7 +11,7 @@
 **Task ID**: 009-T3
 **Blocked by**: LEASH-056, LEASH-094, LEASH-096
 **Blocks**: LEASH-113, LEASH-114, LEASH-128
-**Updated**: 2026-09-23
+**Updated**: 2026-09-25
 
 ## Description
 Script covering the three required moments: an ordinary purchase with no friction, a manipulated purchase stopped, and the human approve / reject / revoke path.

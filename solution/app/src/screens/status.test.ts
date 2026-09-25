@@ -65,7 +65,7 @@ describe("delivery and verdict are separate", () => {
   });
 
   it("the delivery note says what accepted does and does not mean", () => {
-    expect(deliveryNote(payment({ delivery: "accepted" }))).toContain("not confirmation that the order shipped");
+    expect(deliveryNote(payment({ delivery: "accepted" }))).toContain("not confirmation of a completed payment");
     expect(deliveryNote(payment({ delivery: "pending" }))).toContain("waiting for it to confirm");
     expect(deliveryNote(payment({ delivery: "refused", platform_outcome: "deadline_passed" })))
       .toContain("deadline_passed");
@@ -91,7 +91,7 @@ describe("no user-facing string claims the order was settled or shipped", () => 
       // Comments explain the rule; only rendered text can mislead a customer. A `label:` or `agreed:`
       // in test-shaped data does not appear here because these are the components, not the tests.
       .filter(([, line]) => !line.trimStart().startsWith("//") && !line.trimStart().startsWith("*"))
-      // "…is not confirmation that the order shipped" and "…so nothing was paid" are the opposite of
+      // "…is not confirmation of a completed payment" and "…so nothing was paid" are the opposite of
       // the claim being swept for, so a negation before the word in the same sentence clears the line.
       .filter(([, line]) => {
         const text = line.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -101,4 +101,13 @@ describe("no user-facing string claims the order was settled or shipped", () => 
       .map(([n, line]) => `${file}:${n}: ${line.trim()}`);
     expect(offenders, offenders.join("\n")).toEqual([]);
   });
+});
+
+
+it("a decline still awaiting the platform is not presented as confirmed", () => {
+  const pending = payment({ final_state: "declined", delivery: "pending", engine_verdict: "decline" });
+  expect(statusOf(pending)).toEqual(["Declined · sending", "warn"]);
+  expect(deliveryNote(pending)).toContain("waiting for it to confirm");
+  expect(deliveryNote({ ...pending, delivery: "accepted" })).toContain("confirmed the decline");
+  expect(deliveryNote({ ...pending, delivery: "accepted" })).not.toContain("shipped");
 });

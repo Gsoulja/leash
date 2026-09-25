@@ -1,6 +1,6 @@
 # LEASH-133: Run-scoped cockpit
 
-**Status**: REVIEW
+**Status**: DONE
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: S
@@ -11,7 +11,7 @@
 **Task ID**: 129-T4
 **Blocked by**: none
 **Blocks**: LEASH-128, LEASH-143, LEASH-150, LEASH-153
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Make payments, spending totals and status counts use the same selected run instead of mixing all payments with the latest run's spending.

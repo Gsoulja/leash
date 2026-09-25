@@ -20,6 +20,19 @@ def question(view, field_word):
     return next(q for q in view["open_questions"] if field_word in q["text"])
 
 
+def test_repeating_a_model_limit_with_explicit_scope_is_not_a_conflict():
+    from leash.domain.mandate import Rule
+    proposed = [Rule(m.F_BILLING_CHF, "<=", Decimal("20"))]
+    view = clarify("At most CHF 20 per order, delivery included.", [], CATALOGUE, proposed=proposed)
+    # Equivalent rules can differ in bookkeeping, such as an omitted purchase scope.
+    from leash.application.clarify import _Built, _clashing_rule
+    from leash.policy.compiler import compile_instruction
+    base = compile_instruction("At most CHF 20 per order.")
+    built = _Built(proposed, [], "ask", False, [])
+    assert _clashing_rule(base.mandate.rules, built, base, CATALOGUE) is None
+    assert not any('not sure how to read' in q['text'] for q in view['open_questions'])
+
+
 def test_no_platform_draft_while_questions_open():
     view = clarify(GROCERIES, [], CATALOGUE)
     assert view["status"] == "needs_answers"
@@ -456,3 +469,130 @@ def test_a_kind_next_to_a_chosen_item_can_never_widen_it_so_it_is_a_conflict(tex
     after = answer_all(text, [("only the item you chose", reply), ("conflicts with", "Keep what I had"),
                               ("only the item you chose", "Only the item I chose")])
     assert after["status"] == "ready"
+
+
+# ----- DEC-045: rules the model read, and what was left unrestricted ------------------------------
+
+GERMAN = "höchstens CHF 50 pro Bestellung"
+
+
+def test_a_rule_the_compiler_cannot_read_still_reaches_the_draft():
+    """The compiler reads no German; under DEC-045 the model's rule is carried into the draft anyway."""
+    proposed = [m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"), currency="CHF", scope="purchase")]
+    view = clarify(GERMAN, [], CATALOGUE, proposed=proposed)
+    assert [(r["field"], r["value"]) for r in view["hard_rules"]] == [(m.F_BILLING_CHF, 50)]
+
+
+def test_a_proposed_rule_is_read_back_from_the_rule_not_the_instruction():
+    proposed = [m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"), currency="CHF", scope="purchase")]
+    view = clarify(GERMAN, [], CATALOGUE, proposed=proposed)
+    assert "At most CHF 50.00 per order, delivery included." in view["notes"]
+
+
+def test_model_echo_of_session_default_is_not_relabelled_as_customer_instruction():
+    words = "Pause anything that looks like someone other than me is driving the session. Ask me when uncertain."
+    view = clarify(words, [], CATALOGUE, proposed=[m.Rule(m.F_SESSION_RISK, "<", Decimal("2"))])
+    assert any(r["source"] == "team" and r["decision"] == "DEC-024" for r in view["rules"])
+    assert not any(r["source"] == "customer" and "risk score" in r["text"] for r in view["rules"])
+
+
+def test_historical_shops_are_a_customer_rule_without_a_blocking_shop_question():
+    text = ("The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. "
+            "Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.")
+    view = clarify(text, [], CATALOGUE)
+    assert view["status"] == "ready"
+    assert any(r["field"] == m.F_PRIOR_PURCHASES and r["value"] == 1 for r in view["hard_rules"])
+    assert any("shops you have paid before" in r["text"] and r["source"] == "customer" for r in view["rules"])
+    assert not any(q["blocking"] and q["field"] in {m.F_PRIOR_PURCHASES, m.F_MERCHANT_CATEGORY}
+                   for q in view["open_questions"])
+
+
+def test_the_draft_names_the_fields_left_unrestricted():
+    """DEC-045's omission defence: what the customer did not limit has to be visible."""
+    view = clarify(GERMAN, [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"))])
+    assert m.F_BILLING_CHF not in view["unrestricted"]
+    assert m.F_MERCHANT_CATEGORY in view["unrestricted"]
+    assert m.F_MAX_QUANTITY in view["unrestricted"]
+
+
+def test_a_proposed_rule_can_only_tighten_the_draft():
+    """Proposed rules are appended, so the strictest per field still wins (DEC-006)."""
+    view = clarify("Buy groceries for CHF 50 or less.", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("20"), currency="CHF", scope="purchase")])
+    amounts = sorted(r["value"] for r in view["hard_rules"] if r["field"] == m.F_BILLING_CHF)
+    assert amounts == [20, 50]
+
+
+def test_customer_can_state_count_and_familiarity_clarifications_directly():
+    text = ("Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. "
+            "At most 1 item per order and at most 1 purchase. "
+            "By a regular shop I mean at least 3 earlier purchases on this card. "
+            "Only groceries. Ask me when uncertain.")
+    view = clarify(text, [], CATALOGUE)
+    assert view["status"] == "ready", view["open_questions"]
+    assert {"field": m.F_PRIOR_PURCHASES, "operator": ">=", "value": 3} in view["hard_rules"]
+
+
+# --- LEASH-174 -------------------------------------------------------------------------------
+
+def test_the_draft_lists_unrestricted_fields():
+    """Every registry field with no rule, by name.
+
+    A model that silently drops a restriction leaves no trace in the rules it did return, so the
+    only defence is naming what is *not* restricted and showing it to the customer (LEASH-146
+    renders it). The list is derived from the registry, so a new field appears in it for free.
+    """
+    from leash.policy.registry import REGISTRY
+
+    view = clarify(GROCERIES, [], CATALOGUE)
+    restricted = {r["field"] for r in view["hard_rules"]}
+    assert view["unrestricted"] == [name for name in REGISTRY if name not in restricted]
+    assert m.F_BILLING_CHF in restricted and m.F_BILLING_CHF not in view["unrestricted"]
+    assert m.F_RETURN_DAYS in view["unrestricted"], "a field nobody restricted must be named"
+
+
+def test_the_same_limit_read_twice_appears_once_in_hard_rules():
+    """The compiler's rule carries currency and scope, the model's the same restriction without them.
+
+    Kept as two, the customer reviews one limit twice and it is submitted to the platform twice.
+    """
+    view = clarify("At most CHF 50 per order.", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"))])
+    assert [(r["field"], r["value"]) for r in view["hard_rules"]] == [(m.F_BILLING_CHF, 50)]
+
+
+def test_a_set_rule_read_in_another_order_is_the_same_restriction():
+    view = clarify("Buy groceries or household items for CHF 50 or less.", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_ITEM_CATEGORY, "in", ("household", "groceries"))])
+    kinds = [r for r in view["hard_rules"] if r["field"] == m.F_ITEM_CATEGORY]
+    assert len(kinds) == 1, kinds
+
+
+def test_a_sentence_the_compiler_cannot_read_stops_blocking_once_a_rule_covers_it():
+    """DEC-045: the grammar is English-only, so its "I'm not sure how to read …" cannot gate a draft.
+
+    Measured on 2026-09-25: a correctly read German instruction still carried six blocking questions,
+    and a free-text answer in German is refused too — so the draft could never reach `ready`.
+    """
+    proposed = [m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"), currency="CHF", scope="purchase")]
+    view = clarify(GERMAN, [], CATALOGUE, proposed=proposed)
+    asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
+    assert not any("not sure how to read" in t for t in asked), asked
+    assert not any("means for this rule" in t for t in asked), asked
+
+
+def test_a_sentence_no_proposed_rule_covers_is_still_blocking():
+    """The omission net stays: a restriction nobody read must not vanish (DEC-045, LEASH-146)."""
+    view = clarify("Keine Abonnemente. Höchstens CHF 50 pro Bestellung.", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("50"))])
+    asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
+    assert any("Abonnemente" in t for t in asked), asked
+
+
+def test_a_sentence_whose_other_restriction_nobody_read_stays_blocking():
+    """One rule out of a three-clause sentence is not a reading of the sentence (DEC-056, amended)."""
+    view = clarify("Buy me a jacket, at most CHF 120 per order, and no subscriptions.", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("120"))])
+    asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
+    assert any("not sure how to read" in t for t in asked), asked

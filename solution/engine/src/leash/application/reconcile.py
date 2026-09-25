@@ -39,7 +39,7 @@ REFUSED_STATUSES = frozenset({"not_sent", "refused", "rejected", "expired", "dea
 AGREES: Mapping[str, frozenset[str]] = {
     "approved": frozenset({"approved", "accepted", "completed"}),
     "declined": frozenset({"declined", "rejected", "refused"}),
-    "waiting": frozenset({"pending", "waiting"}),
+    "waiting": frozenset({"pending", "waiting", "waiting_for_customer"}),
     "received": frozenset({"pending", "waiting"}),
     "timed_out": frozenset({"declined", "expired", "timed_out", "cancelled"}),
     "not_sent": frozenset({"not_sent", "refused", "rejected", "expired", "deadline_passed", "cancelled"}),

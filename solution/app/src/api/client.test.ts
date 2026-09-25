@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PATHS, api } from "./client";
+import { ASSISTANT_PATHS, PATHS, api } from "./client";
 
 const contract = readFileSync(resolve(__dirname, "../../../contracts/policy-api.yaml"), "utf8");
 
@@ -37,5 +37,39 @@ describe("API client", () => {
     const fetcher = async () =>
       new Response(JSON.stringify({ error: { code: "not_found", message: "no" } }), { status: 404 });
     await expect(api(fetcher).payment("AZ-1")).rejects.toThrow("not_found");
+  });
+});
+
+describe("the permission assistant (LEASH-175)", () => {
+  const assistantContract = readFileSync(resolve(__dirname, "../../../contracts/assistant-api.yaml"), "utf8");
+
+  it("only uses paths from its own contract", () => {
+    for (const path of Object.values(ASSISTANT_PATHS)) expect(assistantContract).toContain(`\n  ${path}:`);
+  });
+
+  it("sends the first words to the assistant, not straight to the policy service", async () => {
+    const calls: { url: string; body: unknown }[] = [];
+    const fetcher = async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: JSON.parse(String(init?.body ?? "null")) });
+      return new Response(JSON.stringify({ draft: { draft_id: "LD-1", instruction: "höchstens CHF 50" },
+                                           consent_text: ["At most CHF 50.00 per order, delivery included."],
+                                           questions: [], status: "needs_answers" }),
+                          { status: 200, headers: { "Content-Type": "application/json" } });
+    };
+    const draft = await api(fetcher).createDraft("höchstens CHF 50");
+    expect(calls).toEqual([{ url: "/api/permission/drafts", body: { text: "höchstens CHF 50" } }]);
+    expect(draft?.draft_id).toBe("LD-1");  // history-only messages need not create a draft
+  });
+
+  it("adds a later turn to the same draft through the assistant", async () => {
+    const calls: string[] = [];
+    const fetcher = async (url: string) => {
+      calls.push(url);
+      return new Response(JSON.stringify({ draft: { draft_id: "LD-1" }, consent_text: [], questions: [],
+                                           status: "ready" }),
+                          { status: 200, headers: { "Content-Type": "application/json" } });
+    };
+    await api(fetcher).addTurn("LD-1", "nur Lieferung");
+    expect(calls).toEqual(["/api/permission/drafts/LD-1/turns"]);
   });
 });

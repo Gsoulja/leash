@@ -101,7 +101,10 @@ def test_assistant_has_no_import_path_to_the_control_layer():
         "leash.domain.mandate.CompiledMandate", "leash.domain.mandate.LooseningError",
         "leash.domain.mandate.Operator", "leash.domain.mandate.Rule",
         "leash.policy.registry", "leash.policy.registry.REGISTRY",
+        "leash.policy.hard_rules", "leash.policy.hard_rules.rule_to_api",
         "leash.policy.registry.problems",
+        # reads a rule back in words, so a question can quote the rule instead of the model's prose
+        "leash.policy.render", "leash.policy.render.describe_rule",
         "leash.policy.compiler", "leash.policy.compiler.compile_instruction"}
 
 
@@ -178,6 +181,16 @@ def test_every_candidate_links_to_the_customer_words_it_came_from():
     assert candidate.turn_id == "T1"
     assert candidate.says == "at most CHF 50 per order"
     assert candidate.says in CUSTOMER[0].text  # an exact excerpt, not a paraphrase
+
+
+def test_quote_capitalization_is_matched_but_original_customer_excerpt_is_preserved():
+    words = "Do not add anything I did not ask for."
+    model = StubModel({"rules": [rule_json(m.F_UNREQUESTED_ITEMS, "=", 0,
+                                         says="do not add anything I did not ask for")], "questions": []})
+    proposal = assistant(model).draft(turns(words))
+    assert len(proposal.candidates) == 1
+    assert proposal.candidates[0].says == words.rstrip(".")
+    assert proposal.questions == ()
 
 
 def test_a_rule_the_customer_never_said_is_labelled_an_unconfirmed_suggestion():
@@ -392,6 +405,22 @@ def test_a_quote_that_does_not_carry_the_value_is_not_a_traced_rule():
     assert any("500" in q.text for q in proposal.questions)
 
 
+@pytest.mark.parametrize("text,value,accepted", [
+    ("Buy clothing up to CHF 250 from shops I have used before. Ask me when uncertain.", 1, True),
+    ("Buy clothing up to CHF 2 from shops I have used before. Ask me when uncertain.", 2, False),
+    ("Never buy from shops I have used before. Ask me when uncertain.", 1, False),
+])
+def test_short_history_quote_is_checked_against_its_original_customer_instruction(text, value, accepted):
+    model = StubModel({"rules": [rule_json(m.F_PRIOR_PURCHASES, ">=", value,
+                                           says="shops I have used before")], "questions": []})
+    proposal = assistant(model).draft(turns(text))
+    matches = [c for c in proposal.candidates if c.rule.field == m.F_PRIOR_PURCHASES]
+    assert bool(matches) == accepted
+    if accepted:
+        assert matches[0].evidenced and matches[0].says == text
+        assert not any(q.field == m.F_PRIOR_PURCHASES for q in proposal.questions)
+
+
 def test_a_quote_is_matched_on_token_boundaries():
     """"50" must not match inside "5000"."""
     said = turns("Spend at most CHF 5000 per order.")
@@ -400,15 +429,21 @@ def test_a_quote_is_matched_on_token_boundaries():
     assert assistant(model).draft(said).candidates == ()
 
 
-def test_an_invented_rule_on_a_field_the_customer_never_mentioned_is_refused():
+def test_an_invented_rule_on_a_field_the_customer_never_mentioned_is_asked_about():
+    """The quote is the customer's, the value is not in it. We ask rather than refuse the wording —
+    a customer writing "nur Lieferung" never types `delivery` either — but it is marked as our
+    reading, it blocks readiness, and the customer sees the rule in plain words before agreeing."""
     said = turns("Spend at most CHF 50 per order.")
     model = StubModel({"rules": [
         rule_json(m.F_BILLING_CHF, "<=", "50", says="at most CHF 50 per order", turn="T1"),
         rule_json(m.F_ITEM_CATEGORY, "in", "alcohol", says="at most CHF 50 per order", turn="T1"),
     ], "questions": []})
     proposal = assistant(model).draft(said)
-    assert [c.rule.field for c in proposal.candidates] == [m.F_BILLING_CHF]
+    by_field = {c.rule.field: c for c in proposal.candidates}
+    assert by_field[m.F_BILLING_CHF].evidenced is True
+    assert by_field[m.F_ITEM_CATEGORY].evidenced is False
     assert proposal.status == "needs_answers"
+    assert any("my words, not yours" in q.text for q in proposal.questions)
 
 
 def test_an_invented_item_id_is_never_taken_for_a_resolved_one(catalogue):
@@ -463,10 +498,25 @@ class StubPolicy:
         self.hard_rules = list(hard_rules)
         self.open_questions = list(open_questions)
         self.calls: list[tuple[str, dict]] = []
+        self.sent_rules: list[dict] = []
+        self.turns: list[tuple[str, str]] = []
 
-    def create_draft(self, instruction, context):
+    def add_turn(self, draft_id, text, rules=(), **kwargs):
+        self.turns.append((draft_id, text))
+        self.sent_rules = [dict(r) for r in rules]
+        return {"draft_id": draft_id, "instruction": text, "status": "ready",
+                "hard_rules": [*self.hard_rules, *self.sent_rules],
+                "independently_read": self.hard_rules,
+                "uncertainty_policy": "ask", "open_questions": self.open_questions}
+
+    def create_draft(self, instruction, context, rules=()):
         self.calls.append((instruction, dict(context)))
-        return {"instruction": instruction, "status": "ready", "hard_rules": self.hard_rules,
+        self.sent_rules = [dict(r) for r in rules]
+        # Faithful to the real service (DEC-045): supplied rules are appended to what it read itself,
+        # and what it read itself is reported separately.
+        return {"instruction": instruction, "status": "ready",
+                "hard_rules": [*self.hard_rules, *self.sent_rules],
+                "independently_read": self.hard_rules,
                 "uncertainty_policy": "ask", "open_questions": self.open_questions}
 
 
@@ -513,13 +563,23 @@ def test_a_rule_the_policy_service_derived_is_validated(pack, scope):
     assert result.status == "ready"
 
 
-def test_a_rule_the_policy_service_did_not_derive_stays_a_suggestion(pack, scope):
-    """The model read it; the deterministic compiler did not. Confidence is not authority."""
+def test_a_rule_the_policy_service_did_not_derive_is_kept_but_marked_uncorroborated(pack, scope):
+    """DEC-045: the compiler reads no German and little ordinary English, so its silence proves nothing.
+
+    The rule is kept and flagged. What gates it is the customer approving the rendered rule
+    (LEASH-146), not a second machine reading agreeing.
+    """
     model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50")], "questions": []})
     result = conversation(pack, scope, model, StubPolicy([])).clarify(CUSTOMER, cutoff=CUTOFF)
-    assert result.validated == ()
-    assert result.status == "needs_answers"
-    assert any("unconfirmed suggestion" in q.text for q in result.questions)
+    assert [c.rule.field for c in result.validated] == [m.F_BILLING_CHF]
+    assert result.validated[0].corroborated is False
+    assert result.proposal.as_draft()["provenance"][0]["corroborated"] is False
+
+
+def test_a_rule_the_compiler_read_the_same_way_is_marked_corroborated(pack, scope):
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50")], "questions": []})
+    result = conversation(pack, scope, model, StubPolicy([spend_hard_rule()])).clarify(CUSTOMER, cutoff=CUTOFF)
+    assert result.validated[0].corroborated is True
 
 
 def test_a_looser_value_than_the_policy_service_read_is_not_validated(pack, scope):
@@ -666,3 +726,356 @@ def test_a_one_item_set_written_as_a_bare_string_is_the_same_restriction(pack, s
     derived = [{"field": m.F_ITEM_CATEGORY, "operator": "in", "value": ["electronics"]}]
     result = conversation(pack, scope, model, StubPolicy(derived)).clarify(said, cutoff=CUTOFF)
     assert [c.rule.field for c in result.validated] == [m.F_ITEM_CATEGORY]
+
+
+GENERIC_RETURNS = "For how many days must the order be returnable?"
+
+
+@pytest.fixture(scope="module")
+def returns_scope(pack) -> Scope:
+    """CA0023 belongs to CU0012, whose profile records a preference for retailers with returns."""
+    return resolve_scope(pack, "CA0023")
+
+
+def test_a_missing_restriction_is_asked_with_the_customers_own_background(pack, returns_scope):
+    """The customer said nothing about returns, so the question should use what we know about them."""
+    said = turns("buy me a jacket, at most CHF 120")
+    generic = [{"question_id": "q1", "text": GENERIC_RETURNS, "blocking": True, "field": m.F_RETURN_DAYS}]
+    result = conversation(pack, returns_scope, StubModel({"rules": [], "questions": []}),
+                          StubPolicy(open_questions=generic)).clarify(said, cutoff=CUTOFF)
+    asked = [q.text for q in result.questions]
+    assert any("returns are possible" in text for text in asked), asked
+    assert GENERIC_RETURNS not in asked
+    assert result.status == "needs_answers"
+
+
+# ----- DEC-045: the model reads, deterministic code validates ------------------------------------
+
+#: The compiler produces no rule for any of these (measured 2026-09-25); it reads English amounts only.
+OTHER_LANGUAGES = ["höchstens CHF 50 pro Bestellung", "au plus CHF 50 par commande",
+                   "al massimo CHF 50 per ordine"]
+
+
+@pytest.mark.parametrize("instruction", OTHER_LANGUAGES)
+def test_an_instruction_the_compiler_cannot_read_still_becomes_a_rule(pack, scope, instruction):
+    """DEC-045. The model does the reading; the compiler's silence no longer discards the rule.
+
+    What this pins is the pipeline, not Apertus: with a model that reads the sentence, the same rule
+    now survives in German, French and Italian as it does in English.
+    """
+    said = (Turn("T1", "customer", instruction),)
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says=instruction, turn="T1")],
+                       "questions": []})
+    result = conversation(pack, scope, model, StubPolicy()).clarify(said, cutoff=CUTOFF)
+    assert [(c.rule.field, c.rule.operator, str(c.rule.value)) for c in result.validated] == [
+        (m.F_BILLING_CHF, "<=", "50")]
+
+
+def test_the_consent_text_comes_from_the_rule_not_the_model(pack, scope):
+    """DEC-045: the customer approves a sentence generated from the Rule, in any input language."""
+    said = (Turn("T1", "customer", OTHER_LANGUAGES[0]),)
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says=OTHER_LANGUAGES[0],
+                                           turn="T1")],
+                       "questions": []})
+    result = conversation(pack, scope, model, StubPolicy()).clarify(said, cutoff=CUTOFF)
+    assert result.consent_text == ("At most CHF 50.00 per order, delivery included.",)
+    # the model's own wording is kept as provenance only, never as the thing agreed to
+    assert result.validated[0].says == OTHER_LANGUAGES[0]
+
+
+def test_the_conversation_hands_the_policy_service_the_rules_it_read(pack, scope):
+    """DEC-045: the model's reading has to reach the draft, or it never reaches the review."""
+    said = (Turn("T1", "customer", OTHER_LANGUAGES[0]),)
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says=OTHER_LANGUAGES[0], turn="T1")],
+                       "questions": []})
+    policy = StubPolicy()
+    result = conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF)
+    assert [(r["field"], str(r["value"])) for r in policy.sent_rules] == [(m.F_BILLING_CHF, "50")]
+    # echoed back in hard_rules, but the service read nothing itself, so nothing is corroborated
+    assert result.validated[0].corroborated is False
+
+
+def test_a_later_turn_adds_to_the_existing_draft_instead_of_starting_a_new_one(pack, scope):
+    """A conversation has one draft. Creating a second would lose the revisions the customer saw."""
+    said = (Turn("T1", "customer", "at most CHF 50 per order"),
+            Turn("T2", "customer", "only for delivery"))
+    model = StubModel({"rules": [rule_json(m.F_FULFILLMENT, "in", ["delivery"], says="only for delivery",
+                                           turn="T2")], "questions": []})
+    policy = StubPolicy()
+    result = conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF, draft_id="LD-1")
+    assert policy.turns == [("LD-1", "only for delivery")]
+    assert [r["field"] for r in policy.sent_rules] == [m.F_FULFILLMENT]
+    assert result.draft["draft_id"] == "LD-1"
+
+
+def test_a_set_of_values_arrives_from_the_model_as_a_json_list():
+    """Every `in` rule comes back as an array; before LEASH-175 each one became a question instead."""
+    model = StubModel({"rules": [rule_json(m.F_ITEM_CATEGORY, "in", ["electronics", "groceries"],
+                                           says="only electronics or groceries", turn="T1")],
+                       "questions": []})
+    said = turns("only electronics or groceries")
+    proposal = assistant(model).draft(said)
+    assert [c.rule.value for c in proposal.candidates] == [("electronics", "groceries")]
+
+
+def test_the_consent_text_covers_every_enforced_rule_not_only_the_model_s(pack, scope):
+    """Found by running it: the compiler's own rules were enforced but never shown to agree to.
+
+    Consent has to cover what will be enforced, whoever read it — otherwise the customer approves a
+    subset and the rest is enforced silently, which is the drift DEC-045 exists to prevent.
+    """
+    model = StubModel({"rules": [], "questions": []})  # the model proposed nothing at all
+    policy = StubPolicy([{**spend_hard_rule(), "value": 20}])  # the API sends amounts as numbers
+    result = conversation(pack, scope, model, policy).clarify(CUSTOMER, cutoff=CUTOFF)
+    assert result.validated == ()
+    assert result.consent_text == ("At most CHF 20.00 per order, delivery included.",)
+
+
+def test_model_reading_preserves_a_quoted_rolling_period():
+    text = "Keep the total across any seven days at or below CHF 300."
+    raw = {**rule_json(m.F_BILLING_CHF, "<=", "300", text), "period_days": 7}
+    proposal = assistant(StubModel({"rules": [raw]})).draft(turns(text))
+    assert len(proposal.candidates) == 1
+    assert proposal.candidates[0].rule.period_days == 7
+    invented = assistant(StubModel({"rules": [{**raw, "period_days": 30}]})).draft(turns(text))
+    assert not invented.candidates and invented.questions
+
+
+def test_number_words_are_supported_by_the_independent_reader():
+    text = "Buy one ordinary grocery item for CHF 20 or less from a shop I have bought from before. Ask me when uncertain."
+    proposed = [rule_json(m.F_MAX_QUANTITY, "<=", "1", text),
+                rule_json(m.F_PRIOR_PURCHASES, ">=", "1", text)]
+    result = assistant(StubModel({"rules": proposed})).draft(turns(text))
+    assert len(result.candidates) == 2
+    assert all(c.evidenced for c in result.candidates)
+
+
+def test_existing_catalogue_id_is_not_authority_to_select_that_product(catalogue):
+    hotel = catalogue.search(name="hotel room").resolved
+    for value in (hotel.item_id, hotel.name):
+        model = StubModel({"rules": [rule_json(m.F_ITEM_ID, "in", value, says="groceries")]})
+        result = assistant(model).draft(turns("only buy groceries"), catalogue=catalogue)
+        assert not result.candidates
+        assert result.questions
+
+
+def test_omission_check_uses_the_same_catalogue_as_product_resolution(catalogue):
+    text = "Replace my worn road-running shoes in size 43."
+    model = StubModel({"rules": []})
+    result = assistant(model).draft(turns(text), catalogue=catalogue)
+    assert model.calls[0].catalogue
+    assert not any(q.field == "instruction" and "not sure how to read" in q.text for q in result.questions)
+
+
+# --- LEASH-174: the model reads, the registry validates ----------------------------------------
+# DEC-045 retired compiler corroboration as the gate. What replaces it is registry validation and
+# nothing else, so the same structured rule must survive whatever language the customer wrote in.
+
+def _sole_rule(words: str):
+    """The one rule the assistant keeps when the model reads `words` as `billing_amount_chf <= 50`."""
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says=words)], "questions": []})
+    proposal = assistant(model).draft(turns(words))
+    assert proposal.questions == (), [q.text for q in proposal.questions]
+    assert len(proposal.candidates) == 1
+    return proposal.candidates[0]
+
+
+@pytest.mark.parametrize("words", [
+    "höchstens CHF 50 pro Bestellung",
+    "au plus CHF 50 par commande",
+    "al massimo CHF 50 per ordine",
+])
+def test_a_german_instruction_produces_the_same_rule_as_english(words):
+    """The compiler reads none of these three. Validation is registry-only, so the rule is the same."""
+    english = _sole_rule("at most CHF 50 per order")
+    assert _sole_rule(words).rule == english.rule
+
+
+def test_an_operator_the_field_forbids_is_refused():
+    """A minimum is not expressible: `billing_amount_chf` permits `<` and `<=` and nothing else."""
+    words = "at least CHF 50 per order"
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, ">=", "50", says=words)], "questions": []})
+    proposal = assistant(model).draft(turns(words))
+    assert proposal.candidates == ()
+    assert proposal.questions, "a refused rule must say why, not vanish"
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity", "1e30"])
+def test_a_value_that_is_not_a_legal_amount_is_refused(value):
+    """Not a legal `Decimal`, or absurd in magnitude. Never stored, always asked about."""
+    words = f"at most CHF {value} per order"
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", value, says=words)], "questions": []})
+    proposal = assistant(model).draft(turns(words))
+    assert proposal.candidates == ()
+    assert proposal.questions
+
+
+def test_an_unquoted_candidate_is_kept_but_marked():
+    """A text value the customer wrote in their own words: kept and restricting, shown as our reading.
+
+    DEC-048: the value-carrying half of the `says` gate is for numbers. "nach Hause" never contains
+    the token `delivery`, and refusing it would be refusing the language, not the reading.
+    """
+    words = "schick es mir nach Hause"
+    model = StubModel({"rules": [rule_json(m.F_FULFILLMENT, "in", ["delivery"], says=words)],
+                       "questions": []})
+    proposal = assistant(model).draft(turns(words))
+    assert [c.rule.field for c in proposal.candidates] == [m.F_FULFILLMENT]
+    assert proposal.candidates[0].evidenced is False
+    assert proposal.questions, "an unevidenced rule is shown as our reading and asked about"
+
+
+@pytest.mark.parametrize("questions", [None, "Which shop?", 7, [{"text": "Which shop?"}]])
+def test_malformed_model_questions_are_retryable_not_a_broken_chat(questions):
+    proposal = assistant(StubModel({"rules": [], "questions": questions})).draft(CUSTOMER)
+    assert proposal.failure == "model_invalid_response"
+    assert not proposal.candidates
+
+
+# --- LEASH-176: the model restates, we must still trace it to the customer's own words ----------
+# Measured live on 2026-09-25: 14 of 19 rules Apertus read correctly from the five challenge
+# instructions were dropped because the quote was a restatement ("one item" for "one ordinary
+# grocery item") rather than a contiguous span. The gate's job is to prove the customer wrote it,
+# not to prove the model copied it character by character.
+
+SCEN0000 = ("Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. "
+            "Ask me when uncertain.")
+
+
+def test_a_restated_quote_is_traced_to_the_sentence_the_customer_wrote():
+    model = StubModel({"rules": [rule_json(m.F_MAX_QUANTITY, "<=", 1, says="one item")],
+                       "questions": []})
+    proposal = assistant(model).draft(turns(SCEN0000))
+    kept = [c for c in proposal.candidates if c.rule.field == m.F_MAX_QUANTITY]
+    assert kept, [q.text for q in proposal.questions]
+    assert kept[0].says.startswith("Buy one ordinary grocery item")
+    assert kept[0].evidenced
+
+
+def test_a_restated_quote_whose_words_the_customer_never_wrote_is_still_refused():
+    """"no add-ons" is nowhere in SCEN0002: an invention must not become a rule (DEC-034)."""
+    said = turns("Replace my worn road-running shoes in size 43. Pay no more than CHF 200.")
+    model = StubModel({"rules": [rule_json(m.F_UNREQUESTED_ITEMS, "=", 0,
+                                           says="Buy only the requested item, no add-ons")],
+                       "questions": []})
+    assert assistant(model).draft(said).candidates == ()
+
+
+def test_a_correction_the_model_restates_still_tightens():
+    """"Actually make it 30." carries the number but not the phrasing; the tightening must land."""
+    said = (Turn("T1", "customer", "At most CHF 50 per order."),
+            Turn("T2", "assistant", "Understood: at most CHF 50.00 per order."),
+            Turn("T3", "customer", "Actually make it 30."))
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 30,
+                                           says="At most CHF 30 per order", turn="T3")],
+                       "questions": []})
+    kept = assistant(model).draft(said).candidates
+    assert [str(c.rule.value) for c in kept] == ["30"]
+
+
+def test_a_number_that_belongs_to_an_amount_never_evidences_a_count():
+    """"CHF 2" is two francs, not two earlier purchases (holds after the restatement fallback)."""
+    said = turns("Buy clothing up to CHF 2 from shops I have used before.")
+    model = StubModel({"rules": [rule_json(m.F_PRIOR_PURCHASES, ">=", 2,
+                                           says="shops I have used before")], "questions": []})
+    assert assistant(model).draft(said).candidates == ()
+
+
+def test_a_rolling_budget_in_another_language_is_kept():
+    """The compiler reads no German, so its silence may not drop the period (DEC-045)."""
+    said = turns("Höchstens CHF 300 in 7 Tagen.")
+    model = StubModel({"rules": [{"field": m.F_BILLING_CHF, "operator": "<=", "value": 300,
+                                  "period_days": 7, "says": "Höchstens CHF 300 in 7 Tagen",
+                                  "turn_id": "T1"}], "questions": []})
+    kept = assistant(model).draft(said).candidates
+    assert [(str(c.rule.value), c.rule.period_days) for c in kept] == [("300", 7)]
+
+
+def test_a_sentence_the_compiler_cannot_read_is_not_asked_when_a_rule_covers_it():
+    """The compiler's "I'm not sure how to read …" is noise once the model has read that sentence."""
+    said = turns("Höchstens CHF 50 pro Bestellung.")
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 50,
+                                           says="Höchstens CHF 50 pro Bestellung")], "questions": []})
+    proposal = assistant(model).draft(said)
+    assert proposal.candidates
+    assert not any("not sure how to read" in q.text for q in proposal.questions), \
+        [q.text for q in proposal.questions]
+
+
+def test_a_sentence_no_rule_covers_is_still_asked_about():
+    """The omission net stays: an unread restriction must not vanish silently."""
+    said = turns("No subscriptions. Höchstens CHF 50 pro Bestellung.")
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 50,
+                                           says="Höchstens CHF 50 pro Bestellung")], "questions": []})
+    proposal = assistant(model).draft(said)
+    assert any("subscriptions" in q.text.lower() for q in proposal.questions)
+
+
+def test_a_dollar_amount_is_asked_never_read_as_chf():
+    """Live: Apertus read "at most USD 450 per order" as billing_amount_chf <= 450 (≈ CHF 391)."""
+    said = turns("At most USD 450 per order.")
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 450,
+                                           says="At most USD 450 per order")], "questions": []})
+    proposal = assistant(model).draft(said)
+    assert proposal.candidates == ()
+    assert any("USD" in q.text for q in proposal.questions)
+
+
+def test_a_value_outside_the_fields_vocabulary_is_asked_never_enforced():
+    """Live: `fulfillment_method = "lieferung"` was stored as an enforceable rule."""
+    said = turns("Nur Lieferung.")
+    model = StubModel({"rules": [rule_json(m.F_FULFILLMENT, "=", "lieferung", says="Nur Lieferung")],
+                       "questions": []})
+    proposal = assistant(model).draft(said)
+    assert proposal.candidates == ()
+    assert any("lieferung" in q.text.lower() for q in proposal.questions)
+
+
+def test_a_number_the_customer_wrote_as_a_word_carries_the_value():
+    """DEC-048 asks for the number in the quoted words. "one" is that number, written out."""
+    said = turns("Only one item per order.")
+    model = StubModel({"rules": [rule_json(m.F_MAX_QUANTITY, "<=", 1, says="Only one item per order")],
+                       "questions": []})
+    kept = assistant(model).draft(said).candidates
+    assert [(c.rule.field, str(c.rule.value), c.evidenced) for c in kept] == \
+        [(m.F_MAX_QUANTITY, "1", True)]
+
+
+def test_a_word_that_is_not_the_rules_number_still_refuses():
+    said = turns("Only one item per order.")
+    model = StubModel({"rules": [rule_json(m.F_MAX_QUANTITY, "<=", 3, says="Only one item per order")],
+                       "questions": []})
+    assert assistant(model).draft(said).candidates == ()
+
+
+# --- a sentence holding two restrictions, only one of them read (found in review, 2026-09-25) -----
+# Suppressing the compiler's "I'm not sure how to read this" because the model's quote covered the
+# whole sentence is unsound: coverage can be manufactured by quoting everything, or by the excerpt
+# being recovered as the whole sentence. Neither other net sees it — the grammar produced no rule to
+# miss, and "no subscriptions" maps to no registry field, so `unrestricted` cannot show it either.
+
+JACKET = "Buy me a jacket, at most CHF 120 per order, and no subscriptions."
+JACKET_DE = "Kauf mir eine Jacke, höchstens CHF 120 pro Bestellung, keine Abos."
+
+
+@pytest.mark.parametrize("text,says", [
+    (JACKET, JACKET.rstrip(".")),              # the model quoted the whole sentence
+    (JACKET, "at most CHF 120 per order"),     # a genuine fragment
+    (JACKET, "CHF 120"),
+    (JACKET_DE, "maximal CHF 120 pro Bestellung"),  # restated: the excerpt becomes the sentence
+    (JACKET_DE, JACKET_DE.rstrip(".")),
+])
+def test_a_restriction_in_the_same_sentence_that_nothing_read_is_still_asked_about(text, says):
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 120, says=says)], "questions": []})
+    proposal = assistant(model).draft(turns(text))
+    assert proposal.candidates, "the limit itself must still be read"
+    assert proposal.questions, f"nothing asked about the rest of {text!r}"
+    assert proposal.status == "needs_answers"
+
+
+def test_a_single_restriction_sentence_the_model_read_is_not_asked_about():
+    """The control: one clause, one rule, so the compiler's silence about it means nothing (DEC-056)."""
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", 50,
+                                           says="Höchstens CHF 50 pro Bestellung")], "questions": []})
+    proposal = assistant(model).draft(turns("Höchstens CHF 50 pro Bestellung."))
+    assert proposal.candidates and proposal.status == "ready"

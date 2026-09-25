@@ -13,6 +13,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "psycopg[binary]>=3.2",
     "jsonschema>=4.20",
+    "openai>=3.19.2",
 ]
 
 
