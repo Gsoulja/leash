@@ -34,7 +34,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U leash -d leash" --health-interval 2s --health-timeout 3s --health-retries 20
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5          # a clean checkout: nothing from a developer's machine
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5          # a clean checkout: nothing from a developer's machine
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.8"
@@ -55,7 +55,7 @@ jobs:
     name: frontend tests and types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "22"
@@ -83,7 +83,7 @@ jobs:
       contents: read
       pull-requests: read                    # gitleaks lists a pull request's commits (LEASH-197)
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0                     # the whole history, not just the tip
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
@@ -94,7 +94,7 @@ jobs:
     name: dependency scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.8"
@@ -123,7 +123,7 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: build once
         id: build
@@ -165,7 +165,7 @@ jobs:
       packages: write
       id-token: write                        # keyless signing and provenance
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: the registry only accepts a lowercase name; github.repository is not one
         id: name
         run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/leash-engine" >> "$GITHUB_OUTPUT"
