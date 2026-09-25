@@ -70,6 +70,24 @@ def ready_draft(http):
     return valid(draft.json(), "PolicyDraft")
 
 
+@pytest.mark.parametrize("corrected", [False, True])
+def test_simulation_submission_keeps_task_text_and_reviews_clarified_rules(api, corrected):
+    http, _, _, _ = api
+    original = "At most CHF 20 per order. Only groceries. Ask me when uncertain."
+    draft = http.post("/api/policies/drafts", json={
+        "instruction": original, "context": {"simulation_scenario": "SCEN0000"}}).json()
+    path = f"/api/policies/drafts/{draft['draft_id']}"
+    if corrected:
+        original = "At most CHF 19 per order. Only groceries. Ask me when uncertain."
+        assert http.post(path + "/turns", json={"text": original, "replace_instruction": True}).status_code == 200
+    clarified = http.post(path + "/turns", json={"text": "At most 1 item per order."}).json()
+    posted = http.post(path + "/submit", json={"revision": clarified["revision"]})
+    assert posted.status_code == 200, posted.text
+    assert posted.json()["instruction"] == original
+    assert posted.json()["hard_rules"] == clarified["hard_rules"]
+    assert clarified["revisions"][-1]["customer_turn"]["text"] == "At most 1 item per order."
+
+
 def test_confirm_requires_draft(api):
     http, viseca, _, _ = api
     response = http.post("/api/policies/drafts/LD-nope/confirm", json={"confirmed": True, "revision": 1})
@@ -916,3 +934,77 @@ def test_model_reply_choices_reach_the_view_and_answered_questions_do_not_return
                          'answers': [{'question': question['text'], 'answer': 'Only groceries.'}]},
                         {'questions': [question]})
     assert not answered['open_questions']
+
+
+def test_model_draft_and_revision_never_reinterpret_customer_grammar(api, monkeypatch):
+    http, viseca, _, _ = api
+    def forbidden(*args, **kwargs):
+        raise AssertionError("model drafts must not use grammar")
+    monkeypatch.setattr("leash.application.clarify.compile_instruction", forbidden)
+    rule = {"field": "authorization.billing_amount_chf", "operator": "<=", "value": 100}
+    assessment = {"reading": "model", "questions": [], "uncertainty_policy": "ask"}
+    response = http.post("/api/policies/drafts", json={"instruction": "Keep my basket below a hundred francs",
+        "rules": [rule], "context": {"assistant": assessment}})
+    assert response.status_code == 201, response.text
+    draft = valid(response.json(), "PolicyDraft")
+    assert draft["status"] == "ready" and draft["hard_rules"] == [rule]
+    path = f"/api/policies/drafts/{draft['draft_id']}"
+    changed = http.post(path + "/turns", json={"text": "Actually fifty francs", "rules": [{**rule, "value": 50}],
+                                             "assessment": assessment, "expected_revision": 1}).json()
+    assert changed["revision"] == 2
+    assert changed["hard_rules"] == [{**rule, "value": 50}]
+    assert http.post(path + "/submit", json={"revision": 1}).status_code == 409
+    assert http.post(path + "/submit", json={"revision": 2}).status_code == 200
+    assert viseca.confirms == 0
+
+
+@pytest.mark.parametrize("rules,questions", [
+    ([], []),
+    ([{"field": "items.item_category", "operator": "in", "value": ["groceries"]},
+      {"field": "items.item_category", "operator": "in", "value": ["electronics"]}], []),
+    ([{"field": "authorization.billing_amount_chf", "operator": "<=", "value": 50}],
+     [{"text": "What does sustainable mean for this task?", "options": []}]),
+])
+def test_model_empty_conflicting_or_unresolved_drafts_cannot_be_submitted(api, rules, questions):
+    http, viseca, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": "My task", "rules": rules,
+        "context": {"assistant": {"reading": "model", "questions": questions, "uncertainty_policy": "ask"}}}).json()
+    assert draft["status"] == "needs_answers" and draft["open_questions"]
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1})
+    assert response.status_code == 409
+    assert viseca.creates == viseca.confirms == 0
+
+
+def test_stale_complete_model_proposal_cannot_erase_a_newer_restriction(api):
+    http, _, _, _ = api
+    budget = {"field": "authorization.billing_amount_chf", "operator": "<=", "value": 100}
+    groceries = {"field": "items.item_category", "operator": "in", "value": ["groceries"]}
+    assessment = {"reading": "model", "questions": [], "uncertainty_policy": "ask"}
+    draft = http.post("/api/policies/drafts", json={"instruction": "At most CHF 100", "rules": [budget],
+        "context": {"assistant": assessment}}).json()
+    path = f"/api/policies/drafts/{draft['draft_id']}"
+    first = http.post(path + "/turns", json={"text": "Only groceries", "rules": [budget, groceries],
+        "assessment": assessment, "expected_revision": 1})
+    assert first.status_code == 200, first.text
+    stale = http.post(path + "/turns", json={"text": "Actually CHF 50", "rules": [{**budget, "value": 50}],
+        "assessment": assessment, "expected_revision": 1})
+    assert stale.status_code == 409, stale.text
+    assert stale.json()["error"]["code"] == "stale_revision"
+    current = http.get(path).json()
+    assert current["revision"] == 2
+    assert current["hard_rules"] == [budget, groceries]
+    assert current["instruction"] == "At most CHF 100 Only groceries"
+
+
+@pytest.mark.parametrize("expected", [None, True, 0, "1"])
+def test_model_revision_requires_a_valid_expected_revision(api, expected):
+    http, _, _, _ = api
+    rule = {"field": "authorization.billing_amount_chf", "operator": "<=", "value": 100}
+    assessment = {"reading": "model", "questions": [], "uncertainty_policy": "ask"}
+    draft = http.post("/api/policies/drafts", json={"instruction": "At most CHF 100", "rules": [rule],
+        "context": {"assistant": assessment}}).json()
+    body = {"text": "Actually fifty", "rules": [{**rule, "value": 50}], "assessment": assessment}
+    if expected is not None:
+        body["expected_revision"] = expected
+    response = http.post(f"/api/policies/drafts/{draft['draft_id']}/turns", json=body)
+    assert response.status_code == 422, response.text

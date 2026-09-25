@@ -450,3 +450,27 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
             # was re-asked under another id), and a transcript that kept showing it would be claiming a
             # settled point the draft no longer holds.
             "answers": replayed}
+
+
+def draft_from_rules(instruction: str, proposed: Sequence[Rule], catalogue: Sequence[CatalogueItem],
+                     uncertainty: Uncertainty = "ask") -> dict[str, Any]:
+    """Render a validated model proposal for human review, without interpreting language."""
+    if uncertainty not in {"ask", "decline"}:
+        raise ValueError("model uncertainty policy must be ask or decline")
+    rules = _once(proposed)
+    mandate = CompiledMandate(rules=tuple(rules), uncertainty=uncertainty, instruction=instruction)
+    impossible = _unsatisfiable(mandate, catalogue)
+    questions = []
+    if impossible or not rules:
+        text = (f"These rules cannot all be met ({impossible}). Please correct the draft." if impossible else
+                "What should the agent be allowed to buy? This draft has no enforceable restrictions yet.")
+        questions.append({"question_id": question_id(Question("instruction", text)),
+                          "text": text, "blocking": True})
+    notes = [*(describe_rule(r) for r in rules), _POLICY_NOTES[uncertainty]]
+    hard_rules = [rule_to_api(r) for r in rules]
+    return {"instruction": instruction, "review": permission_review(rules, uncertainty),
+            "status": "needs_answers" if questions else "ready",
+            "rules": [{"text": note, "source": "assumption", "tightened": False} for note in notes],
+            "hard_rules": hard_rules, "uncertainty_policy": uncertainty, "notes": notes,
+            "open_questions": questions, "unrestricted": [f for f in REGISTRY if not any(r.field == f for r in rules)],
+            "independently_read": [], "proposed": hard_rules, "answers": []}

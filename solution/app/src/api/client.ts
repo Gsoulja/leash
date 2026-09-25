@@ -32,7 +32,7 @@ export type Question = Schemas["Question"];
  *  will show it. `draft` is the policy service's own view, unaltered. */
 export type AssistantDraft = {
   draft: PolicyDraft | null;
-  kind?: "permission" | "history";
+  kind?: "permission" | "history" | "chat";
   reply?: string | null;
   consent_text: string[];
   questions: { text: string; field?: string | null }[];

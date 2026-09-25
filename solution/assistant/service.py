@@ -82,6 +82,10 @@ class PolicyServiceError(RuntimeError):
     """The policy service refused or could not be reached. Never swallowed: a draft we could not
     create must not look like a draft with no restrictions in it."""
 
+    def __init__(self, message: str, status: int = 503):
+        super().__init__(message)
+        self.status = status
+
 
 class HttpPolicyService:
     """The policy service as this surface uses it: ask for a draft, and read the confirmed permission.
@@ -90,10 +94,6 @@ class HttpPolicyService:
     anything, so this process cannot do those things by mistake. Reading the active permission is a
     read: a candidate rule has to be checked against it before a customer ever sees it (DEC-006).
     """
-
-    def __init__(self, message: str, status: int = 503):
-        super().__init__(message)
-        self.status = status
 
     def __init__(self, client: Any, *, timeout_seconds: float = 10.0) -> None:
         self._client, self._timeout = client, timeout_seconds
@@ -106,13 +106,15 @@ class HttpPolicyService:
 
     def add_turn(self, draft_id: str, text: str,
                  rules: Sequence[Mapping[str, Any]] = (), *, assessment: Mapping[str, Any] | None = None,
-                 replace_instruction: bool = False, context: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
+                 replace_instruction: bool = False, context: Mapping[str, Any] | None = None,
+                 expected_revision: int | None = None) -> Mapping[str, Any]:
         from urllib.parse import quote
 
         return self._post(f"/api/policies/drafts/{quote(draft_id, safe='')}/turns",
                           {"text": text, "rules": [dict(r) for r in rules],
                            "assessment": assessment, "replace_instruction": replace_instruction,
-                           "context": dict(context) if context is not None else None})
+                           "context": dict(context) if context is not None else None,
+                           **({"expected_revision": expected_revision} if expected_revision is not None else {})})
 
     def draft(self, draft_id: str) -> Mapping[str, Any]:
         from urllib.parse import quote
@@ -170,13 +172,8 @@ class HttpPolicyService:
         return response.json()
 
 
-def _active(policy: PolicyService) -> CompiledMandate | None:
-    """The confirmed permission a candidate rule must not loosen, compiled from its own hard_rules.
-
-    A `PolicyServiceError` is left to the caller: not knowing what is already confirmed is not the same
-    as nothing being confirmed, and drafting without the check is the loosening it exists to prevent.
-    """
-    stored = policy.active_mandate()
+def _active(stored: Mapping[str, Any] | None) -> CompiledMandate | None:
+    """Only this draft's confirmed mandate constrains changes; a new task is a new permission."""
     if not stored:
         return None
     compiled, _ = mandate_from_api({"instruction": str(stored.get("instruction") or "x"),
@@ -212,13 +209,17 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             target = next((q for q in stored.get("open_questions", []) if q.get("question_id") == question_id), None)
             if target is None:
                 return _error(409, "stale_question", "This question is no longer open. Reload the draft before answering.")
-            if not question_id.startswith("AQ-") and target.get("origin") != "model":
+            if not assistant.structured and not question_id.startswith("AQ-") and target.get("origin") != "model":
                 try:
                     draft = policy.answer_draft(draft_id, question_id, text)
                 except PolicyServiceError as exc:
-                    return _error(exc.status, "invalid_answer", str(exc))
-                return {"draft": draft, "kind": "permission", "reply": None, "consent_text": [],
-                        "questions": [], "status": draft.get("status", "needs_answers")}
+                    if exc.status != 422:
+                        return _error(exc.status, "invalid_answer", str(exc))
+                    # A message beside a question can ask for help or change the task. Let the model
+                    # read it with context when the deterministic answer parser cannot accept it.
+                else:
+                    return {"draft": draft, "kind": "permission", "reply": None, "consent_text": [],
+                            "questions": [], "status": draft.get("status", "needs_answers")}
         earlier = "" if replacing else str(stored.get("instruction", ""))
         turns = _said(earlier, text)
         if not replacing:
@@ -229,7 +230,7 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
                 questions = [target["text"]]
             turns[-1:-1] = [Turn("Q", "assistant", "\n".join(questions))] if questions else []
         return _reply(turns, draft_id=draft_id, replace_instruction=replacing,
-                      scenario_id=stored.get("simulation_scenario"))
+                      scenario_id=stored.get("simulation_scenario"), draft_context=stored)
 
     @app.post("/api/permission/drafts")
     def create_draft(body: dict[str, Any] = Body(...)) -> Any:
@@ -240,7 +241,7 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
         return _reply(_said("", text), draft_id=None, scenario_id=body.get("scenario_id"))
 
     def _reply(said: list[Turn], *, draft_id: str | None, replace_instruction: bool = False,
-               scenario_id: str | None = None) -> Any:
+               scenario_id: str | None = None, draft_context: Mapping[str, Any] | None = None) -> Any:
         scoped_card = card_id
         if scenario_id is not None:
             if not simulation or not isinstance(scenario_id, str):
@@ -263,14 +264,17 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             # DEC-006, before anything is shown: a candidate that would loosen the confirmed permission
             # is a question, not a rule. Without this the customer reads a looser limit as their new
             # permission and only the engine's /tighten refuses it — after they believed it.
-            active = _active(policy)
+            active = _active(draft_context.get("confirmed_mandate") if draft_context else None)
             result = conversation.clarify(said, cutoff=cutoff, draft_id=draft_id, active=active,
-                                          replace_instruction=replace_instruction, simulation_scenario=scenario_id)
+                                          replace_instruction=replace_instruction, simulation_scenario=scenario_id,
+                                          draft_context=draft_context)
         except ModelUnavailable as exc:
             return _error(503, exc.code or "model_unavailable", str(exc))
         except ValueError as exc:  # no customer words yet: a question, not a failure
             return _error(422, "invalid_request", str(exc))
         except PolicyServiceError as exc:
+            if exc.status == 409:
+                return _error(409, "draft_changed", str(exc))
             # Never a draft of our own invention: without the policy service there is no validated
             # draft, and an empty one would read to the customer as "nothing is restricted".
             log.error("the policy service could not produce a draft", exc_info=exc)
@@ -278,7 +282,7 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
                           "I couldn't check your permission just now. Nothing was saved; please try again.")
         return {
             "draft": result.draft or None,
-            "kind": result.proposal.intent,
+            "kind": "permission" if result.proposal.intent == "answer" else result.proposal.intent,
             "reply": result.reply,
             "consent_text": list(result.consent_text),
             # `offers` is the rule the question proposes, so the policy service can offer it as a
@@ -368,9 +372,8 @@ def build_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         model: Any = OfflineModel()
     elif choice == "openrouter":
         from assistant.openrouter import OpenRouterModel
-        from leash.adapters.jev import JevClient
 
-        model = OpenRouterModel(environ=env, verifier=JevClient(env))
+        model = OpenRouterModel(environ=env)
     else:
         raise ValueError("LEASH_ASSISTANT_MODEL must be openrouter or offline")
     return create_app(PermissionAssistant(model), pack, policy, catalogue=catalogue,

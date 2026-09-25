@@ -120,10 +120,10 @@ components:
       properties:
         kind:
           type: string
-          enum: [permission, history]
+          enum: [permission, history, chat]
         reply:
           type: [string, 'null']
-          description: Sourced history answer; never permission or a checkout verdict.
+          description: Conversational explanation or sourced history answer; never permission or a checkout verdict.
         draft:
           type: [object, 'null']
           description: The policy service's own draft view (PolicyDraft in policy-api.yaml), unaltered.

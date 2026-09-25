@@ -32,7 +32,7 @@ from typing import Any, Literal, Protocol, cast, get_args
 from leash.domain import mandate as m
 from leash.domain.mandate import CompiledMandate, LooseningError, Operator, Rule
 from leash.policy.compiler import compile_instruction
-from leash.policy.hard_rules import rule_to_api
+from leash.policy.hard_rules import rule_from_api, rule_to_api
 from leash.policy.registry import REGISTRY, problems
 from leash.policy.render import describe_rule
 
@@ -154,10 +154,14 @@ class Proposal:
     prompt_version: str = PROMPT_VERSION
     tool_calls: tuple[ToolCall, ...] = ()
     failure: str | None = None
-    intent: Literal["permission", "history"] = "permission"
+    intent: Literal["permission", "history", "chat", "answer"] = "permission"
+    reply: str | None = None
+    answer: tuple[str, str] | None = None
     #: Turns the model attributed a rule to, whether or not the rule survived validation. A turn that
     #: appears here stated something, even if what it stated became a question instead of a rule.
     attributed: tuple[str, ...] = ()
+    reading: Literal["reference", "model"] = "reference"
+    uncertainty_policy: Literal["ask", "decline"] = "ask"
 
     @property
     def status(self) -> Status:
@@ -167,6 +171,8 @@ class Proposal:
     def as_draft(self) -> dict[str, Any]:
         """The draft as it goes to the policy service: rules, questions and provenance only."""
         return {
+            "reading": self.reading,
+            "uncertainty_policy": self.uncertainty_policy,
             "rules": [rule_to_api(c.rule) for c in self.candidates],
             # `offers` is the rule the question proposes, so the policy service can offer it as a
             # choice instead of a blank text box. It validates the rule again and renders the button's
@@ -339,6 +345,20 @@ _MONEY_BOUND = re.compile(r"(?:CHF|EUR|USD|GBP|fr\.?|francs?|\u20ac|\$|\u00a3)\s
 _OTHER_MONEY = re.compile(r"\b(EUR|USD|GBP|JPY|euros?|dollars?|pounds?|yen)\b|[\u20ac$\u00a3]", re.I)
 
 
+def _explicit_chf_amounts(text: str) -> set[Decimal]:
+    """Only unambiguous currency literals; worded amounts remain the model's reading."""
+    quoted = re.finditer(r"\bCHF\s*([+-]?\d[\d.,'’]*)(?!\w|\s+\d)|(?<![\w.,'’])([+-]?\d[\d.,'’]*)\s*CHF\b", text, re.I)
+    amounts = set()
+    for match in quoted:
+        before, after = match.groups()
+        if after and re.search(r"\d\s+$", text[:match.start()]):
+            continue  # Never read only the tail of an unhandled grouped number, such as 1 250 CHF.
+        number = (before or after).rstrip(".,")
+        if re.fullmatch(r"[+-]?(?:\d+|\d{1,3}(?:['’]\d{3})+)(?:[.,]\d{1,2})?", number):
+            amounts.add(Decimal(number.replace("'", "").replace("’", "").replace(",", ".")))
+    return amounts
+
+
 def _turn_text(turns: Sequence[Turn], turn_id: str) -> str:
     return next((t.text for t in turns if t.turn_id == turn_id and t.speaker == "customer"), "")
 
@@ -486,6 +506,7 @@ class PermissionAssistant:
 
     def __init__(self, model: AssistantModel):
         self._model = model
+        self.structured = getattr(model, "structured", False)
 
     def draft(self, turns: Sequence[Turn], *, context: Mapping[str, Any] | None = None,
               catalogue: Sequence[Any] | None = None,
@@ -508,6 +529,21 @@ class PermissionAssistant:
     def _read(self, reply: Any, turns: tuple[Turn, ...], confirmed: CompiledMandate | None,
               catalogue: Any, context: Mapping[str, Any]) -> Proposal:
         name = getattr(self._model, "name", "")
+        if isinstance(reply, Mapping) and reply.get("intent") == "answer":
+            selected = reply.get("answer")
+            if isinstance(selected, Mapping) and reply.get("rules") == []:
+                for question in context.get("draft", {}).get("open_questions", []):
+                    if (question.get("question_id") == selected.get("question_id")
+                            and not question["question_id"].startswith("AQ-")
+                            and selected.get("option") in question.get("options", [])):
+                        return Proposal(model=name, intent="answer", answer=(question["question_id"], selected["option"]))
+            return self._fallback("I couldn't match that answer to an open choice. Please clarify.", "model_invalid_response")
+        if isinstance(reply, Mapping) and reply.get("intent") == "chat":
+            prose = reply.get("reply")
+            if reply.get("rules") != [] or not isinstance(prose, str) or not prose.strip() or len(prose) > 4000:
+                return self._fallback("I couldn't read that response. Please retry.", "model_invalid_response")
+            return Proposal(model=name, prompt_version=str(getattr(self._model, "prompt_version", PROMPT_VERSION)),
+                            intent="chat", reply=prose.strip())
         if isinstance(reply, Mapping) and reply.get("intent") == "history":
             if reply.get("rules") != []:
                 return self._fallback("The model mixed a history answer with permission changes. Please retry.",
@@ -530,7 +566,8 @@ class PermissionAssistant:
         # What the deterministic compiler reads from the same words. The policy service compiles the very
         # same instruction, so a rule in here is already in the draft whatever we do with the model's
         # version of it — which is what makes a question about it redundant rather than a safeguard.
-        compiled = _compiler_rules(turns, catalogue)
+        structured = self.structured
+        compiled = () if structured else _compiler_rules(turns, catalogue)
         questions = [q for raw in asked if (q := _model_question(raw)) is not None and q.text.strip()]
         calls: list[ToolCall] = []
         for raw in reply["rules"]:
@@ -539,8 +576,10 @@ class PermissionAssistant:
                 candidates.append(candidate)
             if question is not None:
                 questions.append(question)
-        questions += _omitted(turns, candidates, catalogue)
-        questions += _context_gaps(context)
+        if not structured:
+            questions += _omitted(turns, candidates, catalogue)
+        if not structured:
+            questions += _context_gaps(context)
         # Nothing from the model *and* nothing from the deterministic reader: there is no draft to show,
         # so the customer retries rather than being handed an empty one (DEC-045, DEC-047). When the
         # compiler did read their words, the draft is real even if the model proposed nothing — the
@@ -559,7 +598,8 @@ class PermissionAssistant:
             if isinstance(raw, Mapping) and raw.get("turn_id")
             and _customer_excerpt(str(raw.get("says", "")), turns, str(raw["turn_id"])) is not None))
         return Proposal(tuple(candidates), tuple(dict.fromkeys(questions)), name, version,
-                        tuple(calls), attributed=attributed)
+                        tuple(calls), attributed=attributed, reading="model" if structured else "reference",
+                        uncertainty_policy=reply.get("uncertainty_policy", "ask"))
 
     def _one(self, raw: Any, turns: tuple[Turn, ...], confirmed: CompiledMandate | None,
              catalogue: Any, calls: list[ToolCall],
@@ -567,6 +607,8 @@ class PermissionAssistant:
         """One proposed rule, or the question it becomes instead."""
         if not isinstance(raw, Mapping):
             return None, Question("I couldn't read one of the rules I drafted. Could you say it again?")
+        if self.structured:
+            return self._structured_rule(raw, turns, confirmed, catalogue)
         field_name, operator = str(raw.get("field", "")), str(raw.get("operator", ""))
         says, turn_id = str(raw.get("says", "")), str(raw.get("turn_id", ""))
         if operator not in get_args(Operator):
@@ -684,6 +726,41 @@ class PermissionAssistant:
                 return None, Question(f"I couldn't check that against your confirmed permission "
                                       f"about {_label(field_name)}. Could you say it again?", field_name)
         return CandidateRule(rule, says, turn_id, evidenced=evidenced), unevidenced
+
+
+    def _structured_rule(self, raw, turns, confirmed, catalogue):
+        """Validate shape, enforceability and source without interpreting customer language."""
+        try:
+            rule = rule_from_api({k: v for k, v in raw.items() if k not in {"says", "turn_id"}})
+            rule = replace(rule, value=_value(rule.field, raw["value"]))
+            issues = problems([rule])
+        except (ValueError, TypeError, ArithmeticError):
+            return None, Question("I couldn't validate a proposed rule. Please clarify the restriction.")
+        if issues or _unknown_values(rule, catalogue):
+            return None, Question("This restriction cannot be enforced as drafted. Please clarify it.", rule.field)
+        says, turn_id = raw["says"], raw["turn_id"]
+        if not any(t.speaker == "customer" and t.turn_id == turn_id and says in t.text for t in turns):
+            return None, Question(f"Unconfirmed suggestion: {describe_rule(rule)} Do you want this rule?",
+                                  rule.field, rule=rule)
+        if _wrong_currency(rule.field, says):
+            return None, Question("What is your spending limit in CHF? I cannot convert your permission myself.", rule.field)
+        if rule.field == m.F_BILLING_CHF:
+            amounts = _explicit_chf_amounts(says)
+            if amounts and rule.value not in amounts:
+                return None, Question("The drafted limit differs from the CHF amount you wrote. What should the limit be?", rule.field)
+        if rule.field == m.F_ITEM_ID:
+            items = _items(catalogue)
+            values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
+            selected = [i for i in items if i.item_id in values]
+            if len(selected) != len(values) or any(
+                    i.item_id not in says and i.name.casefold() not in says.casefold() for i in selected):
+                return None, Question("Which exact catalogue product do you mean?", rule.field)
+        if confirmed is not None and not _restates_current(rule, confirmed):
+            try:
+                confirmed.tighten(rule)
+            except LooseningError:
+                return None, Question("That would loosen confirmed permission. Keep the current restriction?", rule.field)
+        return CandidateRule(rule, says, turn_id, evidenced=False), None
 
 
 def _resolve_item(rule: Rule, catalogue: Any, calls: list[ToolCall]) -> tuple[Rule, Question | None]:

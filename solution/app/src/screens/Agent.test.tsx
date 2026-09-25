@@ -82,6 +82,25 @@ async function say(text: string) {
  *  hands back the policy service's own draft unaltered, plus what the customer is asked to agree to. */
 const assistant = (body: PolicyDraft) => ({ draft: body, consent_text: [], questions: [], status: body.status });
 
+it("keeps the mandate instruction visible and answers ordinary conversation without changing it", async () => {
+  const current = draft({ mandate_instruction: "Buy groceries for the week." });
+  sessionStorage.setItem("leash.draft_id", current.draft_id);
+  const calls = stubFetch({
+    "GET /api/policies/drafts/LD-1": [{ status: 200, body: current }],
+    "POST /api/permission/drafts/LD-1/turns": [{ status: 200, body: {
+      ...assistant(current), kind: "chat", reply: "I am asking how to handle missing checkout details.",
+      draft: { ...current, messages: [{ text: "why are you asking?", reply: "I am asking how to handle missing checkout details.", revision: 1, context: {} }] },
+    } }],
+  });
+  render(wrap(<Agent />));
+  await settle();
+  expect(within(await screen.findByRole("region", { name: "Mandate instruction" })).getByText("Buy groceries for the week.")).toBeTruthy();
+  await say("why are you asking?");
+  expect(screen.getByText("I am asking how to handle missing checkout details.")).toBeTruthy();
+  expect(calls.find(c => c.method === "POST")?.body).toEqual({ text: "why are you asking?", question_id: "Q-unsure" });
+  expect(screen.queryByRole("button", { name: "Ask or change something else" })).toBeNull();
+});
+
 it("restores superseded messages, answers and earlier interpretations in conversation order", async () => {
   sessionStorage.clear();
   sessionStorage.setItem("leash.draft_id", "LD-1");
@@ -91,14 +110,14 @@ it("restores superseded messages, answers and earlier interpretations in convers
     messages: [{ text: "Where did I shop?", reply: "Your earlier shop.", revision: 2, context: {} }] };
   stubFetch({ "GET /api/policies/drafts/LD-1": [{ status: 200, body: current }] });
   const view = render(wrap(<Agent />));
-  await screen.findByText("Only books.");
+  await within(screen.getByRole("log")).findByText("Only books.");
   const messages = () => [...screen.getByRole("log").querySelectorAll(".bubble.me .message")].map((node) => node.textContent);
   expect(messages()).toEqual([INSTRUCTION, "Decline", "Where did I shop?", "Only books."]);
   expect(screen.getByText("Your earlier shop.")).toBeInTheDocument();
   expect(screen.getByText("Earlier draft · revision 1")).toBeInTheDocument();
   view.unmount();
   render(wrap(<Agent />));
-  await screen.findByText("Only books.");
+  await within(screen.getByRole("log")).findByText("Only books.");
   expect(messages()).toEqual([INSTRUCTION, "Decline", "Where did I shop?", "Only books."]);
   cleanup();
 });
@@ -154,7 +173,7 @@ describe("Agent conversation (LEASH-145)", () => {
   it("shows the customer's words as their own message, then how Leash read them", async () => {
     const calls = await start(draft());
     expect(posts(calls, "/api/permission/drafts")[0].body).toEqual({ text: INSTRUCTION });
-    expect(screen.getByText(INSTRUCTION)).toBeInTheDocument();
+    expect(within(screen.getByRole("log")).getByText(INSTRUCTION)).toBeInTheDocument();
     expect(screen.getByText(/Got it\./)).toBeInTheDocument();  // acknowledged before the boundaries
     const rules = screen.getByRole("list", { name: "Rules as I read them" });
     expect(within(rules).getByText("At most CHF 50.00 per order, delivery included")).toBeInTheDocument();
@@ -193,15 +212,14 @@ describe("Agent conversation (LEASH-145)", () => {
                               rules: [{ text: "At most CHF 30.00 per order, delivery included",
                                         source: "customer", decision: null, tightened: false }] });
     const calls = await start(draft(), { "POST /api/permission/drafts/LD-1/turns": [{ status: 200, body: assistant(CORRECTED) }] });
-    fireEvent.click(screen.getByRole("button", { name: "Ask or change something else" }));
     await say("Actually, make it CHF 30.");
 
-    expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({ text: "Actually, make it CHF 30." });
+    expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({ text: "Actually, make it CHF 30.", question_id: "Q-unsure" });
     expect(screen.getByText("revision 2")).toBeInTheDocument();
     expect(screen.getByText("replaces revision 1")).toBeInTheDocument();
     expect(screen.getByText("At most CHF 30.00 per order, delivery included")).toBeInTheDocument();
     expect(screen.getByText("Actually, make it CHF 30.")).toBeInTheDocument();
-    expect(screen.getByText(INSTRUCTION)).toBeInTheDocument();  // the earlier turn is still in the transcript
+    expect(within(screen.getByRole("log")).getByText(INSTRUCTION)).toBeInTheDocument();  // the earlier turn is still in the transcript
   });
 
   it("a refused turn is reported where it happened and claims nothing", async () => {
@@ -226,7 +244,7 @@ describe("Agent conversation (LEASH-145)", () => {
     stubFetch({ "GET /api/policies/drafts/LD-1": [{ status: 200, body: draft() }] });
     render(wrap(<Agent />));
     await screen.findByRole("list", { name: "Rules as I read them" });
-    expect(screen.getAllByText(INSTRUCTION)).toHaveLength(1);
+    expect(within(screen.getByRole("log")).getAllByText(INSTRUCTION)).toHaveLength(1);
     expect(screen.getAllByText(/I'm Leash, your permission assistant/)).toHaveLength(1);
   });
 
@@ -265,12 +283,11 @@ describe("Agent conversation (LEASH-145)", () => {
     const after = draft({ messages: [{ text: "check the history", reply, revision: 1, context: {} }] });
     const calls = await start(draft(), { "POST /api/permission/drafts/LD-1/turns": [
       { status: 200, body: { ...assistant(after), kind: "history", reply } }] });
-    fireEvent.click(screen.getByRole("button", { name: "Ask or change something else" }));
     await say("check the history");
     await screen.findByText(reply);
     expect(posts(calls, "/api/policies/drafts/LD-1/answers")).toHaveLength(0);
-    expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({ text: "check the history" });
-    expect(screen.getByText(INSTRUCTION)).toBeInTheDocument();
+    expect(posts(calls, "/api/permission/drafts/LD-1/turns")[0].body).toEqual({ text: "check the history", question_id: "Q-unsure" });
+    expect(within(screen.getByRole("log")).getByText(INSTRUCTION)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Review permission" })).toBeNull();
   });
 
@@ -676,6 +693,23 @@ describe("the handoff to the shopping agent (LEASH-147)", () => {
     expect(screen.getByRole("textbox")).toHaveValue(INSTRUCTION);
   });
 
+  it("can select the same demonstration again after starting over", async () => {
+    stubFetch({
+      "GET /api/scenarios": [{ status: 200, body: { scenarios: TASKS } }],
+      "POST /api/permission/drafts": [{ status: 200, body: assistant(READY) }],
+      "GET /api/policies/drafts/LD-1": [{ status: 200, body: READY }],
+    });
+    render(wrap(<Agent />));
+    fireEvent.click(await screen.findByRole("radio", { name: /Connection check/ }));
+    await say("Buy one grocery item.");
+    await screen.findByRole("button", { name: "Review permission" });
+    fireEvent.click(screen.getByText("•••"));
+    fireEvent.click(screen.getByRole("button", { name: "Start a new conversation" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /Connection check/ }));
+    expect(screen.getByRole("textbox")).toHaveValue("Buy one grocery item.");
+    expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+  });
+
   async function confirmed(runReplies: Reply[]) {
     const calls = stubFetch({
       "GET /api/scenarios": [{ status: 200, body: { scenarios: TASKS } }],
@@ -726,7 +760,7 @@ describe("the handoff to the shopping agent (LEASH-147)", () => {
     await screen.findByRole("button", { name: "Start shopping" });
     // the menu holds no edit action once a permission exists, so there is nothing to correct in place
     expect(screen.queryByRole("button", { name: "Edit task and review again" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();  // nothing more can be said into this draft
+    expect(screen.getByRole("textbox")).toBeInTheDocument();  // explanations remain available without editing confirmed rules
   });
 });
 

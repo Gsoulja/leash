@@ -119,7 +119,7 @@ def test_assistant_has_no_import_path_to_the_control_layer():
         "leash.domain.mandate.CompiledMandate", "leash.domain.mandate.LooseningError",
         "leash.domain.mandate.Operator", "leash.domain.mandate.Rule",
         "leash.policy.registry", "leash.policy.registry.REGISTRY",
-        "leash.policy.hard_rules", "leash.policy.hard_rules.rule_to_api",
+        "leash.policy.hard_rules", "leash.policy.hard_rules.rule_to_api", "leash.policy.hard_rules.rule_from_api",
         "leash.policy.registry.problems",
         # reads a rule back in words, so a question can quote the rule instead of the model's prose
         "leash.policy.render", "leash.policy.render.describe_rule",
@@ -246,7 +246,7 @@ def test_the_assistant_produces_a_draft_and_never_a_verdict():
     proposal = assistant(model).draft(CUSTOMER)
     assert not hasattr(proposal, "verdict") and not hasattr(proposal, "decision")
     assert set(proposal.as_draft()) == {"rules", "questions", "status", "provenance", "model",
-                                        "prompt_version", "tool_calls"}
+                                        "prompt_version", "tool_calls", "reading", "uncertainty_policy"}
     assert all(isinstance(r, dict) for r in proposal.as_draft()["rules"])
 
 

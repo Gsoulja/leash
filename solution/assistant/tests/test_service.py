@@ -477,17 +477,14 @@ class ActivePolicy(StubPolicy):
         return current
 
 
-def test_a_rule_that_would_loosen_the_active_permission_is_not_shown_as_a_draft_rule(pack):
-    """The engine refuses a loosening change at /tighten, but by then the customer has already read it
-    as their new permission. It must not reach them: it is a question, not a candidate."""
+def test_a_new_mandate_does_not_inherit_an_unrelated_mandates_limit(pack):
     policy = ActivePolicy()
     model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "500", "at most CHF 500 per order")],
                        "questions": []})
     body = client(pack, model, policy).post("/api/permission/drafts",
                                             json={"text": "at most CHF 500 per order"}).json()
-    assert policy.calls and policy.calls[0]["rules"] == [], "a looser rule may not be posted as a rule"
-    assert body["consent_text"] == [], "and it is never read back as something the customer agreed to"
-    assert any("loosen" in q["text"] for q in body["questions"]), body["questions"]
+    assert policy.calls[0]["rules"][0]["value"] == 500
+    assert not any("loosen" in q["text"] for q in body["questions"])
 
 
 def test_a_stricter_rule_against_the_active_permission_still_becomes_a_draft_rule(pack):
@@ -500,17 +497,14 @@ def test_a_stricter_rule_against_the_active_permission_still_becomes_a_draft_rul
     assert body["consent_text"] == ["At most CHF 20.00 per order, delivery included."]
 
 
-def test_without_the_active_permission_nothing_is_drafted(pack):
-    """Missing is not permission: if the confirmed permission can't be read, a rule cannot be checked
-    against it, and a draft that skipped the check would be exactly the loosening this prevents."""
+def test_new_drafts_do_not_need_to_read_an_unrelated_active_mandate(pack):
     policy = ActivePolicy(fail=True)
     model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "500", "at most CHF 500 per order")],
                        "questions": []})
     response = client(pack, model, policy).post("/api/permission/drafts",
                                                 json={"text": "at most CHF 500 per order"})
-    assert response.status_code == 503, response.text
-    assert response.json()["error"]["code"] == "policy_service_unavailable"
-    assert policy.calls == []
+    assert response.status_code == 200, response.text
+    assert policy.calls[0]["rules"][0]["value"] == 500
 
 
 def test_with_no_active_permission_a_rule_is_drafted_normally(pack):
@@ -579,3 +573,135 @@ def test_targeted_model_reply_supplies_only_the_question_being_answered(pack):
     assert response.status_code == 200, response.text
     asked = [t.text for t in model.seen[0].turns if t.speaker == 'assistant']
     assert asked == ['Which items?']
+
+
+@pytest.mark.parametrize('text', ['hello there', 'what does this permission mean?', 'can you explain that question?'])
+def test_ordinary_messages_are_answered_without_creating_permission(pack, text):
+    model = StubModel({'intent': 'chat', 'reply': 'I can help you define what the agent may buy.',
+                       'rules': [], 'questions': []})
+    policy = StubPolicy()
+    response = client(pack, model, policy).post('/api/permission/drafts', json={'text': text})
+    assert response.status_code == 200, response.text
+    assert response.json()['kind'] == 'chat'
+    assert response.json()['draft'] is None
+    assert response.json()['reply']
+    assert policy.calls == []
+
+
+def test_a_normal_message_at_a_parser_question_reaches_the_model_with_draft_context(pack):
+    class Policy(StubPolicy):
+        def draft(self, draft_id):
+            return {'draft_id': draft_id, 'revision': 3, 'instruction': GERMAN,
+                    'open_questions': [{'question_id': 'Q-items', 'text': 'Which items?', 'field': m.F_ITEM_CATEGORY}]}
+
+        def answer_draft(self, *args):
+            raise PolicyServiceError('Not a rule', 422)
+
+        def record_message(self, draft_id, text, reply, context):
+            self.calls.append({'text': text, 'reply': reply})
+            return self.draft(draft_id)
+
+    model = StubModel({'intent': 'chat', 'reply': 'This asks what the agent may buy within your budget.',
+                       'rules': [], 'questions': []})
+    policy = Policy()
+    response = client(pack, model, policy).post('/api/permission/drafts/LD-1/turns',
+        json={'text': 'what do you mean?', 'question_id': 'Q-items'})
+    assert response.status_code == 200, response.text
+    assert response.json()['draft']['revision'] == 3
+    assert model.seen[0].context['draft']['instruction'] == GERMAN
+    assert policy.calls[0]['reply'] == model._reply['reply']
+
+
+def test_policy_error_preserves_http_status():
+    assert PolicyServiceError('answer unclear', 422).status == 422
+
+
+@pytest.mark.parametrize('text', ['please check with me first', 'ask before paying if you are unsure'])
+def test_natural_reply_can_select_an_existing_validated_option(pack, text):
+    class Policy(StubPolicy):
+        def draft(self, draft_id):
+            return {'draft_id': draft_id, 'instruction': GERMAN, 'open_questions': [
+                {'question_id': 'Q-unsure', 'text': 'What should happen if details are unclear?',
+                 'field': 'uncertainty_policy', 'options': ['Ask me', 'Decline']}]}
+
+        def answer_draft(self, draft_id, question_id, answer):
+            if answer != 'Ask me':
+                raise PolicyServiceError('Choose an option', 422)
+            self.calls.append((question_id, answer))
+            return {'draft_id': draft_id, 'instruction': GERMAN, 'hard_rules': [],
+                    'uncertainty_policy': 'ask', 'open_questions': [], 'status': 'ready'}
+
+        def record_message(self, draft_id, text, reply, context):
+            return {'draft_id': draft_id, 'instruction': GERMAN, 'status': 'ready',
+                    'hard_rules': [], 'open_questions': [], 'messages': [{'text': text, 'reply': reply}]}
+
+    model = StubModel({'intent': 'answer', 'answer': {'question_id': 'Q-unsure', 'option': 'Ask me'},
+                       'rules': [], 'questions': []})
+    policy = Policy()
+    response = client(pack, model, policy).post('/api/permission/drafts/LD-1/turns',
+        json={'text': text, 'question_id': 'Q-unsure'})
+    assert response.status_code == 200, response.text
+    assert response.json()['draft']['instruction'] == GERMAN
+    assert policy.calls == [('Q-unsure', 'Ask me')]
+
+
+def test_structured_chat_bypasses_legacy_answer_grammar(pack):
+    class Existing(StubPolicy):
+        def draft(self, draft_id):
+            return {"draft_id": draft_id, "instruction": "Only groceries", "revision": 1,
+                    "hard_rules": [], "open_questions": [{"question_id": "Q-old", "text": "Old grammar question"}]}
+        def answer_draft(self, *args):
+            pytest.fail("the live flow must not invoke legacy answer grammar")
+        def record_message(self, draft_id, text, reply, context):
+            return self.draft(draft_id)
+    model = StubModel({"intent": "chat", "reply": "Here is what that means.", "rules": [], "questions": []})
+    model.structured = True
+    result = client(pack, model, Existing()).post("/api/permission/drafts/LD-existing/turns",
+        json={"text": "What does that mean?", "question_id": "Q-old"})
+    assert result.status_code == 200
+    assert result.json()["kind"] == "chat"
+
+
+def test_model_receives_actual_merchant_category_vocabulary(pack):
+    model = StubModel({"intent": "chat", "reply": "Hello", "rules": [], "questions": []})
+    result = client(pack, model, StubPolicy()).post("/api/permission/drafts", json={"text": "Hello"})
+    assert result.status_code == 200
+    assert "groceries" in model.seen[0].context["merchant_categories"]
+    assert "supermarket" not in model.seen[0].context["merchant_categories"]
+
+
+def test_model_receives_separate_item_and_merchant_category_vocabularies(pack):
+    model = StubModel({"intent": "chat", "reply": "Hello", "rules": [], "questions": []})
+    result = client(pack, model, StubPolicy()).post("/api/permission/drafts", json={"text": "Hello"})
+    assert result.status_code == 200
+    context = model.seen[0].context
+    assert context["item_categories"] == sorted({item.category for item in CATALOGUE})
+    assert context["merchant_categories"] == sorted({merchant.category for merchant in pack.merchants().values()})
+
+
+@pytest.mark.parametrize("write_status", [200, 409])
+def test_model_revision_write_is_bound_to_the_draft_it_read(pack, write_status):
+    import json
+    import httpx
+    from assistant.service import HttpPolicyService
+
+    writes = []
+    stored = {"draft_id": "LD-existing", "instruction": "Only groceries", "revision": 7,
+              "hard_rules": [], "open_questions": []}
+
+    def handle(request):
+        if request.method == "GET":
+            return httpx.Response(200, json=stored)
+        writes.append(json.loads(request.content))
+        if write_status == 409:
+            return httpx.Response(409, json={"error": {"code": "stale_revision", "message": "Reload the changed draft."}})
+        return httpx.Response(200, json={**stored, "revision": 8, "hard_rules": writes[-1]["rules"]})
+
+    model = StubModel({"rules": [rule(m.F_ITEM_CATEGORY, "in", ["groceries"], "Only groceries")],
+                       "questions": [], "uncertainty_policy": "ask"})
+    model.structured = True
+    policy = HttpPolicyService(httpx.Client(base_url="http://policy", transport=httpx.MockTransport(handle)))
+    response = client(pack, model, policy).post("/api/permission/drafts/LD-existing/turns",
+                                               json={"text": "Keep that category"})
+    assert response.status_code == write_status, response.text
+    assert writes[0]["expected_revision"] == 7

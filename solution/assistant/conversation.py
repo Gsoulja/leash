@@ -14,10 +14,9 @@ Two rules of its own:
 - **`instruction` is the customer's own words.** `build_context` uses it to choose which questions
   to suggest, so putting assistant, agent or merchant text there would let untrusted text pick the
   questions. `customer_words()` is the only way this module builds one.
-- **A proposal the policy service did not itself derive is a suggestion, not a rule.** The model may
-  read the conversation better than a regex does, but "better" is not "authoritative": a candidate
-  the deterministic compiler did not produce from the same words becomes a question the customer
-  answers, never a rule that slipped through because a model was confident.
+- **Models draft; customers confirm.** The live proposal passes structured-output and registry
+  guardrails before reaching policy. Policy renders the exact rules, checks contradictions and binds
+  explicit customer confirmation to that revision. The reference grammar has no role in live drafts.
 """
 
 from collections.abc import Mapping, Sequence
@@ -26,7 +25,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
 from assistant.agent import (CandidateRule, PermissionAssistant, Proposal, Question, QuestionSource,
-                             Status, Turn)
+                             Status, Turn, _items)
 from leash.application.permission_context import (
     ConfirmedPermission,
     ContextBundle,
@@ -230,7 +229,7 @@ class PermissionConversation:
                 confirmed: Sequence[ConfirmedPermission] = (),
                 active: CompiledMandate | None = None,
                 draft_id: str | None = None, replace_instruction: bool = False,
-                simulation_scenario: str | None = None) -> Clarification:
+               simulation_scenario: str | None = None, draft_context: Mapping[str, Any] | None = None) -> Clarification:
         """One turn of the conversation.
 
         `draft_id` continues an existing draft instead of starting one: a conversation has exactly one
@@ -242,6 +241,15 @@ class PermissionConversation:
             raise ValueError("a permission conversation needs the customer's own words")
         bundle = build_context(self._pack, self._scope, instruction, cutoff=cutoff, confirmed=confirmed)
         evidence = bundle.as_evidence()
+        evidence["merchant_categories"] = sorted({m.category for m in self._pack.merchants().values()})
+        evidence["item_categories"] = sorted({item.category for item in _items(self._catalogue)})
+        if draft_context is not None:
+            evidence["draft"] = {key: draft_context[key] for key in (
+                "instruction", "mandate_instruction", "hard_rules", "uncertainty_policy", "open_questions",
+                "answers", "status", "revision", "confirmed_mandate") if key in draft_context}
+        if draft_context is not None:
+            evidence["draft"]["messages"] = [{k: m[k] for k in ("text", "reply") if k in m}
+                                              for m in draft_context.get("messages", [])]
         if simulation_scenario:
             evidence["simulation_scenario"] = simulation_scenario
         # `None` is passed through, never turned into an empty catalogue: the assistant branches on it
@@ -250,6 +258,16 @@ class PermissionConversation:
                                          confirmed=active)
         if proposal.failure:
             raise ModelUnavailable(proposal)
+        if proposal.intent == "answer" and proposal.answer is not None and draft_id:
+            question_id, answer = proposal.answer
+            draft = self._policy.answer_draft(draft_id, question_id, answer)
+            draft = self._policy.record_message(draft_id, turns[-1].text,
+                f"I read your answer as: {answer}. Review the updated draft before confirming.", evidence)
+            return Clarification(bundle, proposal, (), (), draft)
+        if proposal.intent == "chat":
+            reply = proposal.reply or "Tell me what you would like to clarify."
+            draft = self._policy.record_message(draft_id, turns[-1].text, reply, evidence) if draft_id else {}
+            return Clarification(bundle, proposal, (), (), draft, reply)
         if proposal.intent == "history":
             summary = bundle.summary
             shops = [e.text for e in bundle.entries if e.kind == "history"]
@@ -268,7 +286,7 @@ class PermissionConversation:
         # neither reader can make a rule of them — there is no draft yet for them to leave unchanged.
         # ponytail: so an opening "hello" still starts a draft whose instruction is "hello". Visible and
         # recoverable (Start over); the loop this fixes was not.
-        if draft_id and adds_no_boundary(turns, proposal):
+        if draft_id and proposal.reading != "model" and adds_no_boundary(turns, proposal):
             draft = self._policy.record_message(draft_id, turns[-1].text, NOTHING_CHANGED,
                                                 evidence) if draft_id else {}
             return Clarification(bundle, proposal, (), (), draft, NOTHING_CHANGED)
@@ -284,8 +302,10 @@ class PermissionConversation:
         if draft_id is None:
             draft = self._policy.create_draft(instruction, evidence, rules)
         else:
+            revision = {"expected_revision": (draft_context or {}).get("revision")} if proposal.reading == "model" else {}
             draft = self._policy.add_turn(draft_id, turns[-1].text, rules,
-                                          assessment=evidence["assistant"], replace_instruction=replace_instruction, context=evidence)
+                                          assessment=evidence["assistant"], replace_instruction=replace_instruction,
+                                          context=evidence, **revision)
         return self._check(bundle, proposal, draft)
 
     def _check(self, bundle: ContextBundle, proposal: Proposal,

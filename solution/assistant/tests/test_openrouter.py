@@ -8,6 +8,8 @@ says still has to survive `agent.py` — these tests assume that and check the s
 import json
 
 import pytest
+from pydantic import ValidationError
+from assistant.output import ModelOutput
 
 from assistant.agent import PermissionAssistant, ProposalRequest, Turn
 from assistant.openrouter import DEFAULT_BASE_URL, DEFAULT_MODEL, OpenRouterModel, system_prompt
@@ -44,9 +46,14 @@ def request(*texts: str, context=None) -> ProposalRequest:
     return ProposalRequest(turns, dict(context or {}))
 
 
-ONE_RULE = json.dumps({"rules": [{"field": m.F_BILLING_CHF, "operator": "<=", "value": "50",
-                                  "says": "at most CHF 50 per order", "turn_id": "T1"}],
-                       "questions": []})
+def wire(rules=(), **changes):
+    return json.dumps({"intent": "permission", "reply": None,
+        "rules": [{"currency": None, "scope": None, "period_days": None, **r} for r in rules],
+        "questions": [], "uncertainty_policy": "ask", **changes})
+
+
+ONE_RULE = wire([{"field": m.F_BILLING_CHF, "operator": "<=", "value": "50",
+                  "says": "at most CHF 50 per order", "turn_id": "T1"}])
 
 
 def test_a_json_reply_becomes_the_proposal():
@@ -64,19 +71,21 @@ def test_a_reply_wrapped_in_a_code_fence_is_still_read():
 
 def test_complete_proposal_with_one_extra_closing_brace_is_read_without_losing_content():
     model = OpenRouterModel(client=FakeClient(ONE_RULE + "}"))
-    assert model.propose(request("at most CHF 50 per order")) == json.loads(ONE_RULE)
+    assert model.propose(request("at most CHF 50 per order")) == ModelOutput.model_validate_json(ONE_RULE).model_dump(exclude_none=True)
 
 
 @pytest.mark.parametrize("suffix", [', "questions": ["Ask first"]}', '{"rules": []}', ', {}', ']'])
 def test_recovery_never_discards_a_second_payload_or_truncated_content(suffix):
     model = OpenRouterModel(client=FakeClient(ONE_RULE + suffix))
-    assert model.propose(request("at most CHF 50 per order")) == {}
+    with pytest.raises(ValidationError):
+        model.propose(request("at most CHF 50 per order"))
 
 
 def test_a_reply_that_is_not_json_proposes_nothing():
     """`agent.py` turns an unreadable reply into a question. The adapter's job is to not pretend."""
     model = OpenRouterModel(client=FakeClient("I think you probably want a limit of some kind."))
-    assert model.propose(request("at most CHF 50 per order")) == {}
+    with pytest.raises(ValidationError):
+        model.propose(request("at most CHF 50 per order"))
 
 
 def test_the_prompt_offers_only_fields_the_engine_can_enforce():
@@ -116,8 +125,31 @@ def test_the_customers_turns_reach_the_model_with_their_ids():
     assert "T2" in conversation and "at most CHF 50 per order" in conversation
 
 
+def test_prompt_reads_customer_turns_without_parser_suggestions():
+    client = FakeClient(ONE_RULE)
+    OpenRouterModel(client=client).propose(request("Buy groceries from familiar shops"))
+    assert "PARSER SUGGESTIONS" not in str(client.calls[0]["messages"])
+    assert '"additionalProperties": false' in client.calls[0]["messages"][0]["content"]
+
+
+def test_sent_prompt_distinguishes_subjects_units_and_explicit_thresholds():
+    client = FakeClient(ONE_RULE)
+    OpenRouterModel(client=client).propose(request("Please read my buying instructions"))
+    prompt = client.calls[0]["messages"][0]["content"]
+    # Pin the semantic instructions actually sent; live evaluation checks whether the model follows them.
+    assert "BACKGROUND.item_categories" in prompt
+    assert "Product or basket categories belong to items.item_category" in prompt
+    assert "Shop types belong to merchant.merchant_category" in prompt
+    assert "calendar period is not a rolling window" in prompt
+    assert "per-day purchase count is not a total count for the run" in prompt
+    assert "per-night rate is not an order-total cap" in prompt
+    assert "returnability does not specify a numeric return window" in prompt
+    assert "Internal risk scores need an explicit customer-chosen threshold" in prompt
+    assert "Every explicit exclusion must have its own enforcing rule or unresolved question" in prompt
+
+
 def test_history_reminder_is_the_last_user_message_not_buried_in_background():
-    client = FakeClient('{"intent":"history","rules":[],"questions":[]}')
+    client = FakeClient(wire(intent="history"))
     turns = (Turn("T1", "customer", "Clothing under CHF 250"),
              Turn("Q", "assistant", "Could you phrase that as a rule?"),
              Turn("T2", "customer", "you already have my purchase records"))
@@ -190,23 +222,25 @@ def test_the_adapter_has_no_import_path_to_the_control_layer_or_its_credential()
 
 def test_a_reply_that_is_json_but_not_an_object_proposes_nothing():
     """`[1,2,3]` parses fine and is still not a proposal."""
-    assert OpenRouterModel(client=FakeClient("[1, 2, 3]")).propose(request("at most CHF 50")) == {}
+    with pytest.raises(ValidationError):
+        OpenRouterModel(client=FakeClient("[1, 2, 3]")).propose(request("at most CHF 50"))
 
 
 def test_a_reply_too_deeply_nested_to_parse_proposes_nothing():
     """"Or nothing" has to mean it: deep nesting raises RecursionError, not ValueError."""
     bomb = "[" * 30000 + "]" * 30000
-    assert OpenRouterModel(client=FakeClient(bomb)).propose(request("at most CHF 50")) == {}
+    with pytest.raises(ValidationError):
+        OpenRouterModel(client=FakeClient(bomb)).propose(request("at most CHF 50"))
 
 
 def test_a_product_reference_without_a_catalogue_is_asked_not_crashed():
     """The documented smoke check passes no catalogue; an item rule must ask, never raise."""
-    reply = json.dumps({"rules": [{"field": m.F_ITEM_ID, "operator": "in", "value": "the monitor I chose",
-                                   "says": "the monitor I chose", "turn_id": "T1"}], "questions": []})
+    reply = wire([{"field": m.F_ITEM_ID, "operator": "in", "value": ["the monitor I chose"],
+                   "says": "the monitor I chose", "turn_id": "T1"}])
     proposal = PermissionAssistant(OpenRouterModel(client=FakeClient(reply))).draft(
         request("only buy the monitor I chose").turns)
     assert proposal.candidates == ()
-    assert any("which exact product" in q.text.lower() for q in proposal.questions)
+    assert any("which exact catalogue product" in q.text.lower() for q in proposal.questions)
 
 
 def test_the_recorded_prompt_version_is_the_prompt_that_was_actually_sent():
@@ -232,22 +266,11 @@ def test_a_rate_limited_endpoint_is_retried_before_the_customer_sees_a_failure(m
     assert OpenRouterModel()._client.max_retries == 1
 
 
-def test_verifier_disagreement_is_blocking_and_failure_is_retryable():
-    class Verifier:
-        model, threshold = "typesafe/jev-test", .9
-        def check_permission(self, state, rules, unresolved):
-            assert state["customer_turns"][0]["text"] == "at most CHF 50 per order"
-            return ["not_stated"], {}
-    model = OpenRouterModel(client=FakeClient(ONE_RULE), verifier=Verifier())
-    reply = model.propose(request("at most CHF 50 per order"))
-    assert reply["rules"] == [] and reply["questions"]
-    assert "jev-test" in model.prompt_version
-    class Broken(Verifier):
-        def check_permission(self, *args):
-            raise TimeoutError("not logged")
-    proposal = PermissionAssistant(OpenRouterModel(client=FakeClient(ONE_RULE), verifier=Broken())).draft(
-        request("at most CHF 50 per order").turns)
-    assert proposal.failure == "model_unavailable" and not proposal.candidates
+def test_permission_flow_has_no_jev_dependency():
+    import inspect
+    from assistant import service
+    assert "verifier" not in inspect.signature(OpenRouterModel).parameters
+    assert "JevClient" not in inspect.getsource(service.build_from_env)
 
 
 def test_truncated_response_cannot_be_accepted_even_if_it_contains_json():
@@ -275,12 +298,8 @@ def test_explicit_environment_controls_key_endpoint_and_model(monkeypatch):
     assert options["extra_body"]["reasoning"]["effort"] == "low"
 
 
-def test_omission_check_runs_when_model_proposes_no_rules():
-    class Verifier:
-        model, threshold, rule_mode = "jev-test", .9, "enforce"
-        def check_permission(self, state, rules, unresolved):
-            assert not rules and state["customer_turns"][0]["text"] == "No subscriptions"
-            return [], {"other": "omitted"}
-    result = OpenRouterModel(client=FakeClient(json.dumps({"rules": [], "questions": []})), verifier=Verifier()).propose(
-        request("No subscriptions"))
-    assert "could not account" in result["questions"][0]
+def test_unresolved_conditions_remain_blocking_without_a_second_model():
+    proposal = PermissionAssistant(OpenRouterModel(client=FakeClient(wire(
+        questions=[{"text": "Which subscription restriction should apply?", "options": []}])))).draft(
+        request("No subscriptions").turns)
+    assert proposal.status == "needs_answers" and not proposal.candidates

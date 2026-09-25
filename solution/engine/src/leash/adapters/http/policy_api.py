@@ -37,7 +37,7 @@ from leash.domain import mandate as m
 from leash.domain.mandate import LooseningError, Rule
 from leash.domain.money import fmt_chf
 from leash.domain.states import IllegalTransition
-from leash.application.clarify import AnswerError, clarify, question_id
+from leash.application.clarify import AnswerError, clarify, draft_from_rules, question_id
 from leash.policy.compiler import Question
 from leash.policy.compiler import CatalogueItem, Classifier
 from leash.policy.hard_rules import (AppendOnlyError, HardRulesError, check_append_only, mandate_from_api,
@@ -202,7 +202,14 @@ async def _with_revisions(conn: asyncpg.Connection, view: dict[str, Any]) -> dic
     """Read-only conversation history; superseded drafts are not active permission."""
     rows = await conn.fetch("select draft from draft_revisions where draft_id = $1 "
                             "and revision <= $2 order by revision", view["draft_id"], view["revision"])
-    return {**view, "revisions": [json.loads(row["draft"]) for row in rows]}
+    revisions = [json.loads(row["draft"]) for row in rows]
+    instruction = view["instruction"]
+    if view.get("simulation_scenario"):
+        # The simulator binds a run to its exact task text. Clarifications still contribute hard
+        # rules and remain in the transcript; only an explicit task replacement changes this text.
+        instruction = next((r["instruction"] for r in reversed(revisions)
+                            if r["revision"] == 1 or r.get("customer_turn", {}).get("replaced")), instruction)
+    return {**view, "mandate_instruction": instruction, "revisions": revisions}
 
 
 def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
@@ -233,8 +240,15 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
             return _error(422, "invalid_request", f"A proposed rule can't be enforced: {unsupported[0]}")
         draft_id = f"LD-{uuid.uuid4().hex[:12]}"
         instruction = instruction.strip()  # every stored instruction is a prefix of its successors
-        view = {"draft_id": draft_id, "revision": 1, **await asyncio.to_thread(clarify, instruction, [], items, proposed=proposed, classifier=classifier)}
         context = body.get("context") if isinstance(body.get("context"), dict) else {}
+        assessment = context.get("assistant") or {}
+        if assessment.get("reading") == "model":
+            if assessment.get("uncertainty_policy") not in {"ask", "decline"}:
+                return _error(422, "invalid_request", "Choose ask or decline for uncertainty.")
+            draft = draft_from_rules(instruction, proposed, items, assessment["uncertainty_policy"])
+        else:
+            draft = await asyncio.to_thread(clarify, instruction, [], items, proposed=proposed, classifier=classifier)
+        view = {"draft_id": draft_id, "revision": 1, **draft}
         view = _assessed(view, context.get("assistant"))
         if context.get("simulation_scenario"):
             view["simulation_scenario"] = context["simulation_scenario"]
@@ -272,6 +286,8 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
             if row["platform_draft_id"] is not None:  # Viseca has no draft update: start a new draft instead
                 return _error(409, "already_submitted",
                               "This draft is already at Viseca; start a new one to change it.")
+            if json.loads(row["draft"]).get("assistant", {}).get("reading") == "model":
+                return _error(422, "invalid_answer", "Reply in the permission conversation to revise this draft.")
             answers = list(json.loads(row["answers"])) + given
             revision = int(row["revision"]) + 1
             proposed = _proposed(json.loads(row["draft"]) if row["draft"] else None)
@@ -328,7 +344,7 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
         never applied to a different question, and never assumed. Whatever stays open is simply asked
         again, which is the safe direction: more questions, never fewer.
         """
-        if not isinstance(body, dict) or set(body) - {"rules", "assessment", "replace_instruction", "context"} != {"text"}:
+        if not isinstance(body, dict) or set(body) - {"rules", "assessment", "replace_instruction", "context", "expected_revision"} != {"text"}:
             return _error(422, "invalid_request", 'Send {"text": "…"} with the customer\'s own words.')
         if body.get("context") is not None and not isinstance(body["context"], dict):
             return _error(422, "invalid_request", "context must be an object.")
@@ -358,14 +374,28 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 return _error(409, "already_submitted",
                               "This draft is already at Viseca; start a new one to change it.")
             instruction = text.strip() if replacing else f"{row['instruction']} {text.strip()}".strip()
-            # Appended, never replaced: an earlier reading the customer has already seen stays.
-            proposed = added if replacing else [*_proposed(json.loads(row["draft"])), *added]
-            answers = [] if replacing else await asyncio.to_thread(_still_answered, instruction, list(json.loads(row["answers"])), items, proposed, classifier)
+            previous = json.loads(row["draft"])
+            assessment = body.get("assessment") or previous.get("assistant", {})
+            model_reading = assessment.get("reading") == "model"
+            if model_reading:
+                if not body.get("assessment") or assessment.get("uncertainty_policy") not in {"ask", "decline"}:
+                    return _error(422, "invalid_request", "A model draft needs a complete validated proposal.")
+                expected = body.get("expected_revision")
+                if type(expected) is not int or expected < 1:
+                    return _error(422, "invalid_request", "A model proposal needs the positive integer expected_revision it read.")
+                if expected != row["revision"]:
+                    return _error(409, "stale_revision", "This draft changed while your message was being read. Reload it and send your message again.")
+                # Unconfirmed revisions may correct rules. Active/submitted mandates remain immutable.
+                proposed, answers = added, []
+                draft = draft_from_rules(instruction, proposed, items, assessment["uncertainty_policy"])
+            else:
+                proposed = added if replacing else [*_proposed(previous), *added]
+                answers = [] if replacing else await asyncio.to_thread(_still_answered, instruction, list(json.loads(row["answers"])), items, proposed, classifier)
+                draft = await asyncio.to_thread(clarify, instruction, answers, items, proposed=proposed, classifier=classifier)
             revision = int(row["revision"]) + 1
-            view = {"draft_id": draft_id, "revision": revision,
-                    **await asyncio.to_thread(clarify, instruction, answers, items, proposed=proposed, classifier=classifier)}
+            view = {"draft_id": draft_id, "revision": revision, **draft}
             view["customer_turn"] = {"text": text.strip(), "replaced": replacing}
-            view = _assessed(view, body.get("assessment") or json.loads(row["draft"]).get("assistant"))
+            view = _assessed(view, assessment)
             if messages := json.loads(row["draft"]).get("messages"):
                 view["messages"] = messages
             if scenario := json.loads(row["draft"]).get("simulation_scenario"):
@@ -400,10 +430,10 @@ def policy_router(pool: Callable[[], asyncpg.Pool], viseca: PlatformMandates,
                 return _error(409, "stale_revision", _STALE.format(reviewed=reviewed, current=row["revision"]))
             if row["platform_body"]:  # submitted already: the same platform draft, never a second one
                 return json.loads(row["platform_body"])
-            draft = json.loads(row["draft"])
+            draft = await _with_revisions(conn, json.loads(row["draft"]))
             if draft["status"] != "ready":
                 return _error(409, "questions_open", "Answer the open questions before submitting.")
-            body = {"instruction": draft["instruction"], "hard_rules": draft["hard_rules"],
+            body = {"instruction": draft["mandate_instruction"], "hard_rules": draft["hard_rules"],
                     "uncertainty_policy": draft["uncertainty_policy"], "guidance": draft["notes"],
                     "open_questions": [q["text"] for q in draft["open_questions"]]}
             try:

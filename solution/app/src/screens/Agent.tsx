@@ -151,7 +151,6 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   const scenarios = useQuery({ queryKey: ["scenarios"], queryFn: () => api().scenarios(), retry: false });
   const [scenarioId, setScenarioId] = useState("");
   const [editing, setEditing] = useState(false);
-  const [generalMessage, setGeneralMessage] = useState(false);
   const [mandateId, setMandateId] = useState<string | null>(null);
   const [started, setStarted] = useState<Run | null>(null);  // the run as the engine recorded it
   const starting = useRef(false);  // a second tap while the first is in flight is the same handoff
@@ -212,6 +211,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
     remember(null);
     try { sessionStorage.removeItem(TALK); } catch { /* no storage */ }
     setDraftId(null);
+    setScenarioId("");
     setTalk(EMPTY);
     setPosted(null);
     setReviewed(null);
@@ -247,7 +247,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
     setSending(text);
     setComposer("");
     const result = await act(() => api().chatTurn(text, draftId ?? undefined, scenarioId || undefined, editing,
-                                               editing || generalMessage ? undefined : asking?.question_id));
+                                               editing || posted || confirmedId ? undefined : asking?.question_id));
     setSending(null);
     // A reply answers what they said; it is not a new boundary, so it must not become a revision or
     // reset a review. Both a history answer and "that changed nothing" are this shape — the latter is
@@ -361,7 +361,8 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   }
   const asking = (d?.open_questions ?? []).find((q) => q.blocking) ?? (d?.open_questions ?? [])[0];
   const blocking = (d?.open_questions ?? []).filter((q) => q.blocking).length;
-  useEffect(() => { setGeneralMessage(false); }, [asking?.question_id]);
+  const mandateInstruction = posted?.instruction ?? d?.mandate_instruction ?? d?.instruction
+    ?? offered?.find(s => s.scenario_id === scenarioId)?.cardholder_instruction;
 
   return (
     <div className="perm talk">
@@ -388,6 +389,12 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
           <i className={d ? "filled" : ""} /><i className={posted || confirmedId ? "filled" : ""} /><i className={confirmedId ? "filled" : ""} />
         </div>
       </div>
+      {mandateInstruction && <section className="card" aria-label="Mandate instruction">
+        <details className="chat-details" open><summary>Mandate instruction</summary>
+          <p className="small">{mandateInstruction}</p>
+          <p className="small">{confirmedId ? "Confirmed task" : "Task to review"} · Your answers refine the rules below.</p>
+        </details>
+      </section>}
       <div className="chat-messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions">
       <Bubble from="leash" label="Leash">
         <p className="message">{GREETING}</p>
@@ -471,13 +478,13 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {(talk.history ?? []).map((exchange, i) => (
         <div key={`preface-${i}`}>
           <Bubble from="me"><p className="message">{exchange.text}</p></Bubble>
-          <Bubble from="leash" label="Leash · history checked"><p className="message">{exchange.reply}</p></Bubble>
+          <Bubble from="leash" label="Leash"><p className="message">{exchange.reply}</p></Bubble>
         </div>
       ))}
       {(!d?.revisions?.length ? d?.messages ?? [] : []).map((exchange, i) => (
         <div key={`history-${i}`}>
           <Bubble from="me"><p className="message">{exchange.text}</p></Bubble>
-          <Bubble from="leash" label="Leash · history checked"><p className="message">{exchange.reply}</p></Bubble>
+          <Bubble from="leash" label="Leash"><p className="message">{exchange.reply}</p></Bubble>
         </div>
       ))}
 
@@ -594,19 +601,15 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {activity && <div className="chat-loading" role="status"><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span><span>{activity}</span></div>}
       <div ref={end} />
       </div>
-      {!posted && !confirmedId && (
+      {(
         <section className="composer" aria-label="Say something">
           <label className="k" htmlFor="composer">
-            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking && !generalMessage ? "Reply to Leash" : "Anything to add or change?"}
+            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking ? "Reply to Leash" : "Anything to add or change?"}
           </label>
-          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing && !generalMessage ? "Your answer…" : "Message Leash…"} aria-describedby={asking && !editing && !generalMessage ? `q-${asking.question_id}` : undefined} value={composer}
+          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder="Ask a question, answer, or change your task…" aria-describedby={asking && !editing && !posted && !confirmedId ? `q-${asking.question_id}` : undefined} value={composer}
                     onChange={(e) => setComposer(e.target.value)} />
           <button type="button" className="btn primary" disabled={busy || sending !== null || !composer.trim()}
                   onClick={() => say(composer.trim())} aria-label="Send"><Icon name="send" /></button></div>
-          {asking && !editing && <button type="button" className="btn ghost sm" disabled={busy}
-            onClick={() => setGeneralMessage(!generalMessage)}>
-            {generalMessage ? "Reply to current question" : "Ask or change something else"}
-          </button>}
         </section>
       )}
     </div>

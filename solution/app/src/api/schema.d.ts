@@ -382,7 +382,16 @@ export interface components {
             model?: string;
             prompt_version?: string;
             status?: string;
-            questions?: string[];
+            /** @enum {string} */
+            reading?: "reference" | "model";
+            /** @enum {string} */
+            uncertainty_policy?: "ask" | "decline";
+            questions?: (string | ({
+                text: string;
+                options?: string[];
+            } & {
+                [key: string]: unknown;
+            }))[];
         } & {
             [key: string]: unknown;
         };
@@ -444,6 +453,8 @@ export interface components {
         };
         /** @description Local draft: not yet sent to Viseca (DEC-003, LEASH-123). */
         PolicyDraft: {
+            /** @description Task text submitted with the reviewed rules. For simulations this preserves the original scenario instruction; clarification turns remain in the conversation. */
+            mandate_instruction?: string;
             /** @description Stored conversation snapshots in revision order, including superseded drafts. Read-only history, never active rules. */
             revisions?: components["schemas"]["PolicyDraft"][];
             customer_turn?: {
@@ -495,10 +506,12 @@ export interface components {
             } | null;
             /** @description Replace the unsubmitted task; earlier revisions remain in the audit record. */
             replace_instruction?: boolean;
+            /** @description Required for a complete model proposal. Rejects the write if the draft changed since this revision was read. */
+            expected_revision?: number;
             assessment?: components["schemas"]["AssistantAssessment"];
             /** @description The customer's own words. Never agent or merchant text. */
             text: string;
-            /** @description Rules the assistant read from this turn (DEC-045). Appended to what the draft already holds, so an earlier reading the customer has seen is never replaced, and validated here like any other rule. */
+            /** @description Registry-validated rules. Model proposals supply the complete revised draft bound to expected_revision; reference proposals append to what the draft already holds. */
             rules?: components["schemas"]["HardRule"][];
         };
         AnswersRequest: {
