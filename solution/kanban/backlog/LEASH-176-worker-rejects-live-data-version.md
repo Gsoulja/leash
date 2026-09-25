@@ -39,8 +39,8 @@ Nothing that requires the worker (deciding real purchases, the live rehearsal LE
 `solution/engine/src/leash/config.py`, `check_compatibility()` and `EXPECTED_DATA_VERSION`. Likely a prefix or pattern match (`data_version == EXPECTED_DATA_VERSION or data_version.startswith(EXPECTED_DATA_VERSION + "-")`) rather than widening to a fuzzy match — exact rule depends on Viseca's answer to the decision gate above.
 
 ### Dependencies
-- Blocks LEASH-114 (live rehearsal needs a running worker).
-- Blocks LEASH-128 (release-readiness gate needs live evidence).
+- Blocks LEASH-114 (live rehearsal is impossible without a running worker).
+- Blocks LEASH-128 (release-readiness gate calls for live evidence).
 
 ## Testing Requirements
 Write first: `test_check_compatibility_accepts_current_live_data_version`, `test_check_compatibility_still_rejects_an_unrelated_data_version`. Run `uv run pytest solution/engine/tests -k check_compatibility -x -q`.
