@@ -25,7 +25,8 @@ from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 
-from assistant.agent import CandidateRule, PermissionAssistant, Proposal, Question, Status, Turn
+from assistant.agent import (CandidateRule, PermissionAssistant, Proposal, Question, QuestionSource,
+                             Status, Turn)
 from leash.application.permission_context import (
     ConfirmedPermission,
     ContextBundle,
@@ -35,6 +36,7 @@ from leash.application.permission_context import (
 )
 from leash.domain.clock import SimTime
 from leash.domain.mandate import CompiledMandate, Rule
+from leash.policy.compiler import compile_instruction
 from leash.policy.hard_rules import rule_from_api, rule_to_api
 from leash.policy.registry import REGISTRY
 from leash.policy.render import describe_rule
@@ -97,6 +99,13 @@ class PolicyService(Protocol):
 
     def record_message(self, draft_id: str, text: str, reply: str,
                        context: Mapping[str, Any]) -> Mapping[str, Any]: ...
+
+    def active_mandate(self) -> Mapping[str, Any] | None:
+        """The permission already confirmed, so a candidate rule can be checked against it (DEC-006).
+
+        A read, not an authority: nothing here activates or changes it. `None` means there is none.
+        """
+        ...
 
 
 class ModelUnavailable(RuntimeError):
@@ -169,6 +178,41 @@ def _same(a: Rule, b: Rule) -> bool:
             and _values(a) == _values(b))
 
 
+def adds_no_boundary(turns: Sequence[Turn], proposal: Proposal) -> bool:
+    """The newest turn states no restriction: an acknowledgement ("yes", "go ahead"), not an instruction.
+
+    Both readers have to agree it carries nothing — no candidate the model attributed to this turn, and
+    no rule the deterministic compiler reads from it on its own.
+
+    Found in a live transcript on 2026-09-25: "yes i am go with that now" was appended to the draft's
+    `instruction`, which is the text the mandate carries to the platform. It also burned a revision and
+    left a blocking question the grammar could never read, and answering that question appended more
+    unreadable words — so the harder the customer tried, the worse it got.
+
+    Nothing is dropped: the turn is recorded in the transcript and the customer is told plainly that the
+    draft is unchanged, so a restriction both readers missed shows up at once instead of vanishing.
+    """
+    newest = turns[-1] if turns else None
+    if newest is None or newest.speaker != "customer" or not newest.text.strip():
+        return False
+    if newest.turn_id in proposal.attributed:
+        return False  # the model read something here, even if it became a question rather than a rule
+    # Open questions are deliberately *not* consulted: on a later turn they are almost always about the
+    # instruction the customer gave earlier, and treating them as substance made "yes" an instruction
+    # again. Live check on 2026-09-25: two unevidenced suggestions from the opening sentence were enough.
+    try:
+        return not compile_instruction(newest.text).mandate.rules
+    except Exception:  # noqa: BLE001 — a reading we could not make is not evidence of an acknowledgement
+        return False
+
+
+#: What the customer is told when their words changed nothing, including where the Confirm action is —
+#: typing "yes" is what a customer does when they cannot see one.
+NOTHING_CHANGED = ("I didn't find a new boundary in that, so your draft is unchanged. To accept it, use "
+                   "Review and confirm — I can't confirm anything myself. To add a rule, tell me the "
+                   'rule, for example "at most CHF 50 per order".')
+
+
 class PermissionConversation:
     """Gives the assistant its background and puts what it proposes in front of the policy service."""
 
@@ -218,6 +262,14 @@ class PermissionConversation:
                      "This is evidence for checking your rules, not permission to buy. Your permission is unchanged.")
             draft = self._policy.record_message(draft_id, turns[-1].text, reply, evidence) if draft_id else {}
             return Clarification(bundle, proposal, (), (), draft, reply)
+        # Only on a continuing turn. The customer's opening words *are* the instruction, even when
+        # neither reader can make a rule of them — there is no draft yet for them to leave unchanged.
+        # ponytail: so an opening "hello" still starts a draft whose instruction is "hello". Visible and
+        # recoverable (Start over); the loop this fixes was not.
+        if draft_id and adds_no_boundary(turns, proposal):
+            draft = self._policy.record_message(draft_id, turns[-1].text, NOTHING_CHANGED,
+                                                evidence) if draft_id else {}
+            return Clarification(bundle, proposal, (), (), draft, NOTHING_CHANGED)
         evidence["assistant"] = proposal.as_draft()
         evidence["assistant"]["history_checked"] = (
             f"History checked: {bundle.summary.completed_purchases} approved purchases on card "
@@ -255,9 +307,26 @@ class PermissionConversation:
                                           "Do you want it?", candidate.rule.field))
                 continue
             validated.append(replace(candidate, corroborated=corroborated))
+        questions = [q for q in questions if not _already_enforced(q, draft)]
         questions += _blocking(draft, bundle)
         return Clarification(bundle, proposal, tuple(validated),
                              tuple(dict.fromkeys(questions)), draft)
+
+
+def _already_enforced(question: Question, draft: Mapping[str, Any]) -> bool:
+    """A suggestion the draft already holds, word for word the same restriction.
+
+    Seen live on 2026-09-25: the model quoted "One purchase", which the customer never wrote, so the
+    rule was offered as an unconfirmed suggestion — while the compiler had read the identical rule from
+    their own sentence and it was already in the draft as theirs. The question blocked the draft and
+    could only be answered "yes, the thing I already have".
+
+    Only an identical restriction is dropped. A suggestion that would *change* the draft — "make it 30"
+    against a CHF 50 limit — is a correction and stays, because the question is its only trace.
+    """
+    if question.rule is None:
+        return False
+    return any(_same(question.rule, held) for held in _derived_rules(draft))
 
 
 def _blocking(draft: Mapping[str, Any], bundle: ContextBundle) -> list[Question]:
@@ -267,15 +336,24 @@ def _blocking(draft: Mapping[str, Any], bundle: ContextBundle) -> list[Question]
     with no blocking question behind it is never asked on its own — that would be the assistant
     inventing a restriction the draft does not need.
     """
-    from_background = {q.field: q.text for q in bundle.suggested_questions if q.field}
+    from_background = {q.field: q for q in bundle.suggested_questions if q.field}
     asked = []
     for q in draft.get("open_questions", []):
         if not isinstance(q, Mapping) or not q.get("blocking"):
             continue
         field = q.get("field") if isinstance(q.get("field"), str) else None
-        text = from_background.get(field) or str(q.get("text", ""))
+        suggestion = from_background.get(field)
+        text = (suggestion.text if suggestion else "") or str(q.get("text", ""))
+        # The swap is what needs declaring: when background supplies the wording, the customer is
+        # reading a preference's phrasing, not their own. Saying so is what lets them disagree with
+        # it instead of assuming they already agreed to it (LEASH-145 AC10).
+        source = None
+        if suggestion is not None and suggestion.kind:
+            source = QuestionSource(suggestion.kind, suggestion.evidence or "",
+                                    file=suggestion.source.file if suggestion.source else None,
+                                    row_id=suggestion.source.row_id if suggestion.source else None)
         if text.strip():
-            asked.append(Question(text, field))
+            asked.append(Question(text, field, source))
     return asked
 
 

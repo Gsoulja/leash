@@ -75,9 +75,31 @@ class AssistantModel(Protocol):
 
 
 @dataclass(frozen=True)
+class QuestionSource:
+    """Where a question came from, when it came from background rather than from the customer.
+
+    Only background-derived questions carry one. A question the customer's own words prompted has no
+    source and must not be given one: "your profile records this" and "you told me this" are
+    different claims, and only the customer can make the second (DEC-034).
+    """
+
+    kind: str            # "preference" or "history" — which kind of background put the question here
+    evidence: str        # the recorded words themselves, so the screen quotes rather than paraphrases
+    file: str | None = None      # the row it was read from, kept as evidence for the draft revision
+    row_id: str | None = None
+
+    def as_dict(self) -> dict[str, str | None]:
+        return {"kind": self.kind, "evidence": self.evidence, "file": self.file, "row_id": self.row_id}
+
+
+@dataclass(frozen=True)
 class Question:
     text: str
     field: str | None = None
+    source: QuestionSource | None = None
+    #: The rule this question offers, when it offers one. Kept so a later stage can tell a suggestion
+    #: the draft already enforces from one that would change it — the text alone cannot say.
+    rule: Rule | None = None
 
 
 @dataclass(frozen=True)
@@ -121,6 +143,9 @@ class Proposal:
     tool_calls: tuple[ToolCall, ...] = ()
     failure: str | None = None
     intent: Literal["permission", "history"] = "permission"
+    #: Turns the model attributed a rule to, whether or not the rule survived validation. A turn that
+    #: appears here stated something, even if what it stated became a question instead of a rule.
+    attributed: tuple[str, ...] = ()
 
     @property
     def status(self) -> Status:
@@ -131,7 +156,9 @@ class Proposal:
         """The draft as it goes to the policy service: rules, questions and provenance only."""
         return {
             "rules": [rule_to_api(c.rule) for c in self.candidates],
-            "questions": [q.text for q in self.questions],
+            "questions": [{"text": q.text, "field": q.field,
+                           "source": q.source.as_dict() if q.source else None}
+                          for q in self.questions],
             "status": self.status,
             "provenance": [{"field": c.rule.field, "turn_id": c.turn_id, "says": c.says,
                             "confirmed": c.confirmed, "evidenced": c.evidenced,
@@ -349,13 +376,33 @@ _VOCABULARY: Mapping[str, frozenset[str]] = {
 
 
 def _unknown_values(rule: Rule, catalogue: Any) -> tuple[str, ...]:
-    """Values outside the field's vocabulary, which no purchase could ever satisfy."""
+    """Values outside a vocabulary the event schema fixes, which no purchase could ever satisfy.
+
+    Only `_VOCABULARY` is checked here, because only those values are ours to know. A category comes
+    from whichever scenario pack the platform is running, so a value missing from the catalogue this
+    process happens to hold is not evidence of a mistake — see `_off_catalogue`.
+    """
     known = _VOCABULARY.get(rule.field)
-    if known is None and rule.field == m.F_ITEM_CATEGORY:
-        items = _items(catalogue)
-        known = frozenset(i.category.strip().lower() for i in items) if items else None
     if known is None:
         return ()
+    values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
+    return tuple(str(v) for v in values if str(v).strip().lower() not in known)
+
+
+def _off_catalogue(rule: Rule, catalogue: Any) -> tuple[str, ...]:
+    """Categories the loaded catalogue does not have, which may still be the live pack's own.
+
+    Refusing them would drop a correct rule the moment the scenario pack differs from the one this
+    process holds — and on event day the scenarios, cards and items are ones we have not seen. Such a
+    rule is kept (an unmatchable category only narrows what passes, never widens it) and marked as our
+    reading, so the customer is shown it as unconfirmed rather than told they said it.
+    """
+    if rule.field != m.F_ITEM_CATEGORY:
+        return ()
+    items = _items(catalogue)
+    if not items:
+        return ()
+    known = frozenset(i.category.strip().lower() for i in items)
     values = rule.value if isinstance(rule.value, tuple) else (rule.value,)
     return tuple(str(v) for v in values if str(v).strip().lower() not in known)
 
@@ -364,6 +411,47 @@ def _items(catalogue: Any) -> tuple[Any, ...]:
     if hasattr(catalogue, "search"):
         return tuple(catalogue.search(name="").candidates)
     return tuple(catalogue or ())
+
+
+def _read_by_the_engine(rule: Rule, compiled: Sequence[Rule]) -> bool:
+    """The deterministic compiler read this very rule from the customer's own words.
+
+    The policy service compiles the same instruction, so the rule is in the draft — labelled as the
+    customer's own — whatever we do with the model's version of it. A question about it therefore asks
+    the customer to confirm a boundary their draft already shows them, which blocks them for nothing.
+    Seen live three times on 2026-09-25: "One purchase in total" offered as an unconfirmed suggestion,
+    "I read 'specialist sports retailer' as … those are my words", and "Which exact catalogue product do
+    you want?" — each about a rule the engine had read from the same sentence (DEC-058a).
+    """
+    return any(_same_restriction(rule, read) for read in compiled)
+
+
+def _compiler_rules(turns: Sequence[Turn], catalogue: Any) -> tuple[Rule, ...]:
+    """What the deterministic compiler reads from the customer's own words, or nothing on failure."""
+    said = " ".join(t.text for t in turns if t.speaker == "customer")
+    if not said.strip():
+        return ()
+    try:
+        return tuple(compile_instruction(said, catalogue=_items(catalogue)).mandate.rules)
+    except Exception:  # noqa: BLE001 — an advisory reading; it must never break the draft
+        return ()
+
+
+def _same_restriction(a: Rule, b: Rule) -> bool:
+    """The same restriction, whatever bookkeeping (currency, scope labels) either reading carries."""
+    def value(rule: Rule) -> Any:
+        if isinstance(rule.value, tuple):
+            return frozenset(str(v) for v in rule.value)
+        spec = REGISTRY.get(rule.field)
+        if spec is not None and spec.value_kind == "number":
+            try:
+                return Decimal(str(rule.value)).normalize()
+            except (ArithmeticError, InvalidOperation, ValueError):
+                return str(rule.value)
+        return str(rule.value)
+
+    return ((a.field, a.operator, a.period_days) == (b.field, b.operator, b.period_days)
+            and value(a) == value(b))
 
 
 class PermissionAssistant:
@@ -416,25 +504,43 @@ class PermissionAssistant:
             return self._fallback("The model returned an unreadable proposal. Please retry; you do not need to reword your task.",
                                   "model_invalid_response")
         candidates: list[CandidateRule] = []
+        # What the deterministic compiler reads from the same words. The policy service compiles the very
+        # same instruction, so a rule in here is already in the draft whatever we do with the model's
+        # version of it — which is what makes a question about it redundant rather than a safeguard.
+        compiled = _compiler_rules(turns, catalogue)
         questions: list[Question] = [Question(q) for q in asked if q.strip()]
         calls: list[ToolCall] = []
         for raw in reply["rules"]:
-            candidate, question = self._one(raw, turns, confirmed, catalogue, calls)
+            candidate, question = self._one(raw, turns, confirmed, catalogue, calls, compiled)
             if candidate is not None:
                 candidates.append(candidate)
             if question is not None:
                 questions.append(question)
         questions += _omitted(turns, candidates, catalogue)
         questions += _context_gaps(context)
-        if not candidates and not questions:
+        # Nothing from the model *and* nothing from the deterministic reader: there is no draft to show,
+        # so the customer retries rather than being handed an empty one (DEC-045, DEC-047). When the
+        # compiler did read their words, the draft is real even if the model proposed nothing — the
+        # policy service enforces those rules and the customer consents to them (DEC-058b).
+        if not candidates and not questions and not compiled:
             return self._fallback("The model returned no proposal. Please retry; you do not need to reword your task.",
                                   "model_invalid_response")
         version = str(getattr(self._model, "prompt_version", PROMPT_VERSION))
+        # A turn counts as read only when the model's quote is the customer's words in *that* turn —
+        # the same test a rule must pass to exist at all. Live on SCEN0002 the model tagged a rule
+        # `turn_id` T2 while quoting T1, and trusting the claim made "yes i mean that" an instruction:
+        # it was appended to the draft, burned a revision, and left the grammar's unreadable-sentence
+        # question blocking with no answer that could clear it.
+        attributed = tuple(dict.fromkeys(
+            str(raw["turn_id"]) for raw in reply["rules"]
+            if isinstance(raw, Mapping) and raw.get("turn_id")
+            and _customer_excerpt(str(raw.get("says", "")), turns, str(raw["turn_id"])) is not None))
         return Proposal(tuple(candidates), tuple(dict.fromkeys(questions)), name, version,
-                        tuple(calls))
+                        tuple(calls), attributed=attributed)
 
     def _one(self, raw: Any, turns: tuple[Turn, ...], confirmed: CompiledMandate | None,
-             catalogue: Any, calls: list[ToolCall]) -> tuple[CandidateRule | None, Question | None]:
+             catalogue: Any, calls: list[ToolCall],
+             compiled: Sequence[Rule] = ()) -> tuple[CandidateRule | None, Question | None]:
         """One proposed rule, or the question it becomes instead."""
         if not isinstance(raw, Mapping):
             return None, Question("I couldn't read one of the rules I drafted. Could you say it again?")
@@ -444,7 +550,7 @@ class PermissionAssistant:
             return None, Question(f"I can't enforce \"{operator}\" as a rule. Could you say it as a simple "
                                   "rule (for example: at most CHF 50 per order)?", field_name or None)
         if "value" not in raw:
-            return None, Question(f"I couldn't read a value for {field_name or 'a rule'}. What should it be?")
+            return None, Question(f"I couldn't read a value for {_label(field_name) or 'a rule'}. What should it be?")
         try:
             days = raw.get("period_days")
             if days is not None and (type(days) is not int or days <= 0):
@@ -453,7 +559,7 @@ class PermissionAssistant:
                         currency=raw.get("currency"), scope="period" if days is not None else raw.get("scope"),
                         period_days=days)
         except (ValueError, TypeError, ArithmeticError, InvalidOperation):
-            return None, Question(f"I couldn't read the value for {field_name or 'a rule'}. What should it be?")
+            return None, Question(f"I couldn't read the value for {_label(field_name) or 'a rule'}. What should it be?")
 
         # 0. a product the customer named in words, not by ID: look it up rather than invent one
         if field_name == m.F_ITEM_ID:
@@ -466,7 +572,8 @@ class PermissionAssistant:
             if not all(_spans(str(v).lower(), says.lower()) for v in requested):
                 items = tuple(catalogue.search(name="").candidates) if hasattr(catalogue, "search") else tuple(catalogue or ())
                 read = compile_instruction(says, catalogue=items)
-                if not any(r.field == m.F_ITEM_ID and r.value == rule.value for r in read.mandate.rules):
+                if not any(r.field == m.F_ITEM_ID and r.value == rule.value for r in read.mandate.rules) \
+                        and not _read_by_the_engine(rule, compiled):
                     return None, Question("Which exact catalogue product do you want? I cannot infer a selection from your history.", m.F_ITEM_ID)
 
         # 1. enforceable exactly as written, or it becomes a question
@@ -483,8 +590,20 @@ class PermissionAssistant:
                                   "can't enforce it. Which of the shop's own terms do you mean?", field_name)
         excerpt = _customer_excerpt(says, turns, turn_id) or _value_anchor(rule, _turn_text(turns, turn_id))
         if excerpt is None:
-            return None, Question("I drafted a rule you didn't say in those words, so it stays an "
-                                  f"unconfirmed suggestion: {field_name}. Do you want it?", field_name)
+            # ponytail: the premise — what the compiler reads is in the draft — is pinned over a corpus
+            # of instructions in test_every_rule_the_compiler_reads_is_carried_by_the_draft, because on
+            # event day the wording is unseen. Exact enforcement would need the draft itself, which only
+            # the policy service has: serialise the rule with the question and filter in `_assessed`.
+            if _read_by_the_engine(rule, compiled):
+                # The compiler read this very rule from the customer's own words, so it is in the draft
+                # already — the policy service compiles the same instruction. Asking "do you want this
+                # rule?" about a rule they already have blocks the draft for nothing, and the customer
+                # sees it twice: once as theirs, once as a suggestion. Seen live on 2026-09-25, where
+                # the model quoted "One purchase" — words the customer never wrote — for a rule DEC-013
+                # had already read from "Buy one ordinary grocery item".
+                return None, None
+            return None, Question(f"Unconfirmed suggestion: {describe_rule(rule)} "
+                                  "Do you want this rule?", field_name, rule=rule)
         says = excerpt
         wrong = _wrong_currency(field_name, says)
         if wrong:
@@ -495,7 +614,8 @@ class PermissionAssistant:
         # the registry's canonical term (`delivery`, `electronics`), which a customer writing "nur
         # Lieferung" never types: refusing there would be refusing the language, not the reading. So it
         # is kept, marked as our wording, and asked about (LEASH-175).
-        evidenced = _value_is_evidenced(rule, says)
+        off_pack = _off_catalogue(rule, catalogue)
+        evidenced = _value_is_evidenced(rule, says) and not off_pack
         spec = REGISTRY.get(field_name)
         numeric = spec is not None and spec.value_kind == "number"
         if not evidenced and numeric:
@@ -514,7 +634,16 @@ class PermissionAssistant:
             return None, Question(f'You said "{says}", which doesn\'t give me {missing}. It stays an '
                                   "unconfirmed suggestion — what should it be?", field_name)
         unevidenced: Question | None = None
-        if not evidenced:
+        if not evidenced and _read_by_the_engine(rule, compiled):
+            # Our wording, yes — but the engine read the same restriction from the same words, so the
+            # draft already shows it as the customer's own and there is nothing to confirm.
+            evidenced = True
+        elif off_pack:
+            unevidenced = Question(f'I read "{says}" as {_label(field_name)}: {describe_rule(rule)} '
+                                   f"I don't have \"{off_pack[0]}\" in the catalogue I can see, so nothing "
+                                   "may match it until the shop's own wording does — did you mean that?",
+                                   field_name)
+        elif not evidenced:
             unevidenced = Question(f'I read "{says}" as {_label(field_name)}: {describe_rule(rule)} '
                                    "Those are my words, not yours — did you mean that?", field_name)
         # 3. no looser than a permission already confirmed
@@ -527,7 +656,7 @@ class PermissionAssistant:
                                       field_name)
             except Exception:  # noqa: BLE001 — an unusable rule is a question, never a silent pass
                 return None, Question(f"I couldn't check that against your confirmed permission "
-                                      f"({field_name}). Could you say it again?", field_name)
+                                      f"about {_label(field_name)}. Could you say it again?", field_name)
         return CandidateRule(rule, says, turn_id, evidenced=evidenced), unevidenced
 
 
@@ -578,13 +707,18 @@ def _omitted(turns: Sequence[Turn], candidates: Sequence[CandidateRule], catalog
         read = compile_instruction(said, catalogue=items)
     except Exception:  # noqa: BLE001 — the cross-check is advisory; it must never break the draft
         return []
-    # Keyed by field *and* period: "CHF 120 per order" and "CHF 300 across seven days" are the same
-    # field, and a draft that keeps only one of them has quietly dropped the other.
-    drafted = {_key(c.rule) for c in candidates}
-    missing = [r for r in read.mandate.rules if _key(r) not in drafted]
-    questions = [Question(f"You also said something about {_label(r.field)}{_over(r)}, which I left out "
-                          "of the draft. Should it be a rule too?", r.field)
-                 for r in {_key(r): r for r in missing}.values()]
+    # DEC-058(b): a rule the compiler read is never "left out of the draft". The policy service compiles
+    # the same instruction, so its readings are in `hard_rules` whatever the model produced — verified
+    # with no model rules supplied at all (test_every_rule_the_compiler_reads_is_carried_by_the_draft).
+    # Asking "should it be a rule too?" about a rule the customer can see in their own draft is untrue,
+    # and it blocked them: a well-read English instruction carried one such question per compiler rule
+    # the model had not independently proposed, and no answer could clear them.
+    #
+    # What the question used to carry that was real — *who* read a rule — is now visible in the review
+    # itself, where a reading from the customer's own words is labelled theirs and a default of ours is
+    # labelled ours (LEASH-146). What stays here is the omission that is real: a sentence *neither*
+    # reader turned into a rule has no field in the draft, so nothing else can show it.
+    questions: list[Question] = []
     # A sentence the compiler could not turn into a rule at all (a foreign currency, "no
     # subscriptions") carries a restriction that would otherwise vanish: the draft has no field for
     # it, so it must be asked rather than dropped.
@@ -688,11 +822,21 @@ def _context_gaps(context: Mapping[str, Any]) -> list[Question]:
     if isinstance(entries, list):
         clashing = [e for e in entries if isinstance(e, Mapping) and e.get("conflicting")]
         if clashing:
+            # These two are about the background itself rather than about one entry, so the source
+            # names the kind and quotes the entries at issue: the customer is being asked to overrule
+            # something on file, and cannot do that fairly without seeing what it says.
+            first = clashing[0]
             questions.append(Question(
                 "Some of what I have on file conflicts with what you just told me, so I haven't "
-                "used it. Which one should I go by?"))
+                "used it. Which one should I go by?",
+                source=QuestionSource(
+                    str(first.get("kind") or "preference"),
+                    "; ".join(str(e.get("text", "")) for e in clashing if e.get("text"))[:400],
+                    file=(first.get("source") or {}).get("file"),
+                    row_id=(first.get("source") or {}).get("row_id"))))
     if context.get("truncated"):
         questions.append(Question(
             "I couldn't see all of your background just now, so I may have missed something. "
-            "Is there anything else I should know?"))
+            "Is there anything else I should know?",
+            source=QuestionSource("preference", "some of your background could not be read in full")))
     return questions

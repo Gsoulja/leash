@@ -1,4 +1,6 @@
 // The current permission, the selected run's fixed version, and server-rendered change reviews.
+// Reading, tightening and revoking boundaries only: starting the agent belongs to the conversation,
+// where the customer confirmed the permission in the first place (LEASH-147).
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Mandate, type Run, type TightenRequest } from "../api/client";
@@ -7,16 +9,12 @@ import { PermissionSummary, perOrderLimit, permissionStatus } from "../component
 const chf = (value: number) => `CHF ${value.toFixed(2)}`;
 type Proposal = { mandate: Mandate; change: TightenRequest; title: string };
 
-export function Permission({ selectedRun, onRunStarted, onChat }: {
-  selectedRun?: Run; onRunStarted?: (id: string) => void; onChat?: () => void;
-}) {
+export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?: () => void }) {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["mandates"], queryFn: () => api().mandates() });
-  const catalogue = useQuery({ queryKey: ["scenarios"], queryFn: () => api().scenarios() });
   const history = useQuery({ queryKey: ["mandateVersions", selectedRun?.mandate_id], enabled: !!selectedRun,
     queryFn: () => api().mandateVersions(selectedRun!.mandate_id) });
   const [limit, setLimit] = useState("");
-  const [scenario, setScenario] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -145,19 +143,5 @@ export function Permission({ selectedRun, onRunStarted, onChat }: {
       {onChat && <button className="link" onClick={onChat}>Discuss a new permission in chat</button>}
     </section>}
 
-    {active && <details className="card context-details"><summary>Simulation controls</summary>
-      <p className="small">Try the supplied scenarios using version {m.version} of this permission.</p>
-      <label className="k" htmlFor="scenario">Scenario</label>
-      <select id="scenario" className="field" value={scenario} onChange={(e) => setScenario(e.target.value)} aria-describedby="scenario-hint">
-        <option value="">Choose a scenario</option>
-        {(catalogue.data?.scenarios ?? []).map((s) => <option key={s.scenario_id} value={s.scenario_id}>{s.scenario_name}</option>)}
-      </select>
-      {catalogue.isError && <p className="small">Scenarios could not be loaded. Please try again.</p>}
-      <p id="scenario-hint" className="small">The run uses version {m.version} of this permission, even if you tighten it later.</p>
-      <button className="pill" disabled={busy || !scenario.trim()} onClick={() => run(async () => {
-        const started = await api().startRun(scenario.trim(), m.mandate_id);
-        onRunStarted?.(started.run_id);
-      }, "Simulation started.")}>Start a run</button>
-    </details>}
   </div>;
 }

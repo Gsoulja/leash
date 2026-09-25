@@ -151,12 +151,14 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   await expect(page.getByRole("status")).toHaveText(/The limit is now CHF 300.00 per order/);
   await expect(page.getByText("Version 2", { exact: true })).toBeVisible();
 
-  // 7. A later run, started from the app, gets version 2; the first run keeps the snapshot it started with.
-  await page.getByLabel("Scenario").fill("SCEN0004");
-  await page.getByRole("button", { name: "Start a run" }).click();
-  const started = page.getByRole("status").filter({ hasText: /^Run RUN-\S+ started with version 2 of your permission\.$/ });
-  await expect(started).toBeVisible();
-  const later = await runOf(request, (await started.textContent())!.split(" ")[1]);
+  // 7. A later run gets version 2; the first run keeps the snapshot it started with.
+  //
+  // Started through the API, as step 2 does. LEASH-147 moved the launch out of Permission and into the
+  // conversation, where "Start shopping" appears on the confirmed permission of a demonstration the
+  // customer picked — this journey never picks one, so there is no button here to press. That path is
+  // covered by `Agent.test.tsx` ("starts exactly one run however often the action is tapped"); what this
+  // step is about is the version a later run gets, which the API start shows exactly as well.
+  const later = await startRun(request, "SCEN0004");
   expect(later.mandate_version).toBe(2);
   expect((await runOf(request, first.run_id)).mandate_version).toBe(1);
   await expect(prompt(page)).toBeVisible({ timeout: 60_000 });

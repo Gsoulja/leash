@@ -1,0 +1,52 @@
+{
+  "classification": "SYNTHETIC TEST DATA",
+  "description": "Generated unseen scenario pack in the supplied pack's shape. No expected decisions, risk labels or answer key: the engine reaches its own verdicts.",
+  "generator": "solution/engine/scripts/make_pack.py",
+  "dataset": "unseen-pack",
+  "files": [
+    {
+      "path": "accounts.csv",
+      "rows": 5
+    },
+    {
+      "path": "authorization_history.csv",
+      "rows": 20
+    },
+    {
+      "path": "cards.csv",
+      "rows": 5
+    },
+    {
+      "path": "customers.csv",
+      "rows": 5
+    },
+    {
+      "path": "fx_rates.csv",
+      "rows": 4
+    },
+    {
+      "path": "items.csv",
+      "rows": 7
+    },
+    {
+      "path": "merchants.csv",
+      "rows": 6
+    },
+    {
+      "path": "purchase_attempt_items.csv",
+      "rows": 17
+    },
+    {
+      "path": "purchase_attempts.csv",
+      "rows": 16
+    },
+    {
+      "path": "scenario_authorities.csv",
+      "rows": 5
+    },
+    {
+      "path": "scenario_catalogue.csv",
+      "rows": 5
+    }
+  ]
+}

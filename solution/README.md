@@ -92,7 +92,8 @@ Open `prototype/index.html`, then:
 | --- | --- |
 | Decision engine and API worker | Python 3.12, FastAPI, Pydantic v2, asyncpg |
 | Database | Postgres 17 |
-| Shop-text reader | [Laya](https://github.com/NandhaKishorM/laya), fine-tuned, with a regex fallback |
+| Permission drafting | Gemini 3.8 Flash through OpenRouter; Jev checks the proposed rules |
+| Shop-text reader | Jev through OpenRouter, with a one-second budget and regex fallback |
 | Customer app | React, TypeScript, Vite |
 
 The engine follows a **functional core, hexagonal shell** design: the decision itself is a pure function, and the Viseca API, the database, the model and the app are adapters around it. The full list of patterns and the reasons for each are in [`../CLAUDE.md`](../CLAUDE.md).

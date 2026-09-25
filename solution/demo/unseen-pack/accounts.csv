@@ -1,0 +1,6 @@
+account_id,customer_id,account_type,account_purpose,base_currency,status,opened_on,per_transaction_limit_chf,monthly_limit_chf
+AC0901,CU0901,debit,daily_spending,CHF,active,2020-03-01,1200,4500
+AC0902,CU0902,debit,daily_spending,CHF,active,2020-03-01,1200,4500
+AC0903,CU0903,debit,daily_spending,CHF,active,2020-03-01,1200,4500
+AC0904,CU0904,debit,daily_spending,CHF,active,2020-03-01,1200,4500
+AC0905,CU0905,debit,daily_spending,CHF,active,2020-03-01,1200,4500

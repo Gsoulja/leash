@@ -32,8 +32,10 @@ The checked purchase must belong to the authority the customer actually confirme
       suggests. Needs LEASH-140/143.
 - [x] Every checkout is correlated to its live authorization, run and confirmed mandate snapshot. The event mandate remains authoritative under DEC-003; discrepancies raise an integrity alert without silently rewriting it.
 - [x] Merchant/cart terms are untrusted claims; validation does not imply product quality, fulfillment or delivery has been verified.
-- [ ] A changed cart is evaluated as the actual new attempt; a previous approval or customer answer cannot be replayed for different checkout terms.
-      **Not met — I ticked this with a caveat and the reviewer took the caveat apart.** On the repeat
+- [x] A changed cart is evaluated as the actual new attempt; a previous approval or customer answer cannot be replayed for different checkout terms.
+      **Now met — see the 2026-09-25 (terms) work-log entry. The two notes below are the history of how
+      it was wrong twice, kept because they name exactly what was missing.**
+      **Was: not met — I ticked this with a caveat and the reviewer took the caveat apart.** On the repeat
       path `decide()` is never called at all (`decide_purchase.py` returns `("repeat", saved)` first),
       so "decide() is pure" is irrelevant; `test_a_now_failing_limit_cannot_be_approved…` re-checks
       accumulated spend, not changed terms. `receive()` dedupes on `authorization_id` alone and
@@ -121,3 +123,48 @@ not a reachability one, and §8 now says so and points at its own "credential sc
 
 Criteria 3 and 6 are now unticked. Criterion 6 needs the fake-API changed-cart case the Testing
 Requirements already name; criterion 3's second half needs LEASH-140/143.
+
+### 2026-09-25 — the changed cart, at last (criterion 6)
+
+The reviewer's diagnosis was exact: `receive()` dedupes on `authorization_id` alone and compared none of
+`billing_chf`, `merchant_id` or the `item_fingerprint` it stores two lines earlier, so a same-ID
+redelivery with amended terms replayed the saved verdict with no INTEGRITY line.
+
+**What a retry now means.** `Terms` (`domain/purchase.py`) is what a verdict was given on: shop, billing
+amount and item fingerprint. `Terms.of(purchase).changed_from(decided)` returns the differences in
+words. A redelivery is a retry only while that is empty.
+
+**Both stores, not one.** `PostgresRepository.receive` builds the decided `Terms` from the three columns
+it already stores; `InMemoryDecisionStore` (the offline slice and the worker tests) keeps them per
+decision. Either way the mismatch travels back on `SavedAuthorization.changed_terms`.
+
+**What happens on a mismatch.** The stored decision is *not* rewritten (DEC-003). An `integrity_alert`
+row is written to `decision_events` naming each difference, one `INTEGRITY:` line is logged per
+difference, and `DecidePurchase` answers that delivery with a `step_up` (`checkout_terms_changed`)
+carrying the mismatch as evidence — never the saved approval. If the platform already recorded an
+answer it refuses ours with `409 already_decided`, which is the expected outcome; the step_up matters
+in the case where our first answer never arrived. RUNBOOK §8 documents it.
+
+**Tests.** Four layers, and the fake-API case the Testing Requirements named:
+- `tests/domain/test_purchase.py` — a reordered basket is the same terms; an added line, a raised amount
+  and a swapped shop each read as changed.
+- `tests/adapters/test_postgres_repository.py` — an amended redelivery reports `changed_terms` and writes
+  the alert, while the stored verdict stays `approve`; the same terms stay a plain repeat.
+- `tests/application/test_decide_purchase.py` — the changed-terms delivery is answered `step_up` with the
+  amount in its evidence, nothing is re-decided and nothing replayed; same terms still short-circuit.
+- `tests/adapters/test_worker.py` — **the fake-API changed-cart case**: `FakeViseca(amend=...)` amends the
+  cart of an already-approved live authorization and delivers it again; only one `approve` is ever
+  posted, the second POST carries `step_up` and is refused `already_decided`, and the INTEGRITY line is
+  logged. The fake gained one hook (`amend`), described in its module docstring.
+
+**Fingerprint lock re-pinned** (`tests/policy/test_registry.py`) with its reason: `domain/purchase.py`
+gained `Terms` and `application/decide_purchase.py` gained the repeat-path branch. No field's meaning
+changed; the only verdict movement is approve → step_up on a redelivery, and a first delivery cannot be
+affected.
+
+**Criterion 3 stays unticked.** Nothing here touches it: the engine API still has no authentication, so
+the credential half needs LEASH-140/143.
+
+Checks: `pytest` → 1741 passed at the start of this entry, and the full suite green afterwards except
+`tests/policy/test_registry.py::test_every_module_is_classified`, which fails on another session's new
+`leash.adapters.laya_reader` and `leash.reading.laya` and is not ours.

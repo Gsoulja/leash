@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="27.110" timestamp="2026-09-25T06:32:56.984593+02:00" hostname="war-machine"><testcase classname="tests.e2e.test_laya_run" name="test_real_laya_decisions_reach_platform" time="26.447" /></testsuite></testsuites>

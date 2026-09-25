@@ -28,9 +28,10 @@ def test_review_distinguishes_requirements_and_customer_interventions():
     from leash.policy.render import permission_review
     review = permission_review((Rule(m.F_BILLING_CHF, "<=", Decimal("20")),
                                 Rule(m.F_MAX_PURCHASES, "<=", Decimal("1"))), "ask")
-    assert review["must_follow"] == ["At most CHF 20.00 per order, delivery included."]
-    assert any("1 approved purchase" in line for line in review["must_ask"])
-    assert any("shop" in line for line in review["may_choose"])
+    assert [line["text"] for line in review["must_follow"]] == \
+        ["At most CHF 20.00 per order, delivery included."]
+    assert any("1 approved purchase" in line["text"] for line in review["must_ask"])
+    assert any("shop" in line["text"] for line in review["may_choose"])
 
 
 def test_a_period_limit_names_its_window():
@@ -104,11 +105,56 @@ def test_review_preserves_strict_bounds_and_exclusions(rule, expected):
     from leash.policy.render import permission_review
     assert m.supported(rule)
     assert expected in describe_rule(rule)
-    assert any(expected in line for line in permission_review([rule], "ask")["must_follow"])
+    assert any(expected in line["text"] for line in permission_review([rule], "ask")["must_follow"])
 
 
 def test_review_does_not_truncate_a_fractional_session_threshold():
     from leash.policy.render import permission_review
     rule = Rule(m.F_SESSION_RISK, "<", Decimal("1.5"))
     assert "below 1.5" in describe_rule(rule)
-    assert any("at or above 1.5" in line for line in permission_review([rule], "ask")["must_ask"])
+    assert any("at or above 1.5" in line["text"] for line in permission_review([rule], "ask")["must_ask"])
+
+
+# LEASH-146: the review is read under headings, so every line has to know which heading it belongs
+# under, and the grouping has to be exhaustive — an ungrouped line would silently vanish from the
+# review, which is the one thing the unrestricted list exists to prevent.
+
+def test_each_review_line_carries_the_heading_it_is_read_under():
+    from leash.policy.render import permission_review
+    review = permission_review((Rule(m.F_BILLING_CHF, "<=", Decimal("20")),
+                                Rule(m.F_PRIOR_PURCHASES, ">=", Decimal("1")),
+                                Rule(m.F_MAX_QUANTITY, "<=", Decimal("1"))), "ask")
+    groups = {line["group"] for line in review["must_follow"]}
+    assert groups == {"price", "merchant", "item"}
+    assert all(line["group"] == "uncertainty" for line in review["must_ask"])
+
+
+@pytest.mark.parametrize("field", sorted(REGISTRY))
+def test_every_registry_field_is_grouped_and_named_as_a_choice(field):
+    """A new field with no heading and no plain-words name would drop out of the review unseen."""
+    from leash.policy.render import GROUPS, choice_label, group_of
+    assert group_of(field) in GROUPS, field
+    assert field not in choice_label(field), field
+
+
+@pytest.mark.parametrize("field", sorted(REGISTRY))
+def test_an_unrestricted_field_is_named_in_may_choose(field):
+    """DEC-045: what the model silently dropped is only visible here, so every field must appear."""
+    from leash.policy.render import choice_label, permission_review
+    review = permission_review([], "ask")
+    assert any(choice_label(field) in line["text"] for line in review["may_choose"]), field
+
+
+def test_the_review_never_shows_a_catalogue_id():
+    from leash.policy.render import permission_review
+    review = permission_review([Rule(m.F_ITEM_ID, "in", ("SKU-4711",))], "ask")
+    assert not any("SKU-4711" in line["text"] for line in review["must_follow"])
+    assert any("product you chose" in line["text"] for line in review["must_follow"])
+
+
+def test_no_boundary_is_read_back_twice():
+    from leash.policy.render import permission_review
+    review = permission_review((Rule(m.F_BILLING_CHF, "<=", Decimal("20")),
+                                Rule(m.F_BILLING_CHF, "<=", Decimal("20"))), "ask")
+    texts = [line["text"] for group in review.values() for line in group]
+    assert len(texts) == len(set(texts))

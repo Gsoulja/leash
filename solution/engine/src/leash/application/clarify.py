@@ -28,7 +28,7 @@ from typing import Any
 
 from leash.domain import mandate as m
 from leash.domain.mandate import CompiledMandate, Rule, Uncertainty
-from leash.policy.compiler import CatalogueItem, Draft, Question, compile_instruction
+from leash.policy.compiler import CatalogueItem, Classifier, Draft, Question, compile_instruction
 from leash.policy.registry import REGISTRY
 from leash.policy.render import describe_rule, permission_review
 from leash.policy.hard_rules import mandate_to_api, rule_to_api
@@ -38,6 +38,8 @@ def optional(q: Question) -> bool:
     (e.g. "Please confirm … only from sports shops") always blocks."""
     return q.field == m.F_SPLIT_CHECK or (q.field == m.F_MERCHANT_CATEGORY and "any kind of shop" in q.text)
 _DEC = re.compile(r"\bDEC-\d{3}\b")
+#: The same reference as it is written into a note: " (DEC-013)" at the end of the sentence.
+_DEC_REF = re.compile(r"\s*\(DEC-\d{3}\)")
 _POLICY_NOTES = {"ask": "When unsure, I ask you.", "decline": "When unsure, I decline.",
                  "approve": "When unsure, I approve."}
 _UNCERTAINTY: dict[str, Uncertainty] = {"Ask me": "ask", "Decline": "decline", "Approve": "approve"}
@@ -78,13 +80,29 @@ def _suggested(q: Question) -> bool:  # options offered next to the customer's o
                                                 or "conflicts with" in q.text)
 
 
-def _rule_views(notes: Sequence[str]) -> list[dict[str, Any]]:
+def _rule_views(notes: Sequence[str], origins: Mapping[str, str] = {}) -> list[dict[str, Any]]:
+    r"""How each boundary is shown to the customer, and whose it is.
+
+    `origins` comes from the compiler, which knows whether it read a rule out of the customer's words
+    or supplied it because they said nothing. The decision reference stays on the view either way: it
+    records HOW we read a sentence, which is not the same claim as whose boundary it is. Guessing the
+    source from a `DEC-\d{3}` in the note conflated the two, so "At most 1 item per order." — typed by
+    the customer — came back as our default, inviting them to disagree with their own instruction.
+    """
     views = []
     for note in notes:
         if note in _POLICY_NOTES.values():
             continue
         decision = _DEC.search(note)
-        views.append({"text": note.rstrip("."), "source": "team" if decision else "customer",
+        # Real provenance where we have it. Notes that did not come from a compiler reading — a rule
+        # the model proposed, an option the customer picked — have none to carry, and for those the
+        # old guess stands: a note citing a decision is ours. That keeps a model echoing a session
+        # default (DEC-024) from being relabelled as something the customer said, which is this bug
+        # pointing the other way. Narrowing the guess further needs provenance on those paths too.
+        # The code is provenance, not a boundary: it stays on the view, out of the sentence a customer
+        # is asked to agree to (LEASH-146). The app shows it where it explains how a draft was read.
+        views.append({"text": _DEC_REF.sub("", note).rstrip(". ").strip(),
+                      "source": origins.get(note) or ("team" if decision else "customer"),
                       "decision": decision.group(0) if decision else None, "tightened": False})
     return views
 
@@ -171,13 +189,18 @@ def _read_by_model(q: Question, proposed: Sequence[Rule]) -> bool:
     about = (q.about or "").strip().lower()
     if not about or not proposed:
         return False
-    if q.field == "instruction":
-        # Per clause, not per sentence: one rule read out of "Buy me a jacket, at most CHF 120 per
-        # order, and no subscriptions." is not a reading of that sentence, and the restriction nobody
-        # read would vanish silently (found in review, 2026-09-25 — DEC-056 amended).
-        clauses = [c for c in _CLAUSE.split(about) if re.search(r"\w", c)]
-        return bool(clauses) and len([r for r in proposed if _states(r, about)]) >= len(clauses)
-    return any(r.field == q.field for r in proposed)
+    # Per clause, not per sentence: one rule read out of "Buy me a jacket, at most CHF 120 per order,
+    # and no subscriptions." is not a reading of that sentence, and the restriction nobody read would
+    # vanish silently (found in review, 2026-09-25 — DEC-056 amended).
+    clauses = [c for c in _CLAUSE.split(about) if re.search(r"\w", c)]
+    if clauses and len([r for r in proposed if _states(r, about)]) >= len(clauses):
+        # The sentence was read, so the compiler's guess at which field it was about is answered too.
+        # Its cues are keyword guesses: "Only from shops with at least 3 previous purchases on this
+        # card." matched "shops" and asked about the merchant category, while the rule the model read
+        # was familiarity. Seen in a live chat on 2026-09-25 as a blocking question no answer clears.
+        return True
+    # Sharing a field is not being read: the rule has to come from this sentence.
+    return q.field != "instruction" and any(r.field == q.field and _states(r, about) for r in proposed)
 
 
 def _states(rule: Rule, sentence: str) -> bool:
@@ -326,11 +349,12 @@ def _raise_conflict(state: _State, answer: str, clash: str) -> None:
 
 
 def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
-            catalogue: Sequence[CatalogueItem], *, proposed: Sequence[Rule] = ()) -> dict[str, Any]:
+            catalogue: Sequence[CatalogueItem], *, proposed: Sequence[Rule] = (),
+            classifier: Classifier | None = None) -> dict[str, Any]:
     """The draft view (the contract's PolicyDraft without draft_id) for an instruction and its answers so far.
 
     Answers are replayed in order; each must answer a question that is open at that point."""
-    base = compile_instruction(instruction, catalogue=catalogue)
+    base = compile_instruction(instruction, catalogue=catalogue, classifier=classifier)
     stated_policy = None if any(q.field == "uncertainty_policy" for q in base.questions) else base.mandate.uncertainty
     state = _State()
     replayed: list[dict[str, str]] = []  # what a caller may truthfully show as answered (LEASH-145 AC8)
@@ -368,7 +392,7 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
             continue
         if not answer:
             raise AnswerError("the answer is empty")
-        alone = compile_instruction(answer, catalogue=catalogue)
+        alone = compile_instruction(answer, catalogue=catalogue, classifier=classifier)
         reason = _why_not(alone, answer, q, catalogue)
         if reason is not None:
             raise AnswerError(f"\"{answer}\" doesn't answer this question: {reason}")
@@ -385,6 +409,14 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
     built = _build(base, stated_policy, state, proposed)
     mandate = replace(base.mandate, rules=tuple(built.rules), uncertainty=built.policy,
                       instruction=instruction, notes=tuple(built.notes))
+    # Whose each note is, from every reading that contributed one: the instruction's own draft and
+    # each accepted answer. A note the customer's words produced stays theirs even if a default added
+    # the same note first.
+    origins: dict[str, str] = {}
+    for source in (base, *state.accepted):
+        for note, who in getattr(source, "origins", {}).items():
+            if who and origins.get(note) != "customer":
+                origins[note] = who
     open_questions = []
     impossible = _unsatisfiable(mandate, catalogue)
     if impossible is not None:  # only an instruction that contradicts itself gets here: answers are checked first
@@ -401,7 +433,7 @@ def clarify(instruction: str, answers: Sequence[Mapping[str, str]],
     return {"instruction": instruction,
             "review": permission_review(mandate.rules, mandate.uncertainty),
             "status": "needs_answers" if any(q["blocking"] for q in open_questions) else "ready",
-            "rules": _rule_views(mandate.notes), "hard_rules": mandate_to_api(mandate)["hard_rules"],
+            "rules": _rule_views(mandate.notes, origins), "hard_rules": mandate_to_api(mandate)["hard_rules"],
             "uncertainty_policy": mandate.uncertainty, "notes": list(mandate.notes),
             "open_questions": open_questions,
             # DEC-045: what the customer did not limit. The model can silently drop a restriction and

@@ -11,6 +11,8 @@ Test knobs:
 - delivery_lag_seconds: a slow queue; a queued purchase is delivered only this long after queueing,
   while its deadline still counts from queueing.
 - repeat: pack authorization IDs that are delivered twice (same live ID and deadline).
+- amend: pack authorization ID -> a function amending its purchase for a second delivery of the
+  same live ID, after the first was decided (LEASH-102: terms changed behind an answer).
 - `received` / `resolutions`: every decision and customer answer accepted; `rejected`: every one refused
   (with its error code), for assertions.
 
@@ -28,7 +30,7 @@ import json
 import time
 import uuid
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -119,6 +121,7 @@ class FakeViseca:
                  clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
                  decision_seconds: float = DECISION_SECONDS, human_window_seconds: float = HUMAN_WINDOW_SECONDS,
                  queue_delay_seconds: float = 0, delivery_lag_seconds: float = 0, repeat: Iterable[str] = (),
+                 amend: Mapping[str, Callable[[Purchase], Purchase]] | None = None,
                  api_version: str = "fake-1", data_version: str = "fake-pack",
                  decision_delay_seconds: float = 0, poll_delay_seconds: float = 0,
                  fail_decisions: Mapping[str, int] | None = None, state_file: Path | None = None):
@@ -127,6 +130,9 @@ class FakeViseca:
         self.queue_delay = timedelta(seconds=queue_delay_seconds)
         self.delivery_lag = timedelta(seconds=delivery_lag_seconds)
         self.repeat = set(repeat)
+        # LEASH-102: pack authorization IDs whose cart is amended for a second delivery of the SAME live ID,
+        # after the first was decided — a shop or agent changing the terms behind an answered authorization.
+        self.amend = dict(amend or {})
         self.api_version, self.data_version = api_version, data_version
         # fault injection (LEASH-126): slow answers and polls, and the first N decision POSTs per source ID
         # refused with 503 before they are recorded
@@ -240,10 +246,15 @@ class FakeViseca:
         for run in self.runs.values():
             self._advance(run)
             for live in run.queued:
-                if live.decision is not None or now >= live.deadline_at or now < live.queued_at + self.delivery_lag:
+                source_id = live.attempt.purchase.authorization_id
+                amends = source_id in self.amend
+                if (live.decision is not None and not amends) or now >= live.deadline_at \
+                        or now < live.queued_at + self.delivery_lag:
                     continue
-                allowed = 2 if live.attempt.purchase.authorization_id in self.repeat else 1
+                allowed = 2 if source_id in self.repeat or amends else 1
                 if live.deliveries < allowed:
+                    if amends and live.deliveries == 1:  # the cart changes before it is delivered again
+                        live.attempt = replace(live.attempt, purchase=self.amend[source_id](live.purchase))
                     return run, live
         return None
 

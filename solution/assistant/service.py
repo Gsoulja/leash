@@ -28,6 +28,8 @@ from assistant.agent import PermissionAssistant, Turn
 from assistant.conversation import ModelUnavailable, PermissionConversation, PolicyService
 from leash.application.permission_context import UnknownScope, resolve_scope
 from leash.domain.clock import SimTime
+from leash.domain.mandate import CompiledMandate
+from leash.policy.hard_rules import mandate_from_api
 
 log = logging.getLogger("leash.assistant")
 
@@ -48,6 +50,20 @@ def _text(body: Any, *, simulation: bool = False) -> str | None:
     return text.strip() if isinstance(text, str) and text.strip() else None
 
 
+def _asked(question: Any) -> str:
+    """The text of a question the customer was shown, whichever shape the draft stored it in.
+
+    An assistant question carries its provenance as an object since LEASH-145 AC10; drafts written
+    before that stored a bare string, and one of those is still read back here. Joining the objects as
+    strings raised TypeError on the chat's own path — the second turn of every conversation that had an
+    open question.
+    """
+    if isinstance(question, Mapping):
+        text = question.get("text")
+        return text if isinstance(text, str) else ""
+    return question if isinstance(question, str) else ""
+
+
 def _said(earlier: str, text: str) -> list[Turn]:
     """The conversation the model reads: what the service has recorded, then the newest words.
 
@@ -64,10 +80,11 @@ class PolicyServiceError(RuntimeError):
 
 
 class HttpPolicyService:
-    """The policy service as this surface uses it: ask for a draft. It owns the validation.
+    """The policy service as this surface uses it: ask for a draft, and read the confirmed permission.
 
-    Deliberately the only outbound call here, and deliberately narrow — there is no method for
-    confirming, submitting or activating anything, so this process cannot do those things by mistake.
+    Deliberately narrow — there is no method for confirming, submitting, activating or revoking
+    anything, so this process cannot do those things by mistake. Reading the active permission is a
+    read: a candidate rule has to be checked against it before a customer ever sees it (DEC-006).
     """
 
     def __init__(self, client: Any, *, timeout_seconds: float = 10.0) -> None:
@@ -101,6 +118,20 @@ class HttpPolicyService:
             raise PolicyServiceError(f"no draft {draft_id} ({response.status_code})")
         return response.json()
 
+    def active_mandate(self) -> Mapping[str, Any] | None:
+        """The current active mandate as the policy service lists it, or None if there is none."""
+        try:
+            response = self._client.get("/api/mandates", timeout=self._timeout)
+        except Exception as exc:  # noqa: BLE001
+            raise PolicyServiceError(f"could not reach the policy service: {exc}") from exc
+        if response.status_code >= 400:
+            raise PolicyServiceError(f"could not read the confirmed permission ({response.status_code})")
+        body = response.json()
+        current = body.get("current_mandate_id")
+        mandates = [x for x in body.get("mandates", []) if isinstance(x, Mapping)]
+        active = [x for x in mandates if x.get("status") == "active"]
+        return next((x for x in active if x.get("mandate_id") == current), None) or (active[0] if active else None)
+
     def record_message(self, draft_id: str, text: str, reply: str,
                        context: Mapping[str, Any]) -> Mapping[str, Any]:
         from urllib.parse import quote
@@ -116,6 +147,21 @@ class HttpPolicyService:
         if response.status_code >= 400:
             raise PolicyServiceError(f"the policy service refused the draft ({response.status_code})")
         return response.json()
+
+
+def _active(policy: PolicyService) -> CompiledMandate | None:
+    """The confirmed permission a candidate rule must not loosen, compiled from its own hard_rules.
+
+    A `PolicyServiceError` is left to the caller: not knowing what is already confirmed is not the same
+    as nothing being confirmed, and drafting without the check is the loosening it exists to prevent.
+    """
+    stored = policy.active_mandate()
+    if not stored:
+        return None
+    compiled, _ = mandate_from_api({"instruction": str(stored.get("instruction") or "x"),
+                                    "hard_rules": stored.get("hard_rules") or [],
+                                    "uncertainty_policy": stored.get("uncertainty_policy") or "ask"})
+    return compiled
 
 
 def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService, *,
@@ -144,7 +190,8 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
         turns = _said(earlier, text)
         if not replacing:
             questions = [q["text"] for q in stored.get("open_questions", []) if isinstance(q.get("text"), str)]
-            questions += stored.get("assistant", {}).get("questions", [])
+            questions += [_asked(q) for q in stored.get("assistant", {}).get("questions", [])]
+            questions = [q for q in questions if q.strip()]
             turns[-1:-1] = [Turn("Q", "assistant", "\n".join(questions))] if questions else []
         return _reply(turns, draft_id=draft_id, replace_instruction=replacing,
                       scenario_id=stored.get("simulation_scenario"))
@@ -175,8 +222,12 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             return _error(404, "unknown_card", str(exc))
         conversation = PermissionConversation(assistant, pack, scope, policy, catalogue=catalogue)
         try:
-            result = conversation.clarify(said, cutoff=cutoff, draft_id=draft_id,
-                                         replace_instruction=replace_instruction, simulation_scenario=scenario_id)
+            # DEC-006, before anything is shown: a candidate that would loosen the confirmed permission
+            # is a question, not a rule. Without this the customer reads a looser limit as their new
+            # permission and only the engine's /tighten refuses it — after they believed it.
+            active = _active(policy)
+            result = conversation.clarify(said, cutoff=cutoff, draft_id=draft_id, active=active,
+                                          replace_instruction=replace_instruction, simulation_scenario=scenario_id)
         except ModelUnavailable as exc:
             return _error(503, exc.code or "model_unavailable", str(exc))
         except ValueError as exc:  # no customer words yet: a question, not a failure
@@ -192,7 +243,9 @@ def create_app(assistant: PermissionAssistant, pack: Any, policy: PolicyService,
             "kind": result.proposal.intent,
             "reply": result.reply,
             "consent_text": list(result.consent_text),
-            "questions": [{"text": q.text, "field": q.field} for q in result.questions],
+            "questions": [{"text": q.text, "field": q.field,
+                           "source": q.source.as_dict() if q.source else None}
+                          for q in result.questions],
             "status": result.status,
             "model": result.proposal.model,
             "prompt_version": result.proposal.prompt_version,
@@ -244,7 +297,7 @@ DEFAULT_PACK = "data"
 def build_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     """Assemble the surface from the environment. Fails loudly rather than starting half-wired.
 
-    `APERTUS_API_KEY` is read by the model adapter alone, and nothing here reads `TEAM_API_KEY`: this
+    `OPENROUTER_API_KEY` is read by the model adapter alone, and nothing here reads `TEAM_API_KEY`: this
     process must not hold a control-layer credential (DEC-044).
     """
     import os
@@ -265,15 +318,18 @@ def build_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     policy = HttpPolicyService(httpx.Client(base_url=env.get("LEASH_POLICY_URL", DEFAULT_POLICY_URL)))
     from leash.adapters.pack.catalogue import Catalogue
     catalogue = Catalogue(pack.data_dir)
-    choice = env.get("LEASH_ASSISTANT_MODEL", "apertus").strip().lower()
+    choice = env.get("LEASH_ASSISTANT_MODEL", "openrouter").strip().lower()
     if choice == "offline":
         log.warning("LEASH_ASSISTANT_MODEL=offline: reading with the compiler, not a model. "
                     "For rehearsals and tests only — it reads no language the compiler cannot.")
         model: Any = OfflineModel()
-    else:
-        from assistant.apertus import ApertusModel  # raises without APERTUS_API_KEY, which is the point
+    elif choice == "openrouter":
+        from assistant.openrouter import OpenRouterModel
+        from leash.adapters.jev import JevClient
 
-        model = ApertusModel()
+        model = OpenRouterModel(environ=env, verifier=JevClient(env))
+    else:
+        raise ValueError("LEASH_ASSISTANT_MODEL must be openrouter or offline")
     return create_app(PermissionAssistant(model), pack, policy, catalogue=catalogue,
                       cutoff=SimTime.parse(cutoff), card_id=card_id,
                       simulation=env.get("LEASH_SIMULATION") == "1")

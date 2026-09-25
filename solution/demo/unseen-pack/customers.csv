@@ -1,0 +1,6 @@
+customer_id,persona_name,home_region,background,shopping_preferences,typical_spending,budget_style,travel_pattern
+CU0901,Nadia Brunner,Bern region,Manages a household prescription routine and reorders the same items.,Pharmacy refills and household basics; prefers delivery to the door.,"Small regular pharmacy and grocery payments, mostly weekday mornings.",careful,Rarely travels outside Switzerland.
+CU0902,Tomas Keller,Lucerne region,Keeps two cats and reorders food on a weekly rhythm.,Pet food and litter; buys the same brands repeatedly.,Weekly pet-supply orders and occasional vet payments.,careful,Occasional weekend trips.
+CU0903,Ines Faria,Geneva region,Reads widely and buys hardcovers from one favourite bookshop.,Books and stationery; dislikes marketplace sellers.,"A few book purchases a month, usually evenings.",flexible,Two or three European city trips a year.
+CU0904,Ruben Stauffer,Zurich region,Is furnishing a home office room by room.,"Desks, chairs and lighting; wants exactly the item chosen and nothing added.",Infrequent larger furniture payments.,careful,Little travel.
+CU0905,Lea Amrein,Basel region,Travels for work and replaces small electronics abroad.,"Adapters, cables and chargers; buys in whatever currency the shop uses.","Small electronics payments, often from abroad.",flexible,Frequent short international trips.

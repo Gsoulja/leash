@@ -1,0 +1,8 @@
+item_id,item_name,item_category,item_description,unit_price_min_chf,unit_price_typical_chf,unit_price_max_chf
+IT0901,Prescription refill pack,pharmacy,A repeat prescription refill prepared by the pharmacy.,18.00,32.00,60.00
+IT0902,Grain-free cat food case,pet_care,A case of twelve grain-free wet food trays.,22.00,34.00,55.00
+IT0903,Hardcover novel,books,A hardcover edition of a current literary novel.,28.00,42.00,65.00
+IT0904,Ergonomic office chair,furniture,A height-adjustable office chair with lumbar support.,180.00,240.00,420.00
+IT0905,Universal travel adapter,electronics,A multi-region plug adapter with USB-C output.,18.00,29.00,45.00
+IT0906,Three-year protection plan,membership,An extended warranty sold alongside furniture.,25.00,39.00,59.00
+IT0907,Litter deodoriser,pet_care,A scented additive sold next to cat litter.,6.00,9.00,14.00

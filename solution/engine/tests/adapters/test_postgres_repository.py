@@ -1,5 +1,6 @@
 """Postgres repository against a throw-away database (migrated and seeded from the pack)."""
 
+import json
 import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -9,7 +10,7 @@ import asyncpg
 import pytest
 from alembic import command
 
-from factories import line, merchant, purchase
+from factories import line, merchant, money, purchase
 from leash.adapters.pack.loader import Pack
 from leash.adapters.pack.seed import seed
 from leash.adapters.postgres.repository import PostgresRepository
@@ -84,6 +85,42 @@ def test_repeat_delivery_returns_saved_decision(db):
     first, again = with_repo(db, body)
     assert first is None  # new
     assert (again.state, again.engine_verdict, again.response) == ("declined", "decline", {"decision": "decline"})
+
+
+def test_a_redelivery_with_amended_terms_is_not_a_repeat_of_the_saved_verdict(db):
+    """LEASH-102: the same live ID carrying a different cart is a different attempt, not a retry.
+
+    Nothing is rewritten (DEC-003): the stored decision stays as it was decided, and the mismatch is
+    raised as an integrity alert so the approval cannot be handed back as though it covered these terms.
+    """
+    async def body(repo):
+        p = buy("AZ-1", "2026-08-12T09:15:00Z", "289.00")
+        await received(repo, p)
+        await repo.record_decision("AZ-1", decision("approve"), response={"decision": "approve"})
+        amended = buy("AZ-1", "2026-08-12T09:15:00Z", "368.00",
+                      items=(line(), line(line_no=2, item_id="IT0099", name="Warranty", unit_price=money("79.00"))))
+        again = await received(repo, amended)
+        async with repo._pool.acquire() as conn:
+            alerts = await conn.fetch("select payload from decision_events where authorization_id = 'AZ-1' "
+                                      "and kind = 'integrity_alert'")
+        return again, [json.loads(a["payload"]) for a in alerts]
+
+    again, alerts = with_repo(db, body)
+    assert again.engine_verdict == "approve", "the record stays truthful about what was decided"
+    assert again.changed_terms, "the amended terms have to be reported, not replayed"
+    assert any("billing_chf" in m or "item" in m for m in again.changed_terms), again.changed_terms
+    assert alerts and any("mismatches" in a for a in alerts), alerts
+
+
+def test_a_redelivery_of_the_same_terms_stays_a_plain_repeat(db):
+    async def body(repo):
+        p = buy("AZ-1", "2026-08-12T09:15:00Z", "289.00")
+        await received(repo, p)
+        await repo.record_decision("AZ-1", decision("approve"), response={"decision": "approve"})
+        return await received(repo, buy("AZ-1", "2026-08-12T09:15:00Z", "289.00"))
+
+    again = with_repo(db, body)
+    assert again.engine_verdict == "approve" and not again.changed_terms
 
 
 def test_repeat_delivery_before_a_decision_reports_it_in_flight(db):

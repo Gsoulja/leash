@@ -1,0 +1,7 @@
+merchant_id,merchant_name,merchant_category,merchant_mcc,merchant_country,merchant_city,availability,recurring_capable
+ME0901,Aareperle Apotheke,pharmacy,5912,CH,Bern,store_and_online,false
+ME0902,Pfotenmarkt,pet_care,5995,CH,Lucerne,store_and_online,true
+ME0903,Librairie du Quai,books,5942,CH,Geneva,store_and_online,false
+ME0904,Librairie du Quay,books,5942,CH,Geneva,online_only,false
+ME0905,Werkraum Möbel,home_improvement,5712,CH,Zurich,store_and_online,false
+ME0906,TransitTech,electronics,5732,DE,Berlin,online_only,false

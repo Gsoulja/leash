@@ -192,6 +192,33 @@ def test_repeat_delivery_short_circuits_to_the_saved_verdict():
     assert reader.budgets == [] and "decide" not in store.calls
 
 
+def test_a_redelivery_with_changed_terms_is_answered_as_a_new_attempt_not_the_saved_approval():
+    """LEASH-102: an approval given on one cart may not be sent again for a different one.
+
+    The stored decision stays as it was (DEC-003); this delivery is answered the only honest way, by
+    asking the customer, and the mismatch is on the record.
+    """
+    approved = {"authorization_id": "AZ-1", "decision": "approve", "reason_codes": []}
+    saved = SavedAuthorization("AZ-1", "approved", "approve", approved,
+                               changed_terms=("billing_chf: this delivery says CHF 368.00; "
+                                              "the decided one was CHF 289.00",))
+    store, sender = FakeStore(saved=saved), FakeSender()
+    result = run(use_case(store=store, sender=sender).handle(request()))
+    assert result.verdict == "step_up", "an approval cannot cover terms it was never checked against"
+    assert result.path == "changed_terms"
+    [(aid, body)] = sender.sent
+    assert aid == "AZ-1" and body["decision"] == "step_up"
+    assert body != approved and "decide" not in store.calls        # nothing re-decided, nothing replayed
+    assert any("368.00" in str(e) for e in body["evidence"]), body["evidence"]
+
+
+def test_a_redelivery_with_the_same_terms_still_short_circuits():
+    saved_body = {"authorization_id": "AZ-1", "decision": "approve", "reason_codes": []}
+    store, sender = FakeStore(saved=SavedAuthorization("AZ-1", "approved", "approve", saved_body)), FakeSender()
+    result = run(use_case(store=store, sender=sender).handle(request()))
+    assert (result.path, result.verdict) == ("repeat", "approve") and sender.sent == [("AZ-1", saved_body)]
+
+
 IN_FLIGHT = SavedAuthorization("AZ-1", "received", None, None)
 
 

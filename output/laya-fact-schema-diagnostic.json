@@ -1,0 +1,5762 @@
+[
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "addon-repair",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.008,
+        "confidence": 0.992,
+        "answer_confidence": 0.992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0153,
+        "confidence": 0.9847,
+        "answer_confidence": 0.9847,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0078,
+        "confidence": 0.9922,
+        "answer_confidence": 0.9922,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.147,
+          "final_sale": 0.1018,
+          "not_stated": 0.7513
+        },
+        "confidence": 0.3363,
+        "answer_confidence": 0.7513,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "addon-repair",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0091,
+        "confidence": 0.9909,
+        "answer_confidence": 0.9909,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0165,
+        "confidence": 0.9835,
+        "answer_confidence": 0.9835,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0079,
+        "confidence": 0.9921,
+        "answer_confidence": 0.9921,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1816,
+          "final_sale": 0.0563,
+          "not_stated": 0.7622
+        },
+        "confidence": 0.3823,
+        "answer_confidence": 0.7622,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "addon-setup",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0055,
+        "confidence": 0.9945,
+        "answer_confidence": 0.9945,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0071,
+        "confidence": 0.9929,
+        "answer_confidence": 0.9929,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0038,
+        "confidence": 0.9962,
+        "answer_confidence": 0.9962,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0125,
+          "final_sale": 0.0058,
+          "not_stated": 0.9817
+        },
+        "confidence": 0.9065,
+        "answer_confidence": 0.9817,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "addon-setup",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0047,
+        "confidence": 0.9953,
+        "answer_confidence": 0.9953,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0063,
+        "confidence": 0.9937,
+        "answer_confidence": 0.9937,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0036,
+        "confidence": 0.9964,
+        "answer_confidence": 0.9964,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0465,
+          "final_sale": 0.0283,
+          "not_stated": 0.9253
+        },
+        "confidence": 0.713,
+        "answer_confidence": 0.9253,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "addon-warranty-de",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0059,
+        "confidence": 0.9941,
+        "answer_confidence": 0.9941,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0728,
+        "confidence": 0.9272,
+        "answer_confidence": 0.9272,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0038,
+        "confidence": 0.9962,
+        "answer_confidence": 0.9962,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0623,
+          "final_sale": 0.0083,
+          "not_stated": 0.9294
+        },
+        "confidence": 0.7446,
+        "answer_confidence": 0.9294,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "addon-warranty-de",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0062,
+        "confidence": 0.9938,
+        "answer_confidence": 0.9938,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0218,
+        "confidence": 0.9782,
+        "answer_confidence": 0.9782,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0042,
+        "confidence": 0.9958,
+        "answer_confidence": 0.9958,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0902,
+          "final_sale": 0.0895,
+          "not_stated": 0.8203
+        },
+        "confidence": 0.458,
+        "answer_confidence": 0.8203,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "addon-case",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0056,
+        "confidence": 0.9944,
+        "answer_confidence": 0.9944,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0083,
+        "confidence": 0.9917,
+        "answer_confidence": 0.9917,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0041,
+        "confidence": 0.9959,
+        "answer_confidence": 0.9959,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0062,
+          "final_sale": 0.0094,
+          "not_stated": 0.9844
+        },
+        "confidence": 0.9173,
+        "answer_confidence": 0.9844,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "addon-case",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0067,
+        "confidence": 0.9933,
+        "answer_confidence": 0.9933,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0112,
+        "confidence": 0.9888,
+        "answer_confidence": 0.9888,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0041,
+        "confidence": 0.9959,
+        "answer_confidence": 0.9959,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0055,
+          "final_sale": 0.023,
+          "not_stated": 0.9715
+        },
+        "confidence": 0.8694,
+        "answer_confidence": 0.9715,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "product-warranty",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0072,
+        "confidence": 0.9928,
+        "answer_confidence": 0.9928,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0081,
+        "confidence": 0.9919,
+        "answer_confidence": 0.9919,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0053,
+        "confidence": 0.9947,
+        "answer_confidence": 0.9947,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0231,
+          "final_sale": 0.0054,
+          "not_stated": 0.9715
+        },
+        "confidence": 0.8696,
+        "answer_confidence": 0.9715,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "product-warranty",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.007,
+        "confidence": 0.993,
+        "answer_confidence": 0.993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.008,
+        "confidence": 0.992,
+        "answer_confidence": 0.992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0057,
+        "confidence": 0.9943,
+        "answer_confidence": 0.9943,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0248,
+          "final_sale": 0.0073,
+          "not_stated": 0.9679
+        },
+        "confidence": 0.855,
+        "answer_confidence": 0.9679,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "product-service-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0058,
+        "confidence": 0.9942,
+        "answer_confidence": 0.9942,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0047,
+        "confidence": 0.9953,
+        "answer_confidence": 0.9953,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0041,
+        "confidence": 0.9959,
+        "answer_confidence": 0.9959,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0365,
+          "final_sale": 0.3181,
+          "not_stated": 0.6454
+        },
+        "confidence": 0.3011,
+        "answer_confidence": 0.6454,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "product-service-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0081,
+        "confidence": 0.9919,
+        "answer_confidence": 0.9919,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0062,
+        "confidence": 0.9938,
+        "answer_confidence": 0.9938,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0043,
+        "confidence": 0.9957,
+        "answer_confidence": 0.9957,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0065,
+          "final_sale": 0.0552,
+          "not_stated": 0.9384
+        },
+        "confidence": 0.7705,
+        "answer_confidence": 0.9384,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "renewal-card",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0075,
+        "confidence": 0.9925,
+        "answer_confidence": 0.9925,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0066,
+        "confidence": 0.9934,
+        "answer_confidence": 0.9934,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9817,
+        "confidence": 0.9817,
+        "answer_confidence": 0.9817,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.5655,
+          "final_sale": 0.0904,
+          "not_stated": 0.3441
+        },
+        "confidence": 0.1747,
+        "answer_confidence": 0.5655,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "renewal-card",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0058,
+        "confidence": 0.9942,
+        "answer_confidence": 0.9942,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0053,
+        "confidence": 0.9947,
+        "answer_confidence": 0.9947,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9825,
+        "confidence": 0.9825,
+        "answer_confidence": 0.9825,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.7447,
+          "final_sale": 0.051,
+          "not_stated": 0.2043
+        },
+        "confidence": 0.3668,
+        "answer_confidence": 0.7447,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "renewal-year",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0116,
+        "confidence": 0.9884,
+        "answer_confidence": 0.9884,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0074,
+        "confidence": 0.9926,
+        "answer_confidence": 0.9926,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0375,
+        "confidence": 0.9625,
+        "answer_confidence": 0.9625,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.033,
+          "final_sale": 0.0074,
+          "not_stated": 0.9596
+        },
+        "confidence": 0.8284,
+        "answer_confidence": 0.9596,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "renewal-year",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0153,
+        "confidence": 0.9847,
+        "answer_confidence": 0.9847,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0071,
+        "confidence": 0.9929,
+        "answer_confidence": 0.9929,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9323,
+        "confidence": 0.9323,
+        "answer_confidence": 0.9323,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0154,
+          "final_sale": 0.0043,
+          "not_stated": 0.9803
+        },
+        "confidence": 0.9025,
+        "answer_confidence": 0.9803,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "renewal-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0099,
+        "confidence": 0.9901,
+        "answer_confidence": 0.9901,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.007,
+        "confidence": 0.993,
+        "answer_confidence": 0.993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9849,
+        "confidence": 0.9849,
+        "answer_confidence": 0.9849,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9862,
+          "final_sale": 0.0043,
+          "not_stated": 0.0095
+        },
+        "confidence": 0.9261,
+        "answer_confidence": 0.9862,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "renewal-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0077,
+        "confidence": 0.9923,
+        "answer_confidence": 0.9923,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0066,
+        "confidence": 0.9934,
+        "answer_confidence": 0.9934,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9735,
+        "confidence": 0.9735,
+        "answer_confidence": 0.9735,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.8365,
+          "final_sale": 0.0205,
+          "not_stated": 0.143
+        },
+        "confidence": 0.5383,
+        "answer_confidence": 0.8365,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "renewal-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0095,
+        "confidence": 0.9905,
+        "answer_confidence": 0.9905,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.007,
+        "confidence": 0.993,
+        "answer_confidence": 0.993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9829,
+        "confidence": 0.9829,
+        "answer_confidence": 0.9829,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0485,
+          "final_sale": 0.0124,
+          "not_stated": 0.9391
+        },
+        "confidence": 0.7631,
+        "answer_confidence": 0.9391,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "renewal-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0094,
+        "confidence": 0.9906,
+        "answer_confidence": 0.9906,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0069,
+        "confidence": 0.9931,
+        "answer_confidence": 0.9931,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9843,
+        "confidence": 0.9843,
+        "answer_confidence": 0.9843,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0172,
+          "final_sale": 0.0099,
+          "not_stated": 0.9729
+        },
+        "confidence": 0.8704,
+        "answer_confidence": 0.9729,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "one-payment",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0084,
+        "confidence": 0.9916,
+        "answer_confidence": 0.9916,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0059,
+        "confidence": 0.9941,
+        "answer_confidence": 0.9941,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.5883,
+        "confidence": 0.5883,
+        "answer_confidence": 0.5883,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0133,
+          "final_sale": 0.9433,
+          "not_stated": 0.0434
+        },
+        "confidence": 0.7736,
+        "answer_confidence": 0.9433,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "one-payment",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0082,
+        "confidence": 0.9918,
+        "answer_confidence": 0.9918,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0056,
+        "confidence": 0.9944,
+        "answer_confidence": 0.9944,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.5952,
+        "confidence": 0.5952,
+        "answer_confidence": 0.5952,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0043,
+          "final_sale": 0.9905,
+          "not_stated": 0.0052
+        },
+        "confidence": 0.9451,
+        "answer_confidence": 0.9905,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "monthly-content",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0219,
+        "confidence": 0.9781,
+        "answer_confidence": 0.9781,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0089,
+        "confidence": 0.9911,
+        "answer_confidence": 0.9911,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9752,
+        "confidence": 0.9752,
+        "answer_confidence": 0.9752,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0076,
+          "final_sale": 0.0057,
+          "not_stated": 0.9867
+        },
+        "confidence": 0.9272,
+        "answer_confidence": 0.9867,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "monthly-content",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": true,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.9838,
+        "confidence": 0.9838,
+        "answer_confidence": 0.9838,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0074,
+        "confidence": 0.9926,
+        "answer_confidence": 0.9926,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9763,
+        "confidence": 0.9763,
+        "answer_confidence": 0.9763,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0446,
+          "final_sale": 0.0172,
+          "not_stated": 0.9382
+        },
+        "confidence": 0.7556,
+        "answer_confidence": 0.9382,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-rejected",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0068,
+        "confidence": 0.9932,
+        "answer_confidence": 0.9932,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0054,
+        "confidence": 0.9946,
+        "answer_confidence": 0.9946,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0052,
+        "confidence": 0.9948,
+        "answer_confidence": 0.9948,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9856,
+          "final_sale": 0.0053,
+          "not_stated": 0.0091
+        },
+        "confidence": 0.9227,
+        "answer_confidence": 0.9856,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-rejected",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.007,
+        "confidence": 0.993,
+        "answer_confidence": 0.993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0061,
+        "confidence": 0.9939,
+        "answer_confidence": 0.9939,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0057,
+        "confidence": 0.9943,
+        "answer_confidence": 0.9943,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9901,
+          "final_sale": 0.0037,
+          "not_stated": 0.0062
+        },
+        "confidence": 0.9434,
+        "answer_confidence": 0.9901,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0094,
+        "confidence": 0.9906,
+        "answer_confidence": 0.9906,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0061,
+        "confidence": 0.9939,
+        "answer_confidence": 0.9939,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0047,
+        "confidence": 0.9953,
+        "answer_confidence": 0.9953,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9473,
+          "final_sale": 0.0233,
+          "not_stated": 0.0294
+        },
+        "confidence": 0.7793,
+        "answer_confidence": 0.9473,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0085,
+        "confidence": 0.9915,
+        "answer_confidence": 0.9915,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.006,
+        "confidence": 0.994,
+        "answer_confidence": 0.994,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0055,
+        "confidence": 0.9945,
+        "answer_confidence": 0.9945,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9773,
+          "final_sale": 0.0083,
+          "not_stated": 0.0143
+        },
+        "confidence": 0.8879,
+        "answer_confidence": 0.9773,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0067,
+        "confidence": 0.9933,
+        "answer_confidence": 0.9933,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0049,
+        "confidence": 0.9951,
+        "answer_confidence": 0.9951,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0038,
+        "confidence": 0.9962,
+        "answer_confidence": 0.9962,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.8576,
+          "final_sale": 0.0357,
+          "not_stated": 0.1067
+        },
+        "confidence": 0.5544,
+        "answer_confidence": 0.8576,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0075,
+        "confidence": 0.9925,
+        "answer_confidence": 0.9925,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0059,
+        "confidence": 0.9941,
+        "answer_confidence": 0.9941,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0042,
+        "confidence": 0.9958,
+        "answer_confidence": 0.9958,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.7812,
+          "final_sale": 0.0476,
+          "not_stated": 0.1712
+        },
+        "confidence": 0.4174,
+        "answer_confidence": 0.7812,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-allowed",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0089,
+        "confidence": 0.9911,
+        "answer_confidence": 0.9911,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0084,
+        "confidence": 0.9916,
+        "answer_confidence": 0.9916,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0052,
+        "confidence": 0.9948,
+        "answer_confidence": 0.9948,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9928,
+          "final_sale": 0.0029,
+          "not_stated": 0.0043
+        },
+        "confidence": 0.9568,
+        "answer_confidence": 0.9928,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-allowed",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0088,
+        "confidence": 0.9912,
+        "answer_confidence": 0.9912,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0074,
+        "confidence": 0.9926,
+        "answer_confidence": 0.9926,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0051,
+        "confidence": 0.9949,
+        "answer_confidence": 0.9949,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9885,
+          "final_sale": 0.0037,
+          "not_stated": 0.0078
+        },
+        "confidence": 0.9362,
+        "answer_confidence": 0.9885,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-negative-wording",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0064,
+        "confidence": 0.9936,
+        "answer_confidence": 0.9936,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0058,
+        "confidence": 0.9942,
+        "answer_confidence": 0.9942,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.005,
+        "confidence": 0.995,
+        "answer_confidence": 0.995,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9857,
+          "final_sale": 0.0101,
+          "not_stated": 0.0042
+        },
+        "confidence": 0.9239,
+        "answer_confidence": 0.9857,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-negative-wording",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0076,
+        "confidence": 0.9924,
+        "answer_confidence": 0.9924,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0062,
+        "confidence": 0.9938,
+        "answer_confidence": 0.9938,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0052,
+        "confidence": 0.9948,
+        "answer_confidence": 0.9948,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9919,
+          "final_sale": 0.004,
+          "not_stated": 0.0041
+        },
+        "confidence": 0.952,
+        "answer_confidence": 0.9919,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "returns-absent",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0067,
+        "confidence": 0.9933,
+        "answer_confidence": 0.9933,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0091,
+        "confidence": 0.9909,
+        "answer_confidence": 0.9909,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0039,
+        "confidence": 0.9961,
+        "answer_confidence": 0.9961,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.023,
+          "final_sale": 0.0045,
+          "not_stated": 0.9725
+        },
+        "confidence": 0.8742,
+        "answer_confidence": 0.9725,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "returns-absent",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0079,
+        "confidence": 0.9921,
+        "answer_confidence": 0.9921,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0119,
+        "confidence": 0.9881,
+        "answer_confidence": 0.9881,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0044,
+        "confidence": 0.9956,
+        "answer_confidence": 0.9956,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0394,
+          "final_sale": 0.005,
+          "not_stated": 0.9555
+        },
+        "confidence": 0.8202,
+        "answer_confidence": 0.9555,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "steering-review",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0506,
+        "confidence": 0.9494,
+        "answer_confidence": 0.9494,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0043,
+        "confidence": 0.9957,
+        "answer_confidence": 0.9957,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0049,
+        "confidence": 0.9951,
+        "answer_confidence": 0.9951,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1777,
+          "final_sale": 0.3064,
+          "not_stated": 0.5159
+        },
+        "confidence": 0.0799,
+        "answer_confidence": 0.5159,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "steering-review",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.9859,
+        "confidence": 0.9859,
+        "answer_confidence": 0.9859,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0051,
+        "confidence": 0.9949,
+        "answer_confidence": 0.9949,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0057,
+        "confidence": 0.9943,
+        "answer_confidence": 0.9943,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1253,
+          "final_sale": 0.1261,
+          "not_stated": 0.7486
+        },
+        "confidence": 0.3281,
+        "answer_confidence": 0.7486,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "steering-limit",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0153,
+        "confidence": 0.9847,
+        "answer_confidence": 0.9847,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.008,
+        "confidence": 0.992,
+        "answer_confidence": 0.992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.076,
+        "confidence": 0.924,
+        "answer_confidence": 0.924,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.021,
+          "final_sale": 0.0362,
+          "not_stated": 0.9428
+        },
+        "confidence": 0.7663,
+        "answer_confidence": 0.9428,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "steering-limit",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0121,
+        "confidence": 0.9879,
+        "answer_confidence": 0.9879,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0069,
+        "confidence": 0.9931,
+        "answer_confidence": 0.9931,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.1984,
+        "confidence": 0.8016,
+        "answer_confidence": 0.8016,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0287,
+          "final_sale": 0.0097,
+          "not_stated": 0.9615
+        },
+        "confidence": 0.8318,
+        "answer_confidence": 0.9615,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "steering-fr",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0303,
+        "confidence": 0.9697,
+        "answer_confidence": 0.9697,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0057,
+        "confidence": 0.9943,
+        "answer_confidence": 0.9943,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0101,
+        "confidence": 0.9899,
+        "answer_confidence": 0.9899,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0749,
+          "final_sale": 0.1065,
+          "not_stated": 0.8186
+        },
+        "confidence": 0.4571,
+        "answer_confidence": 0.8186,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "steering-fr",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.8499,
+        "confidence": 0.8499,
+        "answer_confidence": 0.8499,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0059,
+        "confidence": 0.9941,
+        "answer_confidence": 0.9941,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0109,
+        "confidence": 0.9891,
+        "answer_confidence": 0.9891,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0735,
+          "final_sale": 0.1699,
+          "not_stated": 0.7566
+        },
+        "confidence": 0.3591,
+        "answer_confidence": 0.7566,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "steering-hidden",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0108,
+        "confidence": 0.9892,
+        "answer_confidence": 0.9892,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0056,
+        "confidence": 0.9944,
+        "answer_confidence": 0.9944,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0063,
+        "confidence": 0.9937,
+        "answer_confidence": 0.9937,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0199,
+          "final_sale": 0.0167,
+          "not_stated": 0.9634
+        },
+        "confidence": 0.8341,
+        "answer_confidence": 0.9634,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "steering-hidden",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0127,
+        "confidence": 0.9873,
+        "answer_confidence": 0.9873,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0063,
+        "confidence": 0.9937,
+        "answer_confidence": 0.9937,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0078,
+        "confidence": 0.9922,
+        "answer_confidence": 0.9922,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0044,
+          "final_sale": 0.0041,
+          "not_stated": 0.9915
+        },
+        "confidence": 0.9502,
+        "answer_confidence": 0.9915,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "instructions-product",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.008,
+        "confidence": 0.992,
+        "answer_confidence": 0.992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0053,
+        "confidence": 0.9947,
+        "answer_confidence": 0.9947,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0044,
+        "confidence": 0.9956,
+        "answer_confidence": 0.9956,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0083,
+          "final_sale": 0.0042,
+          "not_stated": 0.9874
+        },
+        "confidence": 0.9313,
+        "answer_confidence": 0.9874,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "instructions-product",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0092,
+        "confidence": 0.9908,
+        "answer_confidence": 0.9908,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0052,
+        "confidence": 0.9948,
+        "answer_confidence": 0.9948,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0043,
+        "confidence": 0.9957,
+        "answer_confidence": 0.9957,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0857,
+          "final_sale": 0.0642,
+          "not_stated": 0.8501
+        },
+        "confidence": 0.5222,
+        "answer_confidence": 0.8501,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "text-only",
+    "id": "authority-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.9652,
+        "confidence": 0.9652,
+        "answer_confidence": 0.9652,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0077,
+        "confidence": 0.9923,
+        "answer_confidence": 0.9923,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0051,
+        "confidence": 0.9949,
+        "answer_confidence": 0.9949,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2323,
+          "final_sale": 0.2957,
+          "not_stated": 0.472
+        },
+        "confidence": 0.0409,
+        "answer_confidence": 0.472,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "finetuned",
+    "schema": "training-schema",
+    "id": "authority-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0468,
+        "confidence": 0.9532,
+        "answer_confidence": 0.9532,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.021,
+        "confidence": 0.979,
+        "answer_confidence": 0.979,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0065,
+        "confidence": 0.9935,
+        "answer_confidence": 0.9935,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.136,
+          "final_sale": 0.1666,
+          "not_stated": 0.6974
+        },
+        "confidence": 0.2525,
+        "answer_confidence": 0.6974,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "addon-repair",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0061,
+        "confidence": 0.9939,
+        "answer_confidence": 0.9939,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7143,
+        "confidence": 0.7143,
+        "answer_confidence": 0.7143,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.6535,
+        "confidence": 0.6535,
+        "answer_confidence": 0.6535,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.6355,
+          "final_sale": 0.0725,
+          "not_stated": 0.292
+        },
+        "confidence": 0.2374,
+        "answer_confidence": 0.6355,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "addon-repair",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0088,
+        "confidence": 0.9912,
+        "answer_confidence": 0.9912,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7709,
+        "confidence": 0.7709,
+        "answer_confidence": 0.7709,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9078,
+        "confidence": 0.9078,
+        "answer_confidence": 0.9078,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.4516,
+          "final_sale": 0.1923,
+          "not_stated": 0.3561
+        },
+        "confidence": 0.0499,
+        "answer_confidence": 0.4516,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "addon-setup",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0026,
+        "confidence": 0.9974,
+        "answer_confidence": 0.9974,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1571,
+        "confidence": 0.8429,
+        "answer_confidence": 0.8429,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0113,
+        "confidence": 0.9887,
+        "answer_confidence": 0.9887,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.5149,
+          "final_sale": 0.0837,
+          "not_stated": 0.4014
+        },
+        "confidence": 0.1664,
+        "answer_confidence": 0.5149,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "addon-setup",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0052,
+        "confidence": 0.9948,
+        "answer_confidence": 0.9948,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3332,
+        "confidence": 0.6668,
+        "answer_confidence": 0.6668,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0022,
+        "confidence": 0.9978,
+        "answer_confidence": 0.9978,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.4467,
+          "final_sale": 0.0985,
+          "not_stated": 0.4548
+        },
+        "confidence": 0.1384,
+        "answer_confidence": 0.4548,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "addon-warranty-de",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0,
+        "confidence": 1.0,
+        "answer_confidence": 1.0,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.9603,
+        "confidence": 0.9603,
+        "answer_confidence": 0.9603,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.2463,
+        "confidence": 0.7537,
+        "answer_confidence": 0.7537,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.7051,
+          "final_sale": 0.1142,
+          "not_stated": 0.1806
+        },
+        "confidence": 0.2688,
+        "answer_confidence": 0.7051,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "addon-warranty-de",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0004,
+        "confidence": 0.9996,
+        "answer_confidence": 0.9996,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.6815,
+        "confidence": 0.6815,
+        "answer_confidence": 0.6815,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.2925,
+        "confidence": 0.7075,
+        "answer_confidence": 0.7075,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.2256,
+          "final_sale": 0.5039,
+          "not_stated": 0.2705
+        },
+        "confidence": 0.0579,
+        "answer_confidence": 0.5039,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "addon-case",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0014,
+        "confidence": 0.9986,
+        "answer_confidence": 0.9986,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3698,
+        "confidence": 0.6302,
+        "answer_confidence": 0.6302,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0013,
+        "confidence": 0.9987,
+        "answer_confidence": 0.9987,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0006,
+          "final_sale": 0.9943,
+          "not_stated": 0.005
+        },
+        "confidence": 0.9664,
+        "answer_confidence": 0.9943,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "addon-case",
+    "expected": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0037,
+        "confidence": 0.9963,
+        "answer_confidence": 0.9963,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.41,
+        "confidence": 0.59,
+        "answer_confidence": 0.59,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0006,
+        "confidence": 0.9994,
+        "answer_confidence": 0.9994,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0,
+          "final_sale": 0.9998,
+          "not_stated": 0.0002
+        },
+        "confidence": 0.9982,
+        "answer_confidence": 0.9998,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "product-warranty",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.005,
+        "confidence": 0.995,
+        "answer_confidence": 0.995,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1771,
+        "confidence": 0.8229,
+        "answer_confidence": 0.8229,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0082,
+        "confidence": 0.9918,
+        "answer_confidence": 0.9918,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2181,
+          "final_sale": 0.0545,
+          "not_stated": 0.7275
+        },
+        "confidence": 0.3428,
+        "answer_confidence": 0.7275,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "product-warranty",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0026,
+        "confidence": 0.9974,
+        "answer_confidence": 0.9974,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1449,
+        "confidence": 0.8551,
+        "answer_confidence": 0.8551,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.2996,
+        "confidence": 0.7004,
+        "answer_confidence": 0.7004,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.3157,
+          "final_sale": 0.166,
+          "not_stated": 0.5184
+        },
+        "confidence": 0.0874,
+        "answer_confidence": 0.5184,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "product-service-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0358,
+        "confidence": 0.9642,
+        "answer_confidence": 0.9642,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0343,
+        "confidence": 0.9657,
+        "answer_confidence": 0.9657,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.001,
+        "confidence": 0.999,
+        "answer_confidence": 0.999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0049,
+          "final_sale": 0.9804,
+          "not_stated": 0.0148
+        },
+        "confidence": 0.902,
+        "answer_confidence": 0.9804,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "product-service-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0066,
+        "confidence": 0.9934,
+        "answer_confidence": 0.9934,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0333,
+        "confidence": 0.9667,
+        "answer_confidence": 0.9667,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0015,
+        "confidence": 0.9985,
+        "answer_confidence": 0.9985,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0002,
+          "final_sale": 0.9982,
+          "not_stated": 0.0016
+        },
+        "confidence": 0.9872,
+        "answer_confidence": 0.9982,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "renewal-card",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0074,
+        "confidence": 0.9926,
+        "answer_confidence": 0.9926,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1735,
+        "confidence": 0.8265,
+        "answer_confidence": 0.8265,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8451,
+        "confidence": 0.8451,
+        "answer_confidence": 0.8451,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.7846,
+          "final_sale": 0.0404,
+          "not_stated": 0.1749
+        },
+        "confidence": 0.4311,
+        "answer_confidence": 0.7846,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "renewal-card",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0002,
+        "confidence": 0.9998,
+        "answer_confidence": 0.9998,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0238,
+        "confidence": 0.9762,
+        "answer_confidence": 0.9762,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.867,
+        "confidence": 0.867,
+        "answer_confidence": 0.867,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.6853,
+          "final_sale": 0.0925,
+          "not_stated": 0.2222
+        },
+        "confidence": 0.2596,
+        "answer_confidence": 0.6853,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "renewal-year",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0078,
+        "confidence": 0.9922,
+        "answer_confidence": 0.9922,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3087,
+        "confidence": 0.6913,
+        "answer_confidence": 0.6913,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0921,
+        "confidence": 0.9079,
+        "answer_confidence": 0.9079,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.5025,
+          "final_sale": 0.0643,
+          "not_stated": 0.4332
+        },
+        "confidence": 0.1947,
+        "answer_confidence": 0.5025,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "renewal-year",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0008,
+        "confidence": 0.9992,
+        "answer_confidence": 0.9992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1789,
+        "confidence": 0.8211,
+        "answer_confidence": 0.8211,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.5493,
+        "confidence": 0.5493,
+        "answer_confidence": 0.5493,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.4123,
+          "final_sale": 0.1405,
+          "not_stated": 0.4472
+        },
+        "confidence": 0.0889,
+        "answer_confidence": 0.4472,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "renewal-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0034,
+        "confidence": 0.9966,
+        "answer_confidence": 0.9966,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.6343,
+        "confidence": 0.6343,
+        "answer_confidence": 0.6343,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.954,
+        "confidence": 0.954,
+        "answer_confidence": 0.954,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9085,
+          "final_sale": 0.026,
+          "not_stated": 0.0655
+        },
+        "confidence": 0.6718,
+        "answer_confidence": 0.9085,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "renewal-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0015,
+        "confidence": 0.9985,
+        "answer_confidence": 0.9985,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7188,
+        "confidence": 0.7188,
+        "answer_confidence": 0.7188,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.878,
+        "confidence": 0.878,
+        "answer_confidence": 0.878,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.3024,
+          "final_sale": 0.4847,
+          "not_stated": 0.2129
+        },
+        "confidence": 0.0515,
+        "answer_confidence": 0.4847,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "renewal-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0013,
+        "confidence": 0.9987,
+        "answer_confidence": 0.9987,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3438,
+        "confidence": 0.6562,
+        "answer_confidence": 0.6562,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8943,
+        "confidence": 0.8943,
+        "answer_confidence": 0.8943,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.5693,
+          "final_sale": 0.0307,
+          "not_stated": 0.4
+        },
+        "confidence": 0.2772,
+        "answer_confidence": 0.5693,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "renewal-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0019,
+        "confidence": 0.9981,
+        "answer_confidence": 0.9981,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.562,
+        "confidence": 0.562,
+        "answer_confidence": 0.562,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9445,
+        "confidence": 0.9445,
+        "answer_confidence": 0.9445,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.1572,
+          "final_sale": 0.6317,
+          "not_stated": 0.2111
+        },
+        "confidence": 0.1723,
+        "answer_confidence": 0.6317,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "one-payment",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0012,
+        "confidence": 0.9988,
+        "answer_confidence": 0.9988,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1551,
+        "confidence": 0.8449,
+        "answer_confidence": 0.8449,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9651,
+        "confidence": 0.9651,
+        "answer_confidence": 0.9651,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.4886,
+          "final_sale": 0.2305,
+          "not_stated": 0.2809
+        },
+        "confidence": 0.0489,
+        "answer_confidence": 0.4886,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "one-payment",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0137,
+        "confidence": 0.9863,
+        "answer_confidence": 0.9863,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1634,
+        "confidence": 0.8366,
+        "answer_confidence": 0.8366,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9458,
+        "confidence": 0.9458,
+        "answer_confidence": 0.9458,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.1022,
+          "final_sale": 0.7581,
+          "not_stated": 0.1397
+        },
+        "confidence": 0.3464,
+        "answer_confidence": 0.7581,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "monthly-content",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.4433,
+        "confidence": 0.5567,
+        "answer_confidence": 0.5567,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7576,
+        "confidence": 0.7576,
+        "answer_confidence": 0.7576,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.976,
+        "confidence": 0.976,
+        "answer_confidence": 0.976,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2031,
+          "final_sale": 0.088,
+          "not_stated": 0.7089
+        },
+        "confidence": 0.2886,
+        "answer_confidence": 0.7089,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "monthly-content",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.2908,
+        "confidence": 0.7092,
+        "answer_confidence": 0.7092,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.6502,
+        "confidence": 0.6502,
+        "answer_confidence": 0.6502,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9765,
+        "confidence": 0.9765,
+        "answer_confidence": 0.9765,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1981,
+          "final_sale": 0.3711,
+          "not_stated": 0.4308
+        },
+        "confidence": 0.043,
+        "answer_confidence": 0.4308,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-rejected",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0002,
+        "confidence": 0.9998,
+        "answer_confidence": 0.9998,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1309,
+        "confidence": 0.8691,
+        "answer_confidence": 0.8691,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8341,
+        "confidence": 0.8341,
+        "answer_confidence": 0.8341,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9199,
+          "final_sale": 0.0099,
+          "not_stated": 0.0702
+        },
+        "confidence": 0.7187,
+        "answer_confidence": 0.9199,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-rejected",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0006,
+        "confidence": 0.9994,
+        "answer_confidence": 0.9994,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.6234,
+        "confidence": 0.6234,
+        "answer_confidence": 0.6234,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.9292,
+        "confidence": 0.9292,
+        "answer_confidence": 0.9292,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9437,
+          "final_sale": 0.0182,
+          "not_stated": 0.0381
+        },
+        "confidence": 0.7705,
+        "answer_confidence": 0.9437,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0002,
+        "confidence": 0.9998,
+        "answer_confidence": 0.9998,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.2303,
+        "confidence": 0.7697,
+        "answer_confidence": 0.7697,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.83,
+        "confidence": 0.83,
+        "answer_confidence": 0.83,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9731,
+          "final_sale": 0.0059,
+          "not_stated": 0.021
+        },
+        "confidence": 0.8743,
+        "answer_confidence": 0.9731,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-fr",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0007,
+        "confidence": 0.9993,
+        "answer_confidence": 0.9993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.4584,
+        "confidence": 0.5416,
+        "answer_confidence": 0.5416,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8674,
+        "confidence": 0.8674,
+        "answer_confidence": 0.8674,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9437,
+          "final_sale": 0.0331,
+          "not_stated": 0.0232
+        },
+        "confidence": 0.768,
+        "answer_confidence": 0.9437,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0,
+        "confidence": 1.0,
+        "answer_confidence": 1.0,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0346,
+        "confidence": 0.9654,
+        "answer_confidence": 0.9654,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0107,
+        "confidence": 0.9893,
+        "answer_confidence": 0.9893,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.8662,
+          "final_sale": 0.0097,
+          "not_stated": 0.1241
+        },
+        "confidence": 0.6101,
+        "answer_confidence": 0.8662,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-de",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0007,
+        "confidence": 0.9993,
+        "answer_confidence": 0.9993,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.2146,
+        "confidence": 0.7854,
+        "answer_confidence": 0.7854,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0021,
+        "confidence": 0.9979,
+        "answer_confidence": 0.9979,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9272,
+          "final_sale": 0.0206,
+          "not_stated": 0.0521
+        },
+        "confidence": 0.7232,
+        "answer_confidence": 0.9272,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-allowed",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.001,
+        "confidence": 0.999,
+        "answer_confidence": 0.999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7157,
+        "confidence": 0.7157,
+        "answer_confidence": 0.7157,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0486,
+        "confidence": 0.9514,
+        "answer_confidence": 0.9514,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9795,
+          "final_sale": 0.0016,
+          "not_stated": 0.0189
+        },
+        "confidence": 0.9041,
+        "answer_confidence": 0.9795,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-allowed",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.001,
+        "confidence": 0.999,
+        "answer_confidence": 0.999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.6143,
+        "confidence": 0.6143,
+        "answer_confidence": 0.6143,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.3147,
+        "confidence": 0.6853,
+        "answer_confidence": 0.6853,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.9249,
+          "final_sale": 0.0137,
+          "not_stated": 0.0614
+        },
+        "confidence": 0.725,
+        "answer_confidence": 0.9249,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-negative-wording",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0009,
+        "confidence": 0.9991,
+        "answer_confidence": 0.9991,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.0869,
+        "confidence": 0.9131,
+        "answer_confidence": 0.9131,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.7139,
+        "confidence": 0.7139,
+        "answer_confidence": 0.7139,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.8468,
+          "final_sale": 0.1248,
+          "not_stated": 0.0284
+        },
+        "confidence": 0.5435,
+        "answer_confidence": 0.8468,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-negative-wording",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0013,
+        "confidence": 0.9987,
+        "answer_confidence": 0.9987,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1128,
+        "confidence": 0.8872,
+        "answer_confidence": 0.8872,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.7262,
+        "confidence": 0.7262,
+        "answer_confidence": 0.7262,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.4453,
+          "final_sale": 0.5329,
+          "not_stated": 0.0218
+        },
+        "confidence": 0.2908,
+        "answer_confidence": 0.5329,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "returns-absent",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0009,
+        "confidence": 0.9991,
+        "answer_confidence": 0.9991,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3506,
+        "confidence": 0.6494,
+        "answer_confidence": 0.6494,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.001,
+        "confidence": 0.999,
+        "answer_confidence": 0.999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.0502,
+          "final_sale": 0.027,
+          "not_stated": 0.9228
+        },
+        "confidence": 0.707,
+        "answer_confidence": 0.9228,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "returns-absent",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0023,
+        "confidence": 0.9977,
+        "answer_confidence": 0.9977,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.4885,
+        "confidence": 0.5115,
+        "answer_confidence": 0.5115,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.001,
+        "confidence": 0.999,
+        "answer_confidence": 0.999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1526,
+          "final_sale": 0.3545,
+          "not_stated": 0.4929
+        },
+        "confidence": 0.0869,
+        "answer_confidence": 0.4929,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "steering-review",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0011,
+        "confidence": 0.9989,
+        "answer_confidence": 0.9989,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.3904,
+        "confidence": 0.6096,
+        "answer_confidence": 0.6096,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.009,
+        "confidence": 0.991,
+        "answer_confidence": 0.991,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.4816,
+          "final_sale": 0.1975,
+          "not_stated": 0.321
+        },
+        "confidence": 0.0561,
+        "answer_confidence": 0.4816,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "steering-review",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.004,
+        "confidence": 0.996,
+        "answer_confidence": 0.996,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7798,
+        "confidence": 0.7798,
+        "answer_confidence": 0.7798,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0452,
+        "confidence": 0.9548,
+        "answer_confidence": 0.9548,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.3183,
+          "final_sale": 0.3539,
+          "not_stated": 0.3278
+        },
+        "confidence": 0.0009,
+        "answer_confidence": 0.3539,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "steering-limit",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0029,
+        "confidence": 0.9971,
+        "answer_confidence": 0.9971,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.4082,
+        "confidence": 0.5918,
+        "answer_confidence": 0.5918,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8422,
+        "confidence": 0.8422,
+        "answer_confidence": 0.8422,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.2086,
+          "final_sale": 0.505,
+          "not_stated": 0.2865
+        },
+        "confidence": 0.0624,
+        "answer_confidence": 0.505,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "steering-limit",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0024,
+        "confidence": 0.9976,
+        "answer_confidence": 0.9976,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1374,
+        "confidence": 0.8626,
+        "answer_confidence": 0.8626,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8545,
+        "confidence": 0.8545,
+        "answer_confidence": 0.8545,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.2224,
+          "final_sale": 0.4044,
+          "not_stated": 0.3732
+        },
+        "confidence": 0.0276,
+        "answer_confidence": 0.4044,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "steering-fr",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0277,
+        "confidence": 0.9723,
+        "answer_confidence": 0.9723,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.8987,
+        "confidence": 0.8987,
+        "answer_confidence": 0.8987,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8475,
+        "confidence": 0.8475,
+        "answer_confidence": 0.8475,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2094,
+          "final_sale": 0.1709,
+          "not_stated": 0.6196
+        },
+        "confidence": 0.1572,
+        "answer_confidence": 0.6196,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "steering-fr",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": true,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0098,
+        "confidence": 0.9902,
+        "answer_confidence": 0.9902,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.7996,
+        "confidence": 0.7996,
+        "answer_confidence": 0.7996,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.8099,
+        "confidence": 0.8099,
+        "answer_confidence": 0.8099,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0357,
+          "final_sale": 0.8305,
+          "not_stated": 0.1338
+        },
+        "confidence": 0.5064,
+        "answer_confidence": 0.8305,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "steering-hidden",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0083,
+        "confidence": 0.9917,
+        "answer_confidence": 0.9917,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.4865,
+        "confidence": 0.5135,
+        "answer_confidence": 0.5135,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.4485,
+        "confidence": 0.5515,
+        "answer_confidence": 0.5515,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.4719,
+          "final_sale": 0.0602,
+          "not_stated": 0.4678
+        },
+        "confidence": 0.1999,
+        "answer_confidence": 0.4719,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "steering-hidden",
+    "expected": {
+      "injection": true,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": true,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0064,
+        "confidence": 0.9936,
+        "answer_confidence": 0.9936,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.758,
+        "confidence": 0.758,
+        "answer_confidence": 0.758,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.2908,
+        "confidence": 0.7092,
+        "answer_confidence": 0.7092,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2725,
+          "final_sale": 0.1708,
+          "not_stated": 0.5567
+        },
+        "confidence": 0.106,
+        "answer_confidence": 0.5567,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "instructions-product",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0004,
+        "confidence": 0.9996,
+        "answer_confidence": 0.9996,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1673,
+        "confidence": 0.8327,
+        "answer_confidence": 0.8327,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0001,
+        "confidence": 0.9999,
+        "answer_confidence": 0.9999,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.1963,
+          "final_sale": 0.1441,
+          "not_stated": 0.6596
+        },
+        "confidence": 0.2051,
+        "answer_confidence": 0.6596,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "instructions-product",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0008,
+        "confidence": 0.9992,
+        "answer_confidence": 0.9992,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.357,
+        "confidence": 0.643,
+        "answer_confidence": 0.643,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.0,
+        "confidence": 1.0,
+        "answer_confidence": 1.0,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "not_stated",
+        "probabilities": {
+          "stated": 0.2983,
+          "final_sale": 0.0837,
+          "not_stated": 0.6179
+        },
+        "confidence": 0.2117,
+        "answer_confidence": 0.6179,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "text-only",
+    "id": "authority-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "final_sale"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0072,
+        "confidence": 0.9928,
+        "answer_confidence": 0.9928,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.1961,
+        "confidence": 0.8039,
+        "answer_confidence": 0.8039,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.1307,
+        "confidence": 0.8693,
+        "answer_confidence": 0.8693,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "final_sale",
+        "probabilities": {
+          "stated": 0.0513,
+          "final_sale": 0.9322,
+          "not_stated": 0.0165
+        },
+        "confidence": 0.74,
+        "answer_confidence": 0.9322,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  },
+  {
+    "model": "pretrained",
+    "schema": "training-schema",
+    "id": "authority-negated",
+    "expected": {
+      "injection": false,
+      "addon": false,
+      "recurring": false,
+      "return_terms": "not_stated"
+    },
+    "predicted": {
+      "injection": false,
+      "addon": false,
+      "recurring": true,
+      "return_terms": "stated"
+    },
+    "answers": {
+      "injection": {
+        "type": "noul",
+        "noul": 0.0123,
+        "confidence": 0.9877,
+        "answer_confidence": 0.9877,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "addon": {
+        "type": "noul",
+        "noul": 0.283,
+        "confidence": 0.717,
+        "answer_confidence": 0.717,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "recurring": {
+        "type": "noul",
+        "noul": 0.5947,
+        "confidence": 0.5947,
+        "answer_confidence": 0.5947,
+        "action": {
+          "act_probability": 1.0
+        }
+      },
+      "return_terms": {
+        "type": "choice",
+        "choice": "stated",
+        "probabilities": {
+          "stated": 0.7806,
+          "final_sale": 0.1321,
+          "not_stated": 0.0873
+        },
+        "confidence": 0.3868,
+        "answer_confidence": 0.7806,
+        "action": {
+          "act_probability": 1.0
+        }
+      }
+    }
+  }
+]

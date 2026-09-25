@@ -37,7 +37,7 @@ from leash.adapters.postgres.mandates import StoredMandates
 from leash.adapters.postgres.migrate import ENGINE, head_revision
 from leash.adapters.postgres.unit_of_work import ResolutionTransaction
 from leash.application.resolve import Sweeper
-from leash.policy.compiler import CatalogueItem
+from leash.policy.compiler import CatalogueItem, Classifier
 
 log = logging.getLogger("leash.service")
 
@@ -137,14 +137,18 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
                engine_version: str = "leash",
                cors_origins: Sequence[str] = ("http://localhost:5173",), app_dist: Path | None = None,
                background_seconds: float = 1.0, scenario_cards: Mapping[str, str] | None = None,
-               expected_app_revision: str | None = None) -> FastAPI:
+               scenario_notes: Mapping[str, Mapping[str, Any]] | None = None,
+               expected_app_revision: str | None = None, classifier: Classifier | None = None) -> FastAPI:
     state: dict[str, Any] = {}
     mandates = StoredMandates()
+    data_dir = Path(os.environ.get("LEASH_DATA_DIR", str(ENGINE.parents[1] / "data")))
     if scenario_cards is None:  # each scenario's card, from its first purchase in the pack
         scenario_cards = {}
-        pack = Pack(Path(os.environ.get("LEASH_DATA_DIR", str(ENGINE.parents[1] / "data"))))
+        pack = Pack(data_dir)
         for attempt in pack.attempts():
             scenario_cards.setdefault(attempt.scenario_id, attempt.purchase.card_id)
+    if scenario_notes is None:  # what each demonstration shows, from the supplied catalogue (LEASH-147)
+        scenario_notes = load_scenario_notes(data_dir)
     head = head_revision()
 
     async def every(seconds: float, what: str, job: Any) -> None:
@@ -231,9 +235,10 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
         hub_: EventHub = state["hub"]
         return hub_
 
-    app.include_router(policy_router(lambda: state["pool"], viseca, catalogue))
+    app.include_router(policy_router(lambda: state["pool"], viseca, catalogue, classifier=classifier))
     app.include_router(asks_router(lambda: state["pool"], mandates, viseca, engine_version=engine_version))
-    app.include_router(runs_router(lambda: state["pool"], viseca, scenario_cards))
+    app.include_router(runs_router(lambda: state["pool"], viseca, scenario_cards,
+                                   scenario_notes=scenario_notes))
     app.include_router(mandate_changes_router(lambda: state["pool"], viseca))
     app.include_router(query_router(lambda: state["pool"], mandates, lambda: datetime.now(timezone.utc)))
     app.include_router(events_router(hub))
@@ -248,6 +253,28 @@ def create_api(database_url: str, viseca: PlatformApi, catalogue: Sequence[Catal
 def load_catalogue(data_dir: Path) -> list[CatalogueItem]:
     with (data_dir / "items.csv").open(encoding="utf-8", newline="") as f:
         return [CatalogueItem(r["item_id"], r["item_name"], r["item_category"]) for r in csv.DictReader(f)]
+
+
+#: The demonstration a presenter should land on unless told otherwise (LEASH-147). A theme, not a
+#: scenario ID: the supplied catalogue names the theme, so re-pointing the demo is a setting, not a code
+#: change. Presentation only — nothing here ever reaches a verdict.
+DEMO_THEME = "manipulated_agent"
+
+
+def load_scenario_notes(data_dir: Path, recommended_theme: str = DEMO_THEME) -> dict[str, dict[str, Any]]:
+    """One line per supplied scenario, and which one to open with, keyed by scenario ID.
+
+    The platform names its own scenarios; this is our copy of the supplied catalogue's own rationale, so
+    a customer reads what a demonstration shows instead of a fixture ID. Joined by ID (never by name),
+    and a scenario the platform offers that this file does not describe simply gets no line.
+    """
+    path = data_dir / "scenario_catalogue.csv"
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8", newline="") as f:
+        return {r["scenario_id"]: {"summary": r.get("short_rationale", "").strip(),
+                                   "recommended": r.get("control_theme") == recommended_theme}
+                for r in csv.DictReader(f) if r.get("scenario_id")}
 
 
 class Servable(Protocol):
@@ -284,11 +311,14 @@ def main() -> None:  # pragma: no cover - process entry point
     dist = os.environ.get("LEASH_APP_DIST")
     # This process builds the pooled client, so this process closes it — once, in the loop it served on.
     viseca = platform_client(settings)
+    from leash.adapters.jev import configured_classifier
+
     app = create_api(settings.database_url.get_secret_value(), viseca, load_catalogue(data_dir),
                      cors_origins=[o for o in os.environ.get("LEASH_CORS_ORIGINS", "http://localhost:5173").split(",")
                                    if o],
                      app_dist=Path(dist) if dist else None,
-                     expected_app_revision=os.environ.get("LEASH_APP_REVISION") or None)
+                     expected_app_revision=os.environ.get("LEASH_APP_REVISION") or None,
+                     classifier=configured_classifier(os.environ))
     server = uvicorn.Server(uvicorn.Config(app, host=os.environ.get("LEASH_API_HOST", "0.0.0.0"),
                                            port=int(os.environ.get("LEASH_API_PORT", "8080")),
                                            log_config=None))

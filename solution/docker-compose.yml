@@ -20,6 +20,12 @@ x-engine: &engine
     LEASH_BASE_URL: ${LEASH_BASE_URL:-http://fake:9000}
     LEASH_CORS_ORIGINS: ${LEASH_CORS_ORIGINS:-http://localhost:5173}
     LEASH_LOG_LEVEL: ${LEASH_LOG_LEVEL:-INFO}
+    OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    LEASH_JEV_MODEL: ${LEASH_JEV_MODEL:-typesafe/jev-1.13}
+    LEASH_JEV_RULE_MODE: ${LEASH_JEV_RULE_MODE:-shadow}
+    LEASH_JEV_RULE_THRESHOLD: ${LEASH_JEV_RULE_THRESHOLD:-0.9}
+    LEASH_FACT_READER: ${LEASH_FACT_READER:-jev}
+    LEASH_RULE_CLASSIFIER: ${LEASH_RULE_CLASSIFIER:-jev}
     # Where the chat's calls go on to (LEASH-175). Unset means no assistant in this deployment, and the
     # chat is told so plainly rather than shown a 404.
     LEASH_ASSISTANT_URL: ${LEASH_ASSISTANT_URL:-http://assistant:8100}
@@ -92,8 +98,10 @@ services:
       <<: *engine-env
       DATABASE_URL: ""  # it holds no database credential, and nothing in it reads one
       TEAM_API_KEY: ""  # nor the platform key: it cannot reach the control layer (DEC-044)
-      APERTUS_API_KEY: ${APERTUS_API_KEY:-}
-      LEASH_ASSISTANT_MODEL: ${LEASH_ASSISTANT_MODEL:-apertus}
+      LEASH_ASSISTANT_MODEL: ${LEASH_ASSISTANT_MODEL:-openrouter}
+      LEASH_MODEL: ${LEASH_MODEL:-google/gemini-3.8-flash}
+      LEASH_MODEL_BASE_URL: ${LEASH_MODEL_BASE_URL:-https://openrouter.ai/api/v1}
+      LEASH_MODEL_REASONING: ${LEASH_MODEL_REASONING:-low}
       LEASH_POLICY_URL: ${LEASH_POLICY_URL:-http://api:8080}
       LEASH_CARD_ID: ${LEASH_CARD_ID:-CA0001}
       LEASH_SIM_CUTOFF: ${LEASH_SIM_CUTOFF:-2026-08-09T00:00:00Z}

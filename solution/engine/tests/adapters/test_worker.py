@@ -4,6 +4,9 @@
 import asyncio
 import copy
 import json
+import logging
+from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -59,6 +62,45 @@ def test_worker_keeps_polling_while_ask_open():
     assert first_ask < total - 1  # later purchases were decided while that ask was still open
     assert not fake.resolutions  # nobody answered: the loop never waited for the customer
     assert fake.runs[run_id].queued[-1].decision is not None
+
+
+def test_a_redelivered_cart_that_changed_is_answered_as_a_new_attempt(caplog):
+    """LEASH-102: the platform re-delivers one live authorization with a warranty added to the basket.
+
+    The first delivery was approved. The second is not a retry — it is different terms under the same
+    live ID — so the approval must not be posted again. What the platform already recorded stands; our
+    answer to this delivery is the safe one, and the mismatch is logged.
+    """
+    caplog.set_level(logging.WARNING, logger="leash.decide")
+    pack = Pack(DATA)
+    first = pack.attempts("SCEN0000")[0].purchase
+
+    def add_a_warranty(purchase):
+        warranty = replace(purchase.items[0], line_no=len(purchase.items) + 1, item_id="IT9999",
+                           name="Extended warranty", unit_price=Decimal("79.00"), quantity=1)
+        return replace(purchase, items=(*purchase.items, warranty),
+                       amount=purchase.amount + Decimal("79.00"),
+                       billing_amount_chf=purchase.billing_amount_chf + Decimal("79.00"),
+                       items_subtotal=purchase.items_subtotal + Decimal("79.00"))
+
+    fake = FakeViseca(pack, api_key="k", amend={first.authorization_id: add_a_warranty})
+    client = VisecaClient("k", "http://fake", transport=httpx.ASGITransport(app=fake.app))
+    worker = worker_for(client, pack)
+
+    async def go():
+        run_id = await start(client, "SCEN0000")
+        await asyncio.wait_for(worker.run(run_id=run_id), timeout=60)
+        return run_id
+
+    run_id = asyncio.run(go())
+    live = fake.runs[run_id].queued[0]
+    assert live.deliveries == 2, "the amended cart has to arrive as its own delivery"
+    assert live.decision == "approve"  # what the platform recorded on the terms it asked about stands
+    posted = [r for r in fake.received if r["authorization_id"] == live.live_id]
+    assert [r["decision"] for r in posted] == ["approve"], posted
+    [refused] = [r for r in fake.rejected if r["authorization_id"] == live.live_id]
+    assert refused["error"] == "already_decided" and refused["body"]["decision"] == "step_up", refused
+    assert any("redelivered with different terms" in r.getMessage() for r in caplog.records)
 
 
 class Stub:

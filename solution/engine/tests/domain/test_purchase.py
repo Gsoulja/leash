@@ -5,7 +5,7 @@ import pytest
 
 from leash.domain.clock import SimTime
 from leash.domain.money import money
-from leash.domain.purchase import LineItem, Merchant, Purchase, Term
+from leash.domain.purchase import LineItem, Merchant, Purchase, Term, Terms
 
 
 def merchant(**kw) -> Merchant:
@@ -110,3 +110,24 @@ def test_rejects_invalid_facts():
 def test_replace_keeps_validation():
     with pytest.raises(ValueError):
         replace(purchase(), items=())
+
+
+# --- Terms: what a verdict was given on (LEASH-102) ---------------------------------------------
+
+def test_the_same_cart_in_a_different_line_order_is_the_same_terms():
+    """The fingerprint is a sorted multiset, so a reordered basket is a retry, not a new attempt."""
+    one = purchase(items=(line("IT0001"), line("IT0002", line_no=2)))
+    other = purchase(items=(line("IT0002"), line("IT0001", line_no=2)))
+    assert Terms.of(other).changed_from(Terms.of(one)) == ()
+
+
+def test_an_added_line_a_raised_amount_and_a_swapped_shop_each_read_as_changed_terms():
+    decided = Terms.of(purchase())
+    added = Terms.of(purchase(items=(line(), line("IT9999", line_no=2))))
+    raised = Terms.of(purchase(billing_amount_chf=money("368.00")))
+    elsewhere = Terms.of(purchase(merchant=merchant(merchant_id="ME0099")))
+    assert [c.split(":")[0] for c in added.changed_from(decided)] == ["items"]
+    assert [c.split(":")[0] for c in raised.changed_from(decided)] == ["billing_chf"]
+    assert [c.split(":")[0] for c in elsewhere.changed_from(decided)] == ["merchant_id"]
+    [amount] = raised.changed_from(decided)
+    assert "CHF 368.00" in amount and "CHF 289.00" in amount

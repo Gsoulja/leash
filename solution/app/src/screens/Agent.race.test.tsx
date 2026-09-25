@@ -12,7 +12,7 @@ function draft(extra: Partial<PolicyDraft> = {}): PolicyDraft {
   return {
     draft_id: "LD-1", revision: 1, instruction: INSTRUCTION, status: "needs_answers",
     rules: [{ text: "At most CHF 50.00 per order, delivery included", source: "customer", decision: null, tightened: false },
-            { text: "One item per order (DEC-013)", source: "team", decision: "DEC-013", tightened: false }],
+            { text: "One item per order", source: "team", decision: "DEC-013", tightened: false }],
     hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=", value: 50, currency: "CHF", scope: "purchase" }],
     uncertainty_policy: "ask",
     answers: [],

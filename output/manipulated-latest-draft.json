@@ -1,0 +1,206 @@
+{
+  "notes": [
+    "At most CHF 400.00 per order, delivery included.",
+    "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017).",
+    "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+    "At most 1 item per order (DEC-013).",
+    "One purchase: a second matching order asks you first (DEC-013).",
+    "At most 1 purchases in total.",
+    "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015).",
+    "When unsure, I ask you."
+  ],
+  "rules": [
+    {
+      "text": "At most CHF 400.00 per order, delivery included",
+      "source": "customer",
+      "decision": null,
+      "tightened": false
+    },
+    {
+      "text": "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017)",
+      "source": "customer",
+      "decision": null,
+      "tightened": false
+    },
+    {
+      "text": "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for",
+      "source": "customer",
+      "decision": null,
+      "tightened": false
+    },
+    {
+      "text": "At most 1 item per order (DEC-013)",
+      "source": "team",
+      "decision": "DEC-013",
+      "tightened": false
+    },
+    {
+      "text": "One purchase: a second matching order asks you first (DEC-013)",
+      "source": "team",
+      "decision": "DEC-013",
+      "tightened": false
+    },
+    {
+      "text": "At most 1 purchases in total",
+      "source": "customer",
+      "decision": null,
+      "tightened": false
+    },
+    {
+      "text": "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)",
+      "source": "team",
+      "decision": "DEC-015",
+      "tightened": false
+    }
+  ],
+  "review": {
+    "must_ask": [
+      "Another order after 1 approved purchase(s).",
+      "Missing or unclear evidence needed to check the rules above.",
+      "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+    ],
+    "may_choose": [
+      "No explicit restriction on shop category; all other checks still apply.",
+      "No explicit restriction on product category; all other checks still apply.",
+      "No explicit restriction on size; all other checks still apply.",
+      "No explicit restriction on return window; all other checks still apply.",
+      "No explicit restriction on delivery or collection; all other checks still apply.",
+      "No explicit restriction on session risk threshold; all other checks still apply.",
+      "No explicit restriction on split-order threshold; all other checks still apply."
+    ],
+    "must_follow": [
+      "At most CHF 400.00 per order, delivery included.",
+      "Only the item you chose (IT0017).",
+      "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+      "One item per order.",
+      "Only shops you have paid before."
+    ]
+  },
+  "status": "needs_answers",
+  "answers": [],
+  "draft_id": "LD-6bc89e33c546",
+  "proposed": [],
+  "revision": 5,
+  "assistant": {
+    "model": "swiss-ai/Apertus-v1.5-70B",
+    "rules": [],
+    "status": "needs_answers",
+    "questions": [
+      "I couldn't draft that automatically just now. Could you say the rule in your own words?"
+    ],
+    "provenance": [],
+    "tool_calls": [],
+    "prompt_version": "pa-1"
+  },
+  "hard_rules": [
+    {
+      "field": "authorization.billing_amount_chf",
+      "scope": "purchase",
+      "value": 400,
+      "currency": "CHF",
+      "operator": "<="
+    },
+    {
+      "field": "items.item_id",
+      "value": [
+        "IT0017"
+      ],
+      "operator": "in"
+    },
+    {
+      "field": "leash.items.unrequested_count.v1",
+      "value": 0,
+      "operator": "="
+    },
+    {
+      "field": "leash.items.max_quantity.v1",
+      "value": 1,
+      "operator": "<="
+    },
+    {
+      "field": "leash.purchase.max_count.v2",
+      "value": 1,
+      "operator": "<="
+    },
+    {
+      "field": "leash.merchant.prior_purchases.v1",
+      "value": 1,
+      "operator": ">="
+    }
+  ],
+  "instruction": "Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less. Do not add anything I did not ask for. At most 1 item per order. At most 1 purchase. Ask me when uncertain.",
+  "unrestricted": [
+    "authorization.fulfillment_method",
+    "merchant.merchant_category",
+    "items.item_category",
+    "leash.items.size.v1",
+    "leash.order.return_days.v1",
+    "leash.session.risk_score.v1",
+    "leash.orders.split_check.v1"
+  ],
+  "open_questions": [
+    {
+      "text": "Should I only buy from certain shops, or is any kind of shop fine?",
+      "field": "merchant.merchant_category",
+      "options": [
+        "Any kind of shop"
+      ],
+      "blocking": false,
+      "question_id": "Q-d18f84e81f"
+    },
+    {
+      "text": "If two orders at the same shop within an hour together go over CHF 400.00, should I ask you (it may be one order split in two)?",
+      "field": "leash.orders.split_check.v1",
+      "options": [
+        "Yes, ask me",
+        "No"
+      ],
+      "blocking": false,
+      "question_id": "Q-f6fea257c4"
+    },
+    {
+      "text": "I couldn't draft that automatically just now. Could you say the rule in your own words?",
+      "field": "instruction",
+      "blocking": true,
+      "question_id": "AQ-41ab9ecd31"
+    }
+  ],
+  "independently_read": [
+    {
+      "field": "authorization.billing_amount_chf",
+      "scope": "purchase",
+      "value": 400,
+      "currency": "CHF",
+      "operator": "<="
+    },
+    {
+      "field": "items.item_id",
+      "value": [
+        "IT0017"
+      ],
+      "operator": "in"
+    },
+    {
+      "field": "leash.items.unrequested_count.v1",
+      "value": 0,
+      "operator": "="
+    },
+    {
+      "field": "leash.items.max_quantity.v1",
+      "value": 1,
+      "operator": "<="
+    },
+    {
+      "field": "leash.purchase.max_count.v2",
+      "value": 1,
+      "operator": "<="
+    },
+    {
+      "field": "leash.merchant.prior_purchases.v1",
+      "value": 1,
+      "operator": ">="
+    }
+  ],
+  "uncertainty_policy": "ask",
+  "simulation_scenario": "SCEN0004"
+}

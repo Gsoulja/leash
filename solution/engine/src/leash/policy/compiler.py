@@ -6,12 +6,12 @@ The reading is deliberately conservative: a rule is produced only from wording t
 own clause and not negated; anything else becomes a question, never a silent default, and never a rule
 looser than the words. Amounts, periods, sizes and day counts are extracted by pattern. Shop, item,
 familiarity, fulfilment, quantity and session wording go through a pluggable Classifier; the default
-KeywordClassifier is deterministic. A model-based classifier (LLM or Laya) can be plugged in behind the
-same port later (Laya is after the MVP, DEC-020).
+KeywordClassifier is deterministic. The API wires Jev behind the same port to independently check these
+readings; uncertainty remains a blocking question.
 """
 
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Protocol
@@ -43,6 +43,13 @@ class Question:
 class Reading:
     rule: Rule
     note: str
+    #: Whose boundary this is, where the reading knows. "customer" when it was read out of their own
+    #: words even though the note records HOW we read them ("(DEC-013)"); "team" where we supplied it
+    #: because they said nothing. `None` means this reading makes no claim and the view falls back to
+    #: its older guess, so marking one site changes only that site. Provenance used to be guessed
+    #: entirely from a DEC in the note, which labelled a sentence the customer typed as our
+    #: suggestion and invited them to disagree with their own instruction.
+    origin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +64,9 @@ class Draft:
     mandate: CompiledMandate
     notes: tuple[str, ...]
     questions: tuple[Question, ...]
+    #: note -> "customer" | "team". Whose each note is, so the review can say so without guessing
+    #: from the note's wording.
+    origins: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -381,10 +391,12 @@ class KeywordClassifier:
                     continue
                 quantity_read = True
                 add(Reading(Rule(m.F_MAX_QUANTITY, "<=", Decimal(count)),
-                            f"At most {count} item{'s' if count != 1 else ''} per order (DEC-013)."))
+                            f"At most {count} item{'s' if count != 1 else ''} per order (DEC-013).",
+                            origin="customer"))
                 if count == 1:
                     add(Reading(Rule(m.F_MAX_PURCHASES, "<=", Decimal("1")),
-                                "One purchase: a second matching order asks you first (DEC-013)."))
+                                "One purchase: a second matching order asks you first (DEC-013).",
+                                origin="customer"))
             # Safety net: a clause that states a count next to "items" is read or asked, never dropped.
             bare = re.sub(r"\bchf\s*[\d.,'’]+|\b(?:any|over|within|in)\s+\S+\s+days?\b|\bsize\s+\S+", " ",
                           clause)
@@ -392,13 +404,16 @@ class KeywordClassifier:
                     re.search(r"\b(?:one|two|three|four|five|six|seven|eight|nine|ten|single|dozen|couple|\d+)\b", bare):
                 ask(Question(m.F_MAX_QUANTITY, f'How many items per order? I read "{clause.strip()}".'))
         if item_mode and not quantity_read:
-            add(Reading(Rule(m.F_MAX_QUANTITY, "<=", Decimal("1")), "One item per order (DEC-013)."))
+            add(Reading(Rule(m.F_MAX_QUANTITY, "<=", Decimal("1")), "One item per order (DEC-013).",
+                        origin="team"))  # item mode supplies it; they stated no count
         if item_mode:
             add(Reading(Rule(m.F_MAX_PURCHASES, "<=", Decimal("1")),
-                        "One purchase: a second matching order asks you first (DEC-013)."))
+                        "One purchase: a second matching order asks you first (DEC-013).",
+                        origin="team"))
         once = re.search(r"\b(?:only\s+)?(?:buy|order|purchase)\s+(?:it\s+)?once\b", t)
         if once:
-            add(Reading(Rule(m.F_MAX_PURCHASES, "<=", Decimal("1")), "One purchase in total (DEC-013)."))
+            add(Reading(Rule(m.F_MAX_PURCHASES, "<=", Decimal("1")), "One purchase in total (DEC-013).",
+                        origin="customer"))
         # a frequency ("2 orders per week") is asked below; any other "at most N orders" is read
         for count in re.findall(r"\bat most\s+([\w-]+)\s+(?:orders?|purchases?)\b"
                                 r"(?!\s+(?:per|a|each|every)\s+(?:day|week|month|year)\b)", t):
@@ -649,5 +664,11 @@ def compile_instruction(instruction: str, *, catalogue: Iterable[CatalogueItem] 
         questions.append(policy_question)
     notes = [r.note for r in readings] + ([policy_note] if policy_note else [])
     rules = tuple(dict.fromkeys(r.rule for r in readings))
+    # A note the customer's words produced wins over the same note supplied as a default: if they
+    # stated it, it is theirs, whichever branch happened to add it first.
+    origins: dict[str, str] = {}
+    for r in readings:
+        if origins.get(r.note) != "customer":
+            origins[r.note] = r.origin
     return Draft(CompiledMandate(instruction, rules, policy, notes=tuple(dict.fromkeys(notes))), tuple(dict.fromkeys(notes)),
-                 tuple(dict.fromkeys(questions)))
+                 tuple(dict.fromkeys(questions)), origins)

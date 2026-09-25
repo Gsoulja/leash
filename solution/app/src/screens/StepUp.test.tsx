@@ -88,6 +88,8 @@ describe("Step-up prompt", () => {
     expect(dialog).toHaveTextContent("PixelHarbor AZ-1");
     expect(dialog).toHaveTextContent("Same shop and price as the order at 11:40.");
     expect(dialog).toHaveTextContent("Price, Known shop: OK");
+    // LEASH-146: answering one payment is not changing the standing permission, and must not read as it
+    expect(dialog).toHaveTextContent("This answer covers this payment only");
   });
 
   it("counts down from the server's expires_at", async () => {

@@ -111,6 +111,12 @@ class SuggestedQuestion:
     needs_confirmation: bool = False  # the answer must state an amount or a scope, not just "yes"
     source: SourceRef | None = None
     answered: bool = False
+    #: Which kind of background put this question here, and the recorded words themselves. A question
+    #: that reaches the customer wearing no origin reads as something they already agreed to — the one
+    #: thing a preference must never look like (DEC-034). `evidence` is the entry's own text so the
+    #: screen can quote it rather than paraphrase, and the customer can disagree with the actual words.
+    kind: Kind | None = None
+    evidence: str | None = None
     #: The rule this question is about, when it is about one. Never a rule itself: answering it is
     #: what may create one.
     field: str | None = None
@@ -218,7 +224,8 @@ class ContextBundle:
                          "grants_authority": e.grants_authority} for e in self.entries],
             "questions": [{"text": q.text, "needs_confirmation": q.needs_confirmation,
                            "answered": q.answered,
-                           "source": q.source.as_dict() if q.source else None}
+                           "source": q.source.as_dict() if q.source else None,
+                           "kind": q.kind, "evidence": q.evidence}
                           for q in self.suggested_questions],
         }
 
@@ -396,7 +403,8 @@ def _questions(instruction: str, entries: Sequence[ContextEntry]) -> list[Sugges
             if cue in settled:
                 continue  # the customer already said; background does not reopen it
             if set(_WORD.findall(entry.text.lower())) & set(_CUES[cue]):
-                questions.append(SuggestedQuestion(text, source=entry.source, field=field))
+                questions.append(SuggestedQuestion(text, source=entry.source, field=field,
+                                                   kind=entry.kind, evidence=entry.text))
     if _USUAL_BUDGET.search(instruction):
         # "my usual budget" is not an amount. History can show what was spent; only the customer
         # can say what the limit is, and for which orders it holds.

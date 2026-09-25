@@ -225,13 +225,14 @@ async def _work(client: Any, settings: Any, run_id: str | None) -> None:  # prag
     import asyncpg
 
     from leash.adapters.postgres.unit_of_work import DEFAULT_LEASE_SECONDS, DEFAULT_LOCK_TIMEOUT_MS, PostgresDecisionStore
-    from leash.adapters.regex_reader import RegexReader
+    from leash.adapters.jev import configured_reader
     from leash.adapters.viseca_api.event_schema import load_event_validator
     from leash.adapters.viseca_api.outbox_sender import OutboxSender
     from leash.application.decide_purchase import DeadlinePlan, DecidePurchase
     from leash.application.reconcile import Reconciler, summary
     from leash.config import load_runtime
 
+    reader = configured_reader(os.environ)  # configure the bounded Jev reader before polling
     runtime = await load_runtime(settings, client)
     schema = Path(os.environ.get("LEASH_EVENT_SCHEMA", "../../data/schemas/authorization_event.schema.json"))
     version = f"leash-{runtime.api_version}"
@@ -240,7 +241,7 @@ async def _work(client: Any, settings: Any, run_id: str | None) -> None:  # prag
         store = PostgresDecisionStore(pool, engine_version=version, lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS)
         plan = DeadlinePlan.for_lock_timeout(lock_timeout_ms=DEFAULT_LOCK_TIMEOUT_MS,
                                              send_seconds=settings.watchdog_margin_seconds / 2)
-        use_case = DecidePurchase(store=store, reader=RegexReader(), sender=ApiSender(client), plan=plan,
+        use_case = DecidePurchase(store=store, reader=reader, sender=ApiSender(client), plan=plan,
                                   engine_version=version, human_window_seconds=runtime.human_window_seconds,
                                   claim_refresh_seconds=DEFAULT_LEASE_SECONDS / 3)
         worker = Worker(client, use_case, validate=load_event_validator(schema), engine_version=version)

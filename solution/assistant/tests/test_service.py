@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from assistant.agent import PermissionAssistant  # noqa: E402
-from assistant.service import create_app  # noqa: E402
+from assistant.service import PolicyServiceError, create_app  # noqa: E402
 from leash.adapters.pack.loader import Pack  # noqa: E402
 from leash.domain import mandate as m  # noqa: E402
 from leash.domain.clock import SimTime  # noqa: E402
@@ -45,13 +45,17 @@ class StubModel:
 class StubPolicy:
     """The policy service as this surface may use it: ask for a draft, nothing more."""
 
-    def __init__(self):
+    def __init__(self, open_questions=()):
         self.calls = []
+        self._open = [dict(q) for q in open_questions]
+
+    def active_mandate(self):
+        return None  # nothing confirmed yet: the ordinary first conversation
 
     def create_draft(self, instruction, context, rules=()):
         self.calls.append({"instruction": instruction, "context": dict(context), "rules": [dict(r) for r in rules]})
         return {"instruction": instruction, "status": "ready", "hard_rules": [*rules],
-                "independently_read": [], "uncertainty_policy": "ask", "open_questions": [],
+                "independently_read": [], "uncertainty_policy": "ask", "open_questions": self._open,
                 "unrestricted": [m.F_MERCHANT_CATEGORY]}
 
 
@@ -224,14 +228,14 @@ def test_the_surface_refuses_to_start_without_a_simulated_cutoff():
     from assistant.service import build_from_env
 
     with pytest.raises(ValueError, match="LEASH_SIM_CUTOFF"):
-        build_from_env({"APERTUS_API_KEY": "x"})
+        build_from_env({"OPENROUTER_API_KEY": "x"})
 
 
 def test_the_surface_refuses_to_start_without_a_card():
     from assistant.service import build_from_env
 
     with pytest.raises(ValueError, match="LEASH_CARD_ID"):
-        build_from_env({"APERTUS_API_KEY": "x", "LEASH_SIM_CUTOFF": "2026-08-09T00:00:00Z"})
+        build_from_env({"OPENROUTER_API_KEY": "x", "LEASH_SIM_CUTOFF": "2026-08-09T00:00:00Z"})
 
 
 # ----- the contract describes what the surface actually returns ------------------------------------
@@ -373,3 +377,141 @@ def test_the_consent_sentence_comes_from_the_rule_not_the_model(pack):
     dearer = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "120", louder)], "questions": []})
     body = client(pack, dearer, StubPolicy()).post("/api/permission/drafts", json={"text": louder}).json()
     assert body["consent_text"] == ["At most CHF 120.00 per order, delivery included."]
+
+
+# --- LEASH-145 AC10 ---------------------------------------------------------------------------
+
+def test_a_background_question_tells_the_customer_where_it_came_from(pack):
+    """A question the customer never asked for must say whose idea it was.
+
+    `_blocking` already rewrites a draft question's wording with the background's phrasing when the
+    field matches. Today that swap is invisible, so a recorded preference reaches the chat looking
+    exactly like something the customer said — which is the one thing DEC-034 forbids background from
+    looking like. The origin travels with the question, and the screen quotes the recorded words.
+    """
+    returns_question = {"question_id": "Q-returns", "text": "How many days to return it?",
+                        "blocking": True, "field": m.F_RETURN_DAYS}
+    policy = StubPolicy(open_questions=[returns_question])
+    model = StubModel({"rules": [], "questions": []})
+    # CU0012 (card CA0024) records a clothing preference mentioning returns.
+    app = create_app(PermissionAssistant(model), pack, policy, catalogue=CATALOGUE, cutoff=CUTOFF,
+                     card_id="CA0024")
+    body = TestClient(app).post("/api/permission/drafts",
+                                json={"text": "Buy me a jacket for the autumn"}).json()
+    asked = [q for q in body["questions"] if q.get("field") == m.F_RETURN_DAYS]
+    assert asked, body["questions"]
+    source = asked[0]["source"]
+    assert source and source["kind"] == "preference"
+    assert "return" in source["evidence"].lower(), "the recorded words, quoted, not paraphrased"
+    assert source["file"] == "customers.csv"
+
+
+def test_a_question_the_customer_prompted_claims_no_background_source(pack):
+    """The other half: an ordinary question must not wear a source it does not have."""
+    policy = StubPolicy(open_questions=[{"question_id": "Q-limit", "text": "What is the limit?",
+                                         "blocking": True, "field": m.F_BILLING_CHF}])
+    body = client(pack, StubModel({"rules": [], "questions": []}), policy).post(
+        "/api/permission/drafts", json={"text": "Buy me a jacket"}).json()
+    assert all(q.get("source") is None for q in body["questions"])
+
+
+def test_a_later_turn_survives_stored_questions_carrying_their_provenance(pack):
+    """The stored draft's assistant questions became objects when provenance was added (AC10).
+
+    The second turn of a conversation joins the questions the customer was asked into an assistant
+    turn, so the model can read what was answered. Joining objects as strings raised TypeError, which
+    is a 500 on the chat's own path — every conversation with an open question hit it on turn two.
+    """
+    class StoredPolicy(StubPolicy):
+        def draft(self, draft_id):
+            return {"draft_id": draft_id, "instruction": GERMAN,
+                    "open_questions": [{"text": "What kind of items may I buy?", "blocking": True}],
+                    "assistant": {"questions": [{"text": "Did you mean delivery?", "field": None,
+                                                 "source": None},
+                                                "an older draft stored a bare string"]}}
+
+        def add_turn(self, draft_id, text, rules=(), **kwargs):
+            return {"draft_id": draft_id, "status": "ready", "hard_rules": [*rules],
+                    "independently_read": [], "uncertainty_policy": "ask", "open_questions": [],
+                    "unrestricted": []}
+
+        def record_message(self, draft_id, text, reply, context):
+            return {"draft_id": draft_id, "status": "ready", "hard_rules": [],
+                    "independently_read": [], "uncertainty_policy": "ask", "open_questions": [],
+                    "unrestricted": []}
+
+    model = StubModel({"rules": [rule(m.F_FULFILLMENT, "in", ["delivery"], "nur Lieferung", turn="T3")],
+                       "questions": []})
+    response = client(pack, model, StoredPolicy()).post("/api/permission/drafts/LD-1/turns",
+                                                        json={"text": "nur Lieferung"})
+    assert response.status_code == 200, response.text
+    asked = [t.text for t in model.seen[0].turns if t.speaker == "assistant"]
+    assert asked and "Did you mean delivery?" in asked[0]
+    assert "an older draft stored a bare string" in asked[0]
+
+
+# --- LEASH-174 criterion 7: a loosening rule is refused before it is ever shown (DEC-006) ---------
+
+class ActivePolicy(StubPolicy):
+    """A policy service with one active permission: at most CHF 50 per order."""
+
+    def __init__(self, mandates=None, fail=False):
+        super().__init__()
+        self._fail = fail
+        self.mandates = mandates if mandates is not None else [{
+            "mandate_id": "TM-1", "version": 1, "status": "active", "instruction": "At most CHF 50 per order.",
+            "hard_rules": [{"field": m.F_BILLING_CHF, "operator": "<=", "value": 50,
+                            "currency": "CHF", "scope": "purchase"}],
+            "uncertainty_policy": "ask",
+        }]
+
+    def active_mandate(self):
+        if self._fail:
+            raise PolicyServiceError("could not reach the policy service")
+        current = next((x for x in self.mandates if x["status"] == "active"), None)
+        return current
+
+
+def test_a_rule_that_would_loosen_the_active_permission_is_not_shown_as_a_draft_rule(pack):
+    """The engine refuses a loosening change at /tighten, but by then the customer has already read it
+    as their new permission. It must not reach them: it is a question, not a candidate."""
+    policy = ActivePolicy()
+    model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "500", "at most CHF 500 per order")],
+                       "questions": []})
+    body = client(pack, model, policy).post("/api/permission/drafts",
+                                            json={"text": "at most CHF 500 per order"}).json()
+    assert policy.calls and policy.calls[0]["rules"] == [], "a looser rule may not be posted as a rule"
+    assert body["consent_text"] == [], "and it is never read back as something the customer agreed to"
+    assert any("loosen" in q["text"] for q in body["questions"]), body["questions"]
+
+
+def test_a_stricter_rule_against_the_active_permission_still_becomes_a_draft_rule(pack):
+    policy = ActivePolicy()
+    model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "20", "at most CHF 20 per order")],
+                       "questions": []})
+    body = client(pack, model, policy).post("/api/permission/drafts",
+                                            json={"text": "at most CHF 20 per order"}).json()
+    assert [str(r["value"]) for r in policy.calls[0]["rules"]] == ["20"]
+    assert body["consent_text"] == ["At most CHF 20.00 per order, delivery included."]
+
+
+def test_without_the_active_permission_nothing_is_drafted(pack):
+    """Missing is not permission: if the confirmed permission can't be read, a rule cannot be checked
+    against it, and a draft that skipped the check would be exactly the loosening this prevents."""
+    policy = ActivePolicy(fail=True)
+    model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "500", "at most CHF 500 per order")],
+                       "questions": []})
+    response = client(pack, model, policy).post("/api/permission/drafts",
+                                                json={"text": "at most CHF 500 per order"})
+    assert response.status_code == 503, response.text
+    assert response.json()["error"]["code"] == "policy_service_unavailable"
+    assert policy.calls == []
+
+
+def test_with_no_active_permission_a_rule_is_drafted_normally(pack):
+    policy = ActivePolicy(mandates=[])
+    model = StubModel({"rules": [rule(m.F_BILLING_CHF, "<=", "500", "at most CHF 500 per order")],
+                       "questions": []})
+    body = client(pack, model, policy).post("/api/permission/drafts",
+                                            json={"text": "at most CHF 500 per order"}).json()
+    assert [str(r["value"]) for r in policy.calls[0]["rules"]] == ["500"]

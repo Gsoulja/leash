@@ -247,6 +247,18 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:14px;overflo
 .boundary-group h2{font-size:13px;font-weight:700;margin:0 0 8px}
 .boundary-group ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.5}
 .boundary-group li::marker{color:var(--a-muted)}
+/* LEASH-146: one heading per boundary kind inside a section, quieter than the section title. */
+.boundary-part+.boundary-part{margin-top:10px}
+/* LEASH-147: pick a demonstration by what it shows. One tap target per choice, name first. */
+.task-choices{display:flex;flex-direction:column;gap:8px}
+.task-choice{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--a-line);
+  border-radius:10px;cursor:pointer;min-height:44px}
+.task-choice.chosen{border-color:var(--a-blue);background:#E6EEFE}
+.task-choice input{margin-top:2px;flex:none}
+.task-choice>span{display:flex;flex-direction:column;gap:2px}
+.task-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
+.card.handoff{border:2px solid var(--a-blue)}
+.boundary-group h3{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--a-muted);margin:0 0 4px}
 .context-details summary{font-size:13px;font-weight:600;cursor:pointer;padding:10px 0;min-height:44px}
 .card.context-details{padding:6px 16px}
 .context-details[open]>summary{margin-bottom:8px}

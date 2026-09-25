@@ -1,6 +1,6 @@
 # LEASH-174: The model reads, deterministic code validates and renders
 
-**Status**: ONGOING
+**Status**: REVIEW
 **Priority**: P0
 **Type**: feature
 **Estimated Effort**: L
@@ -49,9 +49,9 @@ Today they must speak the compiler's English grammar or answer fixed options.
 - [x] A value that is not a legal `Decimal`, or is absurd in magnitude, is refused (edge case: `NaN`).
 - [x] The consent sentence is generated from the `Rule` object. A test asserts that changing the rule
       changes the sentence, and that no model-supplied string reaches it.
-- [ ] The rendered sentence is what the confirmation records; the model's prose is stored as provenance
+- [x] The rendered sentence is what the confirmation records; the model's prose is stored as provenance
       only, clearly labelled as the model's wording.
-- [ ] A rule that would loosen an active mandate is refused before it is ever shown (DEC-006).
+- [x] A rule that would loosen an active mandate is refused before it is ever shown (DEC-006).
 - [x] `says` stays a gate, unchanged: a rule must quote the customer's own words verbatim, from the
       turn it names, and the quote must carry the value. Softening it was tried and reverted — it lets a
       background preference become a candidate rule (DEC-034), and it is not what excluded German.
@@ -128,3 +128,55 @@ above it (`questions == ()`), which fails on the pre-change code. No real-model 
 
 Criterion 11 verified independently: `evals/baseline.json` untouched, replay and fingerprint tests
 pass, full engine suite 1681 passed / exit 0.
+
+## Work log
+
+### 2026-09-25 — criteria 6 and 7 closed
+
+**Criterion 7 — the loosening check now has a caller.** The reviewer's finding was exact: the check
+existed and was unit-tested, and nothing supplied it. `PermissionConversation.clarify(..., active=...)`
+reaches `PermissionAssistant.draft(confirmed=...)`, which is where `CompiledMandate.tighten` refuses a
+looser rule — but the HTTP surface never passed it, so through the running service a loosening rule
+became a candidate and was shown. Only `/tighten` refused it, after the customer had read it as theirs.
+
+- `HttpPolicyService.active_mandate()` reads `GET /api/mandates` and returns the current active mandate.
+  A read, not an authority: there is still no method here that confirms, submits, activates or revokes.
+- `service._active()` compiles it through `mandate_from_api` and `_reply` passes it as `active=`, so both
+  `POST /api/permission/drafts` and `…/turns` are covered.
+- A `PolicyServiceError` while reading it is **not** treated as "nothing is confirmed": the request fails
+  with `503 policy_service_unavailable` and nothing is drafted. Not knowing what is already confirmed is
+  not the same as there being nothing, and drafting without the check is the loosening it prevents.
+- `PolicyService` (the protocol in `conversation.py`) declares `active_mandate`; two lines, so the
+  boundary says what this layer may read.
+
+Tests (`assistant/tests/test_service.py`): a looser rule is not posted, is not in `consent_text`, and
+comes back as a question mentioning loosening; a stricter one still becomes a rule; an unreadable policy
+service drafts nothing; no active permission drafts normally.
+
+**Criterion 6 — both halves.**
+1. *What confirmation records.* `finish()` writes `consent_text` — the rendered review at the moment of
+   consent — and `model_wording` into the version's existing `compiled` blob (no migration). The review
+   is still regenerated from the frozen rules on read, which keeps wording and enforcement together; the
+   recorded copy is what this customer actually saw, so a renderer changed later cannot rewrite history.
+   Pinned by `test_confirmation_records_the_sentences_the_customer_agreed_to`: the record equals the
+   review the API returns, and the model's `history_checked` sentence appears in `model_wording` and in
+   no boundary.
+2. *Labelled where it is shown.* Solved in the engine rather than in `agent.py`, which the LEASH-176
+   session owns: `_assessed`'s only input **is** the assistant's assessment, so it marks every question
+   it adds `origin: "model"` — a fact, not an inference. The contract gains `Question.origin`
+   (`leash` | `model`, default `leash`), and the app labels those questions "In my own words — my own
+   words, not a rule". Pinned engine-side (`test_a_question_in_the_models_words_says_so`) and app-side
+   (two cases in `Agent.test.tsx`).
+
+**The `_fully_read` suppression hole is closed — corrected 2026-09-25, later the same day.** The review
+log above records it as open; it is not. `_fully_read` no longer exists: the LEASH-176 session replaced it
+with `_accounted_for`, which counts clauses instead of characters, precisely because coverage could be
+manufactured by quoting the whole sentence or by DEC-054 recovering the excerpt as the whole sentence
+(`assistant/agent.py:752`, docstring naming the same reproduction). That session re-verified all three
+cases on the current tree — the English jacket sentence with a whole-sentence quote and with a fragment
+quote, and the German `keine Abos` — and each still asks "I'm not sure how to read …", so nothing
+vanishes. It also survived DEC-058(b), which rewrote the same function. Left here as a correction rather
+than deleted, because the review log's "not met" would otherwise send someone chasing a fixed bug.
+
+Checks: `assistant` 188 passed; `tests/adapters/test_policy_api.py` + `test_tighten_revoke.py` 64 passed;
+app 155 passed and `npm run build` green.

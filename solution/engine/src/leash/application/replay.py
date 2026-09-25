@@ -6,7 +6,7 @@ none (it stays waiting), approve all, decline all, or per authorization ID.
 """
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
@@ -18,7 +18,7 @@ from leash.domain.explain import explain
 from leash.domain.facts import Facts
 from leash.domain.mandate import CompiledMandate
 from leash.domain.money import fmt_chf
-from leash.domain.purchase import Purchase
+from leash.domain.purchase import Purchase, Terms
 from leash.domain.snapshot import FinalState, PriorPurchase, Snapshot
 from leash.ports.fact_reader import FactReader
 from leash.ports.repository import SavedAuthorization
@@ -69,6 +69,7 @@ class InMemoryDecisionStore:
         self.ledger = ledger if ledger is not None else InMemoryLedger()
         self._names = {mid: m.name for mid, m in pack.merchants().items()}
         self._saved: dict[str, SavedAuthorization] = {}
+        self._terms: dict[str, Terms] = {}  # what each stored decision was actually made on (LEASH-102)
 
     async def receive(self, purchase: Purchase, *, run_id: str | None, event: Mapping[str, Any],
                       received_at: datetime, deadline_at: datetime) -> SavedAuthorization | None:
@@ -76,7 +77,10 @@ class InMemoryDecisionStore:
         if saved is None:
             self._saved[purchase.authorization_id] = SavedAuthorization(purchase.authorization_id, "received", None,
                                                                          None)
-        return saved
+            return None
+        decided = self._terms.get(purchase.authorization_id)
+        changed = Terms.of(purchase).changed_from(decided) if decided else ()
+        return replace(saved, changed_terms=changed) if changed else saved
 
     async def decide(self, purchase: Purchase, *, run_id: str | None, mandate: CompiledMandate, facts: Facts,
                      platform_period_spend_chf: Decimal | None, ask_expires_at: datetime | None = None,
@@ -89,6 +93,7 @@ class InMemoryDecisionStore:
         self.ledger.record(purchase, decision, _STATE[decision.verdict])
         self._saved[purchase.authorization_id] = SavedAuthorization(
             purchase.authorization_id, _STATE[decision.verdict], decision.verdict, response)
+        self._terms[purchase.authorization_id] = Terms.of(purchase)
         return _Outcome(decision, response)
 
     async def record_fallback(self, purchase: Purchase, *, run_id: str | None, response: Mapping[str, Any],

@@ -144,6 +144,30 @@ components:
                 type:
                 - string
                 - 'null'
+              source:
+                description: >-
+                  Where the question came from, when it came from the customer's background rather
+                  than from their own words. Null for every question their instruction prompted: a
+                  recorded preference and a thing the customer said are different claims, and only
+                  the customer can make the second (DEC-034). `evidence` is the recorded wording
+                  itself so the screen can quote it and the customer can disagree with it.
+                type:
+                - object
+                - 'null'
+                additionalProperties: false
+                required:
+                - kind
+                - evidence
+                properties:
+                  kind:
+                    type: string
+                    enum: [preference, history, statement, confirmed]
+                  evidence:
+                    type: string
+                  file:
+                    type: [string, 'null']
+                  row_id:
+                    type: [string, 'null']
         status:
           type: string
           enum:

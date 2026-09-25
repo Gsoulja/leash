@@ -1,0 +1,448 @@
+{
+  "draft_id": "LD-6bc89e33c546",
+  "draft": {
+    "notes": [
+      "At most CHF 400.00 per order, delivery included.",
+      "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017).",
+      "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+      "One item per order (DEC-013).",
+      "One purchase: a second matching order asks you first (DEC-013).",
+      "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015).",
+      "Only the item you chose (IT0017).",
+      "Only shops you have paid before.",
+      "When unsure, I ask you."
+    ],
+    "rules": [
+      {
+        "text": "At most CHF 400.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "One item per order (DEC-013)",
+        "source": "team",
+        "decision": "DEC-013",
+        "tightened": false
+      },
+      {
+        "text": "One purchase: a second matching order asks you first (DEC-013)",
+        "source": "team",
+        "decision": "DEC-013",
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)",
+        "source": "team",
+        "decision": "DEC-015",
+        "tightened": false
+      },
+      {
+        "text": "Only the item you chose (IT0017)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      }
+    ],
+    "review": {
+      "must_ask": [
+        "Another order after 1 approved purchase(s).",
+        "Missing or unclear evidence needed to check the rules above.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ],
+      "may_choose": [
+        "No explicit restriction on shop category; all other checks still apply.",
+        "No explicit restriction on product category; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on session risk threshold; all other checks still apply.",
+        "No explicit restriction on split-order threshold; all other checks still apply."
+      ],
+      "must_follow": [
+        "At most CHF 400.00 per order, delivery included.",
+        "Only the item you chose (IT0017).",
+        "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+        "One item per order.",
+        "Only shops you have paid before."
+      ]
+    },
+    "status": "needs_answers",
+    "answers": [],
+    "draft_id": "LD-6bc89e33c546",
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 400,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_id",
+        "value": [
+          "IT0017"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 400,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_id",
+        "value": [
+          "IT0017"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      }
+    ],
+    "revision": 2,
+    "assistant": {
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "value": 400,
+          "operator": "<="
+        },
+        {
+          "field": "items.item_id",
+          "value": [
+            "IT0017"
+          ],
+          "operator": "in"
+        },
+        {
+          "field": "leash.merchant.prior_purchases.v1",
+          "value": 1,
+          "operator": ">="
+        }
+      ],
+      "status": "needs_answers",
+      "questions": [
+        "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.items.unrequested_count.v1. Do you want it?",
+        "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.items.max_quantity.v1. Do you want it?",
+        "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.purchase.max_count.v2. Do you want it?",
+        "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+        "You also said something about how many items an order may have, which I left out of the draft. Should it be a rule too?",
+        "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+        "I'm not sure how to read \"Yes.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "I'm not sure how to read \"Buy only catalogue item IT0017, the 27-inch computer monitor.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "I'm not sure how to read \"No unrequested items or extras: unrequested item count must be zero.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "I'm not sure how to read \"At most 1 item per order and only 1 purchase.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "I'm not sure how to read \"Only a seller with at least 1 previous approved purchase on this card.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "I'm not sure how to read \"The complete order including delivery must be CHF 400 or less.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?"
+      ],
+      "provenance": [
+        {
+          "says": "The complete order including delivery must be CHF 400 or less.",
+          "field": "authorization.billing_amount_chf",
+          "turn_id": "T2",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "Buy only catalogue item IT0017, the 27-inch computer monitor.",
+          "field": "items.item_id",
+          "turn_id": "T2",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "Only a seller with at least 1 previous approved purchase on this card.",
+          "field": "leash.merchant.prior_purchases.v1",
+          "turn_id": "T2",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        }
+      ],
+      "tool_calls": [],
+      "prompt_version": "apertus-4f4e0336"
+    },
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 400,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_id",
+        "value": [
+          "IT0017"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.items.unrequested_count.v1",
+        "value": 0,
+        "operator": "="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 400,
+        "operator": "<="
+      }
+    ],
+    "instruction": "Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less. Do not add anything I did not ask for. Ask me when uncertain. Yes. Buy only catalogue item IT0017, the 27-inch computer monitor. No unrequested items or extras: unrequested item count must be zero. At most 1 item per order and only 1 purchase. Only a seller with at least 1 previous approved purchase on this card. The complete order including delivery must be CHF 400 or less. Ask me when uncertain.",
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "merchant.merchant_category",
+      "items.item_category",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.session.risk_score.v1",
+      "leash.orders.split_check.v1"
+    ],
+    "open_questions": [
+      {
+        "text": "I'm not sure how to read \"Yes.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-e38337fd92"
+      },
+      {
+        "text": "I'm not sure how to read \"Buy only catalogue item IT0017, the 27-inch computer monitor.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-54e8485964"
+      },
+      {
+        "text": "Please confirm what \"Buy only catalogue item IT0017, the 27-inch computer monitor.\" means for this rule.",
+        "field": "authorization.billing_amount_chf",
+        "blocking": true,
+        "question_id": "Q-3446e41386"
+      },
+      {
+        "text": "Please confirm what \"Buy only catalogue item IT0017, the 27-inch computer monitor.\" means for this rule.",
+        "field": "leash.items.max_quantity.v1",
+        "blocking": true,
+        "question_id": "Q-b13aa4db5d"
+      },
+      {
+        "text": "I'm not sure how to read \"No unrequested items or extras: unrequested item count must be zero.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-d4825677bb"
+      },
+      {
+        "text": "Please confirm what \"No unrequested items or extras: unrequested item count must be zero.\" means for this rule.",
+        "field": "leash.items.max_quantity.v1",
+        "blocking": true,
+        "question_id": "Q-7e70cf5676"
+      },
+      {
+        "text": "I'm not sure how to read \"At most 1 item per order and only 1 purchase.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-be28d0e5d2"
+      },
+      {
+        "text": "Please confirm what \"At most 1 item per order and only 1 purchase.\" means for this rule.",
+        "field": "authorization.billing_amount_chf",
+        "blocking": true,
+        "question_id": "Q-015e3e112d"
+      },
+      {
+        "text": "Please confirm what \"At most 1 item per order and only 1 purchase.\" means for this rule.",
+        "field": "leash.items.max_quantity.v1",
+        "blocking": true,
+        "question_id": "Q-43eb5f8aee"
+      },
+      {
+        "text": "Please confirm what \"At most 1 item per order and only 1 purchase.\" means for this rule.",
+        "field": "leash.purchase.max_count.v2",
+        "blocking": true,
+        "question_id": "Q-516b58c919"
+      },
+      {
+        "text": "I'm not sure how to read \"Only a seller with at least 1 previous approved purchase on this card.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-adaa348ed8"
+      },
+      {
+        "text": "Please confirm what \"Only a seller with at least 1 previous approved purchase on this card.\" means for this rule.",
+        "field": "authorization.billing_amount_chf",
+        "blocking": true,
+        "question_id": "Q-eb285e2a60"
+      },
+      {
+        "text": "Please confirm what \"Only a seller with at least 1 previous approved purchase on this card.\" means for this rule.",
+        "field": "merchant.merchant_category",
+        "blocking": true,
+        "question_id": "Q-8ec5630b72"
+      },
+      {
+        "text": "Please confirm what \"Only a seller with at least 1 previous approved purchase on this card.\" means for this rule.",
+        "field": "leash.purchase.max_count.v2",
+        "blocking": true,
+        "question_id": "Q-d7dfe19a07"
+      },
+      {
+        "text": "I'm not sure how to read \"The complete order including delivery must be CHF 400 or less.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-a10389c7b2"
+      },
+      {
+        "text": "Please confirm what \"The complete order including delivery must be CHF 400 or less.\" means for this rule.",
+        "field": "authorization.billing_amount_chf",
+        "blocking": true,
+        "question_id": "Q-e3be5aaa55"
+      },
+      {
+        "text": "Please confirm what \"The complete order including delivery must be CHF 400 or less.\" means for this rule.",
+        "field": "authorization.fulfillment_method",
+        "blocking": true,
+        "question_id": "Q-5964e15427"
+      },
+      {
+        "text": "Please confirm what \"The complete order including delivery must be CHF 400 or less.\" means for this rule.",
+        "field": "leash.purchase.max_count.v2",
+        "blocking": true,
+        "question_id": "Q-3eeb0f0b5f"
+      },
+      {
+        "text": "Should I only buy from certain shops, or is any kind of shop fine?",
+        "field": "merchant.merchant_category",
+        "options": [
+          "Any kind of shop"
+        ],
+        "blocking": false,
+        "question_id": "Q-d18f84e81f"
+      },
+      {
+        "text": "If two orders at the same shop within an hour together go over CHF 400.00, should I ask you (it may be one order split in two)?",
+        "field": "leash.orders.split_check.v1",
+        "options": [
+          "Yes, ask me",
+          "No"
+        ],
+        "blocking": false,
+        "question_id": "Q-f6fea257c4"
+      },
+      {
+        "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.items.unrequested_count.v1. Do you want it?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-297b29b1fa"
+      },
+      {
+        "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.items.max_quantity.v1. Do you want it?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-5fa8c49574"
+      },
+      {
+        "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.purchase.max_count.v2. Do you want it?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-fbd9c4eeaa"
+      },
+      {
+        "text": "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-022d80db32"
+      },
+      {
+        "text": "You also said something about how many items an order may have, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-118cd26864"
+      },
+      {
+        "text": "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-aeb3b10b81"
+      }
+    ],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 400,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_id",
+        "value": [
+          "IT0017"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.items.unrequested_count.v1",
+        "value": 0,
+        "operator": "="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "simulation_scenario": "SCEN0004"
+  }
+}

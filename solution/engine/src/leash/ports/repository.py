@@ -21,6 +21,10 @@ class SavedAuthorization:
     state: PurchaseState
     engine_verdict: str | None  # None while the first delivery is still being decided
     response: Mapping[str, Any] | None  # the decision body that was (or will be) sent
+    #: How this delivery's terms differ from the ones the saved decision was made on (LEASH-102). A
+    #: redelivery carrying a different amount, shop or basket is a new attempt, not a retry, so the
+    #: saved verdict must not be handed back as though it had covered these terms.
+    changed_terms: tuple[str, ...] = ()
 
 
 @runtime_checkable

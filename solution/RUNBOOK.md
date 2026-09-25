@@ -29,7 +29,7 @@ LEASH_CORS_ORIGINS=http://localhost:5173
 
 ## 2. Start
 
-Local platform simulation with the real Apertus chat model (set `APERTUS_API_KEY` in `solution/.env`):
+Local platform simulation with the OpenRouter chat model and Jev checks (set `OPENROUTER_API_KEY` in `solution/.env`):
 
 ```bash
 LEASH_DB_PORT=55443 LEASH_API_PORT=8090 LEASH_WORKER_HEALTH_PORT=8181 \
@@ -45,7 +45,9 @@ checkout, the deterministic decision, customer intervention where needed, and th
 
 The override forces API/worker traffic to `http://fake:9000`, even if `.env` contains the hosted URL.
 `leash-local` has its own database volume. Stop any older app services using ports 8090/8181/8100 first;
-keep their volumes. The assistant still calls Apertus; it is not an offline language-model substitute.
+keep their volumes. The assistant calls Gemini through OpenRouter; Jev checks rules and merchant text.
+For a fully offline rehearsal set `LEASH_ASSISTANT_MODEL=offline`, `LEASH_FACT_READER=regex` and
+`LEASH_RULE_CLASSIFIER=keyword`.
 Scenario selection is enabled only in this local mode and derives the customer card from the supplied
 attempts. Background preferences remain context, not permission.
 
@@ -230,6 +232,15 @@ decides that purchase, the agent's task text is never re-interpreted, and mercha
 data. An event carrying a mandate that differs from the run's snapshot is logged as an INTEGRITY line
 and changes nothing.
 
+**A cart that changed behind an answer.** A redelivery of the same live `authorization_id` is treated
+as a retry only while the terms match — the shop, the amount and the basket the verdict was given on.
+If any of them differ, the stored decision is left exactly as it was (DEC-003), an `integrity_alert` is
+written to `decision_events` naming each difference, an `INTEGRITY:` line is logged, and this delivery
+is answered with a `step_up` instead of the saved verdict. An approval covers the terms it was checked
+against and nothing else. If the platform had already recorded an answer it refuses ours with `409
+already_decided`, which is the expected outcome and appears in the logs as a failed send; the point of
+the step_up is the case where our first answer never arrived.
+
 **What acceptance does not mean.** A verdict is a decision about permission, not a statement about the
 product, the merchant's honesty, or whether anything was delivered. A local `approve` is not platform
 acceptance, and platform acceptance is not settlement or fulfilment.
@@ -248,3 +259,11 @@ acceptance, and platform acceptance is not settlement or fulfilment.
   card without passing through it.
 - **Authenticated consent.** The prototype has no login (DEC-019). Confirmation must be authenticated
   before any of this is a real permission (LEASH-140, LEASH-143).
+
+## Model selection and benchmark
+
+Permission drafting uses Gemini 3.8 Flash on OpenRouter with low reasoning and latency routing.
+Jev replaces the local Laya reader, with the existing one-second regex fallback. Jev also checks
+rule proposals in shadow mode (`LEASH_JEV_RULE_MODE=shadow`): the benchmark found false rejections,
+so these checks do not block drafts until calibrated. `enforce` enables the experimental blocking check.
+See [the measured comparison and reproduction command](docs/openrouter-benchmark.md).

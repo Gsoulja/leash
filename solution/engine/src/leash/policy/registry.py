@@ -238,6 +238,9 @@ NOT_A_FIELD_MEANING: Mapping[str, str] = MappingProxyType({
     "leash.config": "runtime settings and timeouts, no rule semantics",
     "leash.policy.registry": "the registry itself; meanings and versions are in each fingerprint",
     "leash.ports.fact_reader": "interface only",
+    "leash.adapters.jev": "typed model suggestions only; FallbackReader and decide enforce the deterministic floor",
+    "leash.adapters.laya_reader": "legacy offline experiment; not used by runtime wiring",
+    "leash.reading.laya": "legacy offline model decoding and training checks",
     "leash.reading.question_bank": "the model's questions, pinned by bank_hash; a model can only tighten (DEC-009)",
 })
 

@@ -596,3 +596,76 @@ def test_a_sentence_whose_other_restriction_nobody_read_stays_blocking():
                    proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("120"))])
     asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
     assert any("not sure how to read" in t for t in asked), asked
+
+
+SHOPS = "Only from shops with at least 3 previous purchases on this card."
+
+
+def test_a_cue_question_about_a_read_sentence_is_answered_whatever_field_it_guessed():
+    """From a live chat on 2026-09-25.
+
+    "Only from shops with at least 3 previous purchases on this card." is about familiarity, but the
+    compiler's cues match the word "shops", so it asked what the sentence means for the *merchant
+    category*. The model had read it correctly as `prior_purchases >= 3`. The customer was left with a
+    blocking question about a sentence that had been read, and no answer clears it — a cue question is
+    a guess at which field an unreadable sentence is about, so the sentence being read answers it too.
+    """
+    view = clarify(SHOPS, [], CATALOGUE, proposed=[m.Rule(m.F_PRIOR_PURCHASES, ">=", Decimal("3"))])
+    asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
+    assert not any("previous purchases on this card" in t for t in asked), asked
+
+
+def test_a_cue_question_is_not_answered_by_a_rule_read_from_another_sentence():
+    """Sharing a field is not being read: the rule has to come from this sentence."""
+    view = clarify(f"At most CHF 20 per order. {SHOPS}", [], CATALOGUE,
+                   proposed=[m.Rule(m.F_BILLING_CHF, "<=", Decimal("20"))])
+    asked = [q["text"] for q in view["open_questions"] if q["blocking"]]
+    assert any("previous purchases on this card" in t for t in asked), asked
+
+
+# --- the customer's own words are not our suggestion -------------------------------------------
+
+def test_a_count_the_customer_stated_is_shown_as_theirs_not_as_our_default():
+    """Found in a live transcript: "At most 1 item per order." came back labelled as our default.
+
+    Provenance was inferred by sniffing the note for a `DEC-\\d{3}`, so any rule whose note cites a
+    decision read as ours — including one read straight from the customer's sentence. Telling a
+    customer they may disagree with a boundary they themselves set is the mirror of letting a
+    preference pass as their instruction, and worse: it puts words in their mouth.
+    """
+    view = clarify("Buy the monitor I chose. At most 1 item per order. At most 1 purchase in total.",
+                   [], CATALOGUE)
+    stated = [r for r in view["rules"] if "item per order" in r["text"]]
+    assert stated, [r["text"] for r in view["rules"]]
+    assert stated[0]["source"] == "customer", "the customer typed this sentence"
+    assert stated[0]["decision"] == "DEC-013", "still says how we read it; that is not the same as whose it is"
+    total = [r for r in view["rules"] if "One purchase" in r["text"]]
+    assert total and total[0]["source"] == "customer", "they typed this one too"
+
+
+def test_a_default_we_applied_is_still_shown_as_ours():
+    """The mirror. An instruction that never states a count still gets the item-mode default, and
+    that one really is ours to disagree with."""
+    view = clarify("Buy the 27-inch monitor I chose, from a seller I have bought from before, "
+                   "for CHF 400 or less. Ask me when uncertain.", [], CATALOGUE)
+    ours = [r for r in view["rules"] if r["source"] == "team"]
+    assert [r["text"] for r in ours] == ["One item per order",
+                                         "One purchase: a second matching order asks you first"], \
+        "item mode supplies these; the customer never stated a count"
+    assert all(r["decision"] == "DEC-013" for r in ours)
+    # everything they did state stays theirs
+    assert all(r["source"] == "customer" for r in view["rules"] if r not in ours)
+
+
+def test_a_rule_reads_without_our_decision_code():
+    """LEASH-146: `DEC-013` is our vocabulary. It stays on the view as provenance, out of the sentence.
+
+    The code is kept — the customer can still be shown how a sentence was read — but a boundary they
+    are asked to agree to must read as a boundary, not as a citation.
+    """
+    view = clarify("Buy the 27-inch monitor I chose, from a seller I have bought from before, "
+                   "for CHF 400 or less. Ask me when uncertain.", [], CATALOGUE)
+    ours = [r for r in view["rules"] if r["source"] == "team"]
+    assert ours, [r["text"] for r in view["rules"]]
+    assert not any("DEC-" in r["text"] for r in view["rules"]), [r["text"] for r in view["rules"]]
+    assert all(r["decision"] == "DEC-013" for r in ours)

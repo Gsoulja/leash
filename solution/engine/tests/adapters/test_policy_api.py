@@ -156,6 +156,66 @@ def test_confirm_stores_the_returned_mandate_as_version_1(api):
     assert http.get("/api/mandates/TM-nope").status_code == 404
 
 
+def test_a_question_in_the_models_words_says_so(api):
+    """LEASH-174 criterion 6: model prose reaching the customer must be labelled as the model's.
+
+    Our own questions are generated from a rule or a registry field; a question the model wrote is
+    neither, and shown side by side they were indistinguishable. The draft knows which is which — the
+    assessment is the only source of these — so it says so rather than leaving the screen to guess.
+    """
+    http, _, _, _ = api
+    draft = valid(http.post("/api/policies/drafts", json={
+        "instruction": UNCLEAR,
+        "context": {"assistant": {"model": "stub-1", "questions": ["Which shop did you have in mind?"]}},
+    }).json(), "PolicyDraft")
+    model = [q for q in draft["open_questions"] if q["text"] == "Which shop did you have in mind?"]
+    assert model and model[0]["origin"] == "model", draft["open_questions"]
+    ours = [q for q in draft["open_questions"] if q["text"] != "Which shop did you have in mind?"]
+    assert ours and all(q.get("origin", "leash") == "leash" for q in ours), ours
+
+
+def test_confirmation_records_the_sentences_the_customer_agreed_to(api):
+    """LEASH-174 criterion 6: what was shown is what is recorded, and the model's prose is not it.
+
+    The review is regenerated from the frozen rules on every read, which is right — but a renderer
+    changed later would then read back sentences this customer never saw. The exact text at the moment
+    of consent is written with the version, beside the model's own wording, which is labelled as the
+    model's and is never consent text (DEC-045).
+    """
+    http, _, _, url = api
+    # `history_checked` is the model's own sentence, and it reaches the customer's screen. It is prose:
+    # it must be recorded as the model's wording and must never appear among the boundaries.
+    prose = "I looked at the last 30 days on this card and saw nothing unusual."
+    draft = valid(http.post("/api/policies/drafts", json={
+        "instruction": CLEAR,
+        "context": {"assistant": {"model": "stub-1", "prompt_version": "p1", "history_checked": prose}},
+    }).json(), "PolicyDraft")
+    assert draft["status"] == "ready", draft["open_questions"]
+    posted = http.post(f"/api/policies/drafts/{draft['draft_id']}/submit").json()
+    mandate = http.post(f"/api/policies/drafts/{draft['draft_id']}/confirm", json={"confirmed": True}).json()
+    assert "mandate_id" in mandate, (posted, mandate)
+
+    async def stored():
+        conn = await asyncpg.connect(url)
+        try:
+            return await conn.fetchval("select compiled from mandate_versions where mandate_id = $1 and version = 1",
+                                       mandate["mandate_id"])
+        finally:
+            await conn.close()
+
+    compiled = json.loads(asyncio.run(stored()))
+    consent = compiled["consent_text"]
+    assert consent == mandate["review"], "the recorded sentences are the ones the review showed"
+    assert [line["text"] for line in consent["must_follow"]], consent
+    wording = compiled["model_wording"]
+    assert (wording["model"], wording["prompt_version"]) == ("stub-1", "p1")
+    assert wording["history_checked"] == prose, "the model's own sentence is kept, as the model's"
+    shown = {line["text"] for group in consent.values() for line in group}
+    assert prose not in shown and not any(prose in text for text in shown), \
+        "model prose is provenance, never consent text"
+    assert posted["hard_rules"] == mandate["hard_rules"]
+
+
 def test_confirm_needs_the_customers_explicit_yes(api):
     http, viseca, _, _ = api
     draft = ready_draft(http)
@@ -426,6 +486,24 @@ def test_customer_can_replace_an_unconfirmed_task_and_stale_review_fails(api):
     assert updated["revision"] == 2
     assert [r["value"] for r in updated["hard_rules"] if r["field"] == "authorization.billing_amount_chf"] == [500]
     assert http.post(f"/api/policies/drafts/{draft['draft_id']}/submit", json={"revision": 1}).status_code == 409
+
+
+def test_conversation_revisions_survive_answers_history_and_replacement(api):
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": GROCERIES}).json()
+    answered = _answer_once(http, draft)
+    path = f"/api/policies/drafts/{draft['draft_id']}"
+    exchange = {"text": "Where did I shop?", "reply": "Your earlier shop.", "context": {}}
+    recorded = valid(http.post(path + "/messages", json=exchange).json(), "PolicyDraft")
+    updated = valid(http.post(path + "/turns", json={"text": CLEAR, "replace_instruction": True}).json(), "PolicyDraft")
+    restored = valid(http.get(path).json(), "PolicyDraft")
+    assert restored == updated
+    assert [r["instruction"] for r in restored["revisions"]] == [GROCERIES, GROCERIES, CLEAR]
+    assert restored["revisions"][1]["answers"] == answered["answers"]
+    assert restored["answers"] == []
+    assert restored["messages"] == recorded["messages"] == [{**exchange, "revision": 2}]
+    assert restored["revisions"][2]["customer_turn"] == {"text": CLEAR, "replaced": True}
+    assert all("revisions" not in r for r in restored["revisions"])
 
 
 def test_a_correction_creates_a_new_revision_and_supersedes_the_old_one(api):
@@ -754,3 +832,37 @@ def test_each_model_turn_retains_the_background_it_actually_read(api):
     with ThreadPoolExecutor() as pool:
         stored = pool.submit(asyncio.run, read_context()).result()
     assert json.loads(stored) == evidence
+
+
+# --- LEASH-145 AC10: a question from background says so, on the draft the screen renders ---------
+
+def test_an_assistant_question_keeps_its_background_source_on_the_draft(api):
+    """The screen renders `open_questions`, so that is where provenance has to survive.
+
+    A question put there by a recorded preference must say so, or it reads to the customer as
+    something they already agreed to — the one thing background must never look like (DEC-034).
+    """
+    http, _, _, _ = api
+    asked = {"text": "Should a 30-day return window be required for this jacket?",
+             "field": "leash.order.return_days.v1",
+             "source": {"kind": "preference", "evidence": "prefers retailers with returns",
+                        "file": "customers.csv", "row_id": "CU0012"}}
+    draft = http.post("/api/policies/drafts", json={"instruction": CLEAR, "context": {
+        "assistant": {"model": "test", "questions": [asked], "status": "needs_answers"}
+    }}).json()
+    mine = [q for q in draft["open_questions"] if q["text"] == asked["text"]]
+    assert mine, draft["open_questions"]
+    assert mine[0]["source"] == asked["source"]
+    # and it survives the reload the customer's browser does
+    again = http.get(f"/api/policies/drafts/{draft['draft_id']}").json()
+    assert [q for q in again["open_questions"] if q["text"] == asked["text"]][0]["source"] == asked["source"]
+
+
+def test_a_question_with_no_background_behind_it_carries_no_source(api):
+    """The mirror: an ordinary question must not wear a provenance it does not have."""
+    http, _, _, _ = api
+    draft = http.post("/api/policies/drafts", json={"instruction": CLEAR, "context": {
+        "assistant": {"model": "test", "questions": ["Which exact product?"], "status": "needs_answers"}
+    }}).json()
+    mine = [q for q in draft["open_questions"] if q["text"] == "Which exact product?"]
+    assert mine and mine[0].get("source") is None

@@ -55,10 +55,13 @@ def fetch(url, sql, *args):
 
 
 def test_scenarios_come_from_the_connected_platform(api):
+    """Every field the platform owns is passed through untouched; our own notes are additive (LEASH-147)."""
     http, fake, _, _, _ = api
     response = http.get("/api/scenarios")
     assert response.status_code == 200
-    assert response.json()["scenarios"] == fake._scenarios()
+    ours = {"summary", "recommended"}
+    served = [{k: v for k, v in s.items() if k not in ours} for s in response.json()["scenarios"]]
+    assert served == fake._scenarios()
 
 
 def test_run_keeps_starting_version(api):
@@ -250,3 +253,21 @@ def test_a_repeated_start_returns_the_same_run_and_never_a_second_one(api):
     assert later.json()["run_id"] != first.json()["run_id"]
     assert later.json()["mandate_version"] > first.json()["mandate_version"]
     assert len(fetch(url, "select run_id from runs where mandate_id = $1", mandate["mandate_id"])) == 2
+
+
+def test_scenarios_carry_a_one_line_outcome_and_the_recommended_one(api):
+    """LEASH-147: a customer picks a demonstration by what it shows, not by a fixture ID.
+
+    The names and instructions come from the platform; the one-line outcome comes from our own copy of
+    the supplied catalogue, joined by ID. A scenario the platform offers that our copy does not describe
+    simply has no line — never someone else's.
+    """
+    http, _, _, _, _ = api
+    raw = http.get("/api/scenarios")
+    assert raw.status_code == 200, raw.text
+    body = valid(raw.json(), "ScenarioList")
+    described = [s for s in body["scenarios"] if s.get("summary")]
+    assert described, body["scenarios"]
+    assert all(not s["summary"].startswith("SCEN") for s in described)
+    recommended = [s for s in body["scenarios"] if s.get("recommended")]
+    assert len(recommended) == 1, recommended

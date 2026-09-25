@@ -1,0 +1,202 @@
+{
+  "rows": [
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "cap-supported",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 601.3695680012461
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "cap-loosened",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 305.9269299992593
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "cap-invented",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 304.8103579931194
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "foreign-conversion",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 310.01255600131117
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "delivery-supported",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 919.2571610037703
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "delivery-reversed",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 333.67446399643086
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "groceries-supported",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 278.86026399210095
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "groceries-cap",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 307.8333279991057
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "shop-supported",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 404.91680000559427
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "shop-not-item",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 517.9321790055837
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "returns-supported",
+      "expected": true,
+      "predicted": false,
+      "score": {
+        "correct": false,
+        "fn": 1,
+        "fp": 0
+      },
+      "ms": 304.7332369897049
+    },
+    {
+      "task": "verification",
+      "source": "jev",
+      "id": "returns-invented",
+      "expected": false,
+      "predicted": false,
+      "score": {
+        "correct": true,
+        "fn": 0,
+        "fp": 0
+      },
+      "ms": 307.0074370043585
+    }
+  ],
+  "summary": [
+    {
+      "task": "verification",
+      "source": "jev",
+      "n": 12,
+      "errors": 0,
+      "correct": 6,
+      "p50_ms": 308.92,
+      "p95_ms": 919.26,
+      "false_negative_flags": 6,
+      "false_positive_flags": 0,
+      "model_unavailable": 0
+    }
+  ],
+  "replay": {
+    "regex": {
+      "purchases": 45,
+      "total_ms": 69.76,
+      "reader_p50_ms": 0.04,
+      "model_unavailable": 0,
+      "verdicts": {
+        "approve": 12,
+        "step_up": 11,
+        "decline": 22
+      },
+      "changes": [],
+      "looser": []
+    },
+    "jev+regex": {
+      "purchases": 45,
+      "total_ms": 15894.83,
+      "reader_p50_ms": 308.38,
+      "model_unavailable": 0,
+      "verdicts": {
+        "approve": 12,
+        "step_up": 11,
+        "decline": 22
+      },
+      "changes": [],
+      "looser": []
+    }
+  }
+}

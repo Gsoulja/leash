@@ -17,7 +17,7 @@ import asyncpg
 from leash.domain.clock import SimTime
 from leash.domain.decide import Decision
 from leash.domain.money import fmt_chf
-from leash.domain.purchase import LineItem, Merchant, Purchase, Term
+from leash.domain.purchase import LineItem, Merchant, Purchase, Term, Terms
 from leash.domain.snapshot import FinalState, HistoryBaseline, PriorPurchase, Snapshot
 from leash.domain.states import Actor, PurchaseState, delivery_transition, purchase_transition
 from leash.ports.repository import SavedAuthorization
@@ -83,6 +83,13 @@ def _check_json(decision: Decision) -> list[dict[str, Any]]:
              "detail": c.detail, "reason_code": c.reason_code} for c in decision.checks]
 
 
+def _changed_terms(purchase: Purchase, row: Mapping[str, Any]) -> tuple[str, ...]:
+    """The terms this delivery carries against the ones the stored decision was made on (LEASH-102)."""
+    decided = Terms(row["merchant_id"], Decimal(row["billing_chf"]),
+                    tuple((i, int(q)) for i, q in json.loads(row["item_fingerprint"] or "[]")))
+    return Terms.of(purchase).changed_from(decided)
+
+
 class PostgresRepository:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
@@ -121,11 +128,18 @@ class PostgresRepository:
                                 extra={"authorization_id": purchase.authorization_id})
                     await self._event(conn, purchase.authorization_id, "reclaimed", {"owner": owner})
                 return None
-            row = await conn.fetchrow("select state, engine_verdict, checks from authorizations "
-                                      "where authorization_id = $1", purchase.authorization_id)
+            row = await conn.fetchrow(
+                "select state, engine_verdict, checks, merchant_id, billing_chf, item_fingerprint "
+                "from authorizations where authorization_id = $1", purchase.authorization_id)
+            changed = _changed_terms(purchase, row)
+            if changed:
+                # DEC-003: the stored decision is not rewritten. The delivery is recorded as what it is —
+                # the same live ID carrying different terms — and the caller answers it as a new attempt.
+                await self._event(conn, purchase.authorization_id, "integrity_alert",
+                                  {"mismatches": list(changed), "source": "receive"})
         checks = json.loads(row["checks"]) if row["checks"] else None
         return SavedAuthorization(purchase.authorization_id, row["state"], row["engine_verdict"],
-                                  checks["response"] if checks else None)
+                                  checks["response"] if checks else None, changed_terms=changed)
 
     async def refresh_claim(self, authorization_id: str, owner: str, lease_seconds: float) -> bool:
         """Extend the owner's lease while the work is still undecided. False: the claim is no longer ours."""

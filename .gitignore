@@ -29,3 +29,7 @@ output/local-platform-state/
 
 # Laya training data and checkpoints (7 GB): reproducible from the pipeline, never in git
 solution/training/
+
+# Pitch build scratch and UI screenshots: regenerable, not evidence
+.codex-pitch-build/
+output/*.png

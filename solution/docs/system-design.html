@@ -97,7 +97,7 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
   <span class="eyebrow">Agent on a Leash · Viseca challenge · design v0.1</span>
   <h1>Leash: system design</h1>
   <p class="lede">A wallet control layer that decides whether an AI shopping agent may spend a customer's money, with a permission assistant that proposes rules for customer review. Product search and order preparation belong to an external shopping agent.</p>
-  <p class="note"><strong>Scope updated 2026-09-24.</strong> This is a design, not a completion report. The <a href="product-notes.md">current product agreement</a> and DEC-033–037 govern permission context, draft revisions and external-agent handoff. Optional Laya components below remain planned.</p>
+  <p class="note"><strong>Scope updated 2026-09-25.</strong> This is a design, not a completion report. The <a href="product-notes.md">current product agreement</a> and DEC-033–037 govern permission context, draft revisions and external-agent handoff. An optional local Laya fact-reader adapter is implemented for experiments and defaults to shadow mode. Its quality gate has not passed; the deployed worker has not been switched. See <a href="laya-system-evaluation.md">the measured results and remaining gaps</a>.</p>
   <p class="note">Every team decision and assumption behind this design is in the <a href="decisions.md">decision log</a>; <code>DEC-</code> numbers below refer to it.</p>
   <div class="principles">
     <div class="principle"><h3>Rules decide, models advise</h3><p>Deterministic checks own every verdict. Laya can only add caution, never approve.</p></div>
@@ -262,6 +262,8 @@ pre.json{margin:0;background:var(--code);border-radius:12px;padding:16px;overflo
 
 <section id="pipeline">
   <h2>What happens to one purchase</h2>
+  <p><strong>Laya classifies evidence for the rules.</strong> It reads what merchant data says about extra services, future charges, returns and instructions aimed at the payment system. These are typed observations, tied to the cart line; they carry no spending authority. Classification establishes what the text claims, not whether the merchant will honour it.</p>
+  <p class="note">Current integration: add-on flags feed the basket rule, final-sale flags feed the returns rule, and payment-steering flags feed the shop-text rule. Recurring-charge flags are observed but have no separate rule yet. Semantic item matching remains planned: it needs the confirmed requested product, which the reader currently does not receive. Numeric sizes and return days still use deterministic extraction; absent facts remain unknown. Tests must score classification errors and resulting verdicts separately—a stricter decision can still be a false alarm.</p>
   <figure>
     <div class="scroll">
     <svg viewBox="0 0 1000 310" role="img" aria-label="Per-purchase pipeline in seven stages: receive, dedupe, extract facts, hard rules, context checks, combine, respond. Duplicates short-circuit to respond. Laya has a one-second budget inside the deadline; a watchdog sends a safe step_up when the remaining time falls below a margin.">

@@ -1,0 +1,1532 @@
+[
+  {
+    "scenario": "SCEN0000",
+    "result": {
+      "draft": {
+        "draft_id": "LD-f041c4268bb2",
+        "revision": 1,
+        "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.",
+        "review": {
+          "must_follow": [
+            "At most CHF 20.00 per order, delivery included.",
+            "One item per order.",
+            "Only groceries in the basket.",
+            "Only shops you have paid at least 3 times before."
+          ],
+          "may_choose": [
+            "No explicit restriction on shop category; all other checks still apply.",
+            "No explicit restriction on exact product; all other checks still apply.",
+            "No explicit restriction on size; all other checks still apply.",
+            "No explicit restriction on return window; all other checks still apply.",
+            "No explicit restriction on delivery or collection; all other checks still apply.",
+            "No explicit restriction on extra items; all other checks still apply.",
+            "No explicit restriction on session risk threshold; all other checks still apply.",
+            "No explicit restriction on split-order threshold; all other checks still apply."
+          ],
+          "must_ask": [
+            "Another order after 1 approved purchase(s).",
+            "Missing or unclear evidence, including uncertain product details or return terms.",
+            "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+          ]
+        },
+        "status": "needs_answers",
+        "rules": [
+          {
+            "text": "At most CHF 20.00 per order, delivery included",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "At most 1 item per order (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "One purchase: a second matching order asks you first (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "Only groceries in the basket (a shop's category doesn't make every item in it that kind)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "\"A shop I use regularly\" = at least 3 earlier purchases there on this card (DEC-014)",
+            "source": "team",
+            "decision": "DEC-014",
+            "tightened": false
+          },
+          {
+            "text": "Only groceries in the basket",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "One item per order",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          }
+        ],
+        "hard_rules": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 20,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "groceries"
+            ]
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 3
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 20
+          }
+        ],
+        "uncertainty_policy": "ask",
+        "notes": [
+          "At most CHF 20.00 per order, delivery included.",
+          "At most 1 item per order (DEC-013).",
+          "One purchase: a second matching order asks you first (DEC-013).",
+          "Only groceries in the basket (a shop's category doesn't make every item in it that kind).",
+          "\"A shop I use regularly\" = at least 3 earlier purchases there on this card (DEC-014).",
+          "Only groceries in the basket.",
+          "One item per order.",
+          "When unsure, I ask you."
+        ],
+        "open_questions": [
+          {
+            "question_id": "Q-12cd35fb42",
+            "text": "Should I only buy from groceries shops, or is any kind of shop fine?",
+            "blocking": false,
+            "field": "merchant.merchant_category",
+            "options": [
+              "Only groceries shops",
+              "Any kind of shop"
+            ]
+          },
+          {
+            "question_id": "Q-06deafbb46",
+            "text": "If two orders at the same shop within an hour together go over CHF 20.00, should I ask you (it may be one order split in two)?",
+            "blocking": false,
+            "field": "leash.orders.split_check.v1",
+            "options": [
+              "Yes, ask me",
+              "No"
+            ]
+          },
+          {
+            "question_id": "AQ-3727c5ef13",
+            "text": "You said \"from a shop I use regularly\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-aeb3b10b81",
+            "text": "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-71f2f1a7a7",
+            "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          }
+        ],
+        "unrestricted": [
+          "authorization.fulfillment_method",
+          "merchant.merchant_category",
+          "items.item_id",
+          "leash.items.size.v1",
+          "leash.order.return_days.v1",
+          "leash.items.unrequested_count.v1",
+          "leash.session.risk_score.v1",
+          "leash.orders.split_check.v1"
+        ],
+        "independently_read": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 20,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "groceries"
+            ]
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 3
+          }
+        ],
+        "proposed": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 20
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "groceries"
+            ]
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          }
+        ],
+        "answers": [],
+        "assistant": {
+          "rules": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": "20"
+            },
+            {
+              "field": "items.item_category",
+              "operator": "in",
+              "value": "('groceries',)"
+            },
+            {
+              "field": "leash.items.max_quantity.v1",
+              "operator": "<=",
+              "value": "1"
+            }
+          ],
+          "questions": [
+            "You said \"from a shop I use regularly\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+            "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+            "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?"
+          ],
+          "status": "needs_answers",
+          "provenance": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "turn_id": "T1",
+              "says": "for CHF 20 or less",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            },
+            {
+              "field": "items.item_category",
+              "turn_id": "T1",
+              "says": "ordinary grocery item",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            },
+            {
+              "field": "leash.items.max_quantity.v1",
+              "turn_id": "T1",
+              "says": "one ordinary grocery item",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            }
+          ],
+          "model": "swiss-ai/Apertus-v1.5-70B",
+          "prompt_version": "apertus-bc8f2970",
+          "tool_calls": []
+        },
+        "simulation_scenario": "SCEN0000"
+      },
+      "consent_text": [
+        "At most CHF 20.00 per order, delivery included.",
+        "One item per order.",
+        "One purchase in total.",
+        "Only groceries in the basket.",
+        "Only shops you have paid at least 3 times before."
+      ],
+      "questions": [
+        {
+          "text": "You said \"from a shop I use regularly\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+          "field": "leash.merchant.prior_purchases.v1"
+        },
+        {
+          "text": "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.purchase.max_count.v2"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.merchant.prior_purchases.v1"
+        },
+        {
+          "text": "You said \"from a shop I use regularly\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about how many orders I may place, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        }
+      ],
+      "status": "needs_answers",
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "prompt_version": "apertus-bc8f2970"
+    }
+  },
+  {
+    "scenario": "SCEN0001",
+    "result": {
+      "draft": {
+        "draft_id": "LD-54647b2baddb",
+        "revision": 1,
+        "instruction": "Order our household groceries for delivery. Keep each order at or below CHF 120 including delivery, and keep the total across any seven days at or below CHF 300. Ask me when uncertain.",
+        "review": {
+          "must_follow": [
+            "At most CHF 120.00 per order, delivery included.",
+            "At most CHF 300.00 across any 7 days.",
+            "Only groceries in the basket.",
+            "For delivery only."
+          ],
+          "may_choose": [
+            "No explicit restriction on shop category; all other checks still apply.",
+            "No explicit restriction on shop familiarity; all other checks still apply.",
+            "No explicit restriction on exact product; all other checks still apply.",
+            "No explicit restriction on size; all other checks still apply.",
+            "No explicit restriction on return window; all other checks still apply.",
+            "No explicit restriction on item quantity; all other checks still apply.",
+            "No explicit restriction on number of purchases; all other checks still apply.",
+            "No explicit restriction on extra items; all other checks still apply.",
+            "No explicit restriction on session risk threshold; all other checks still apply.",
+            "No explicit restriction on split-order threshold; all other checks still apply."
+          ],
+          "must_ask": [
+            "Missing or unclear evidence, including uncertain product details or return terms.",
+            "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+          ]
+        },
+        "status": "needs_answers",
+        "rules": [
+          {
+            "text": "At most CHF 120.00 per order, delivery included",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "At most CHF 300.00 across any 7 days (a rolling window of paid orders; an order waiting for you counts once you approve it)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Only groceries in the basket (a shop's category doesn't make every item in it that kind)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "For delivery: a pickup or digital order fails this rule (DEC-022)",
+            "source": "team",
+            "decision": "DEC-022",
+            "tightened": false
+          }
+        ],
+        "hard_rules": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 120,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 300,
+            "currency": "CHF",
+            "scope": "period",
+            "period_days": 7
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "groceries"
+            ]
+          },
+          {
+            "field": "authorization.fulfillment_method",
+            "operator": "in",
+            "value": [
+              "delivery"
+            ]
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 120
+          }
+        ],
+        "uncertainty_policy": "ask",
+        "notes": [
+          "At most CHF 120.00 per order, delivery included.",
+          "At most CHF 300.00 across any 7 days (a rolling window of paid orders; an order waiting for you counts once you approve it).",
+          "Only groceries in the basket (a shop's category doesn't make every item in it that kind).",
+          "For delivery: a pickup or digital order fails this rule (DEC-022).",
+          "When unsure, I ask you."
+        ],
+        "open_questions": [
+          {
+            "question_id": "Q-12cd35fb42",
+            "text": "Should I only buy from groceries shops, or is any kind of shop fine?",
+            "blocking": false,
+            "field": "merchant.merchant_category",
+            "options": [
+              "Only groceries shops",
+              "Any kind of shop"
+            ]
+          },
+          {
+            "question_id": "Q-8fc389c806",
+            "text": "If two orders at the same shop within an hour together go over CHF 120.00, should I ask you (it may be one order split in two)?",
+            "blocking": false,
+            "field": "leash.orders.split_check.v1",
+            "options": [
+              "Yes, ask me",
+              "No"
+            ]
+          },
+          {
+            "question_id": "AQ-fdc50159f6",
+            "text": "You also said something about how much I may spend over 7 days, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-62ae2d476a",
+            "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-89d3092268",
+            "text": "You also said something about delivery or collection, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          }
+        ],
+        "unrestricted": [
+          "merchant.merchant_category",
+          "items.item_id",
+          "leash.items.size.v1",
+          "leash.merchant.prior_purchases.v1",
+          "leash.order.return_days.v1",
+          "leash.items.unrequested_count.v1",
+          "leash.purchase.max_count.v2",
+          "leash.items.max_quantity.v1",
+          "leash.session.risk_score.v1",
+          "leash.orders.split_check.v1"
+        ],
+        "independently_read": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 120,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 300,
+            "currency": "CHF",
+            "scope": "period",
+            "period_days": 7
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "groceries"
+            ]
+          },
+          {
+            "field": "authorization.fulfillment_method",
+            "operator": "in",
+            "value": [
+              "delivery"
+            ]
+          }
+        ],
+        "proposed": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 120
+          }
+        ],
+        "answers": [],
+        "assistant": {
+          "rules": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": "120"
+            }
+          ],
+          "questions": [
+            "You also said something about how much I may spend over 7 days, which I left out of the draft. Should it be a rule too?",
+            "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+            "You also said something about delivery or collection, which I left out of the draft. Should it be a rule too?"
+          ],
+          "status": "needs_answers",
+          "provenance": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "turn_id": "T1",
+              "says": "Keep each order at or below CHF 120 including delivery",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            }
+          ],
+          "model": "swiss-ai/Apertus-v1.5-70B",
+          "prompt_version": "apertus-bc8f2970",
+          "tool_calls": []
+        },
+        "simulation_scenario": "SCEN0001"
+      },
+      "consent_text": [
+        "At most CHF 120.00 per order, delivery included.",
+        "At most CHF 300.00 across any 7 days.",
+        "Only groceries in the basket.",
+        "For delivery only."
+      ],
+      "questions": [
+        {
+          "text": "You also said something about how much I may spend over 7 days, which I left out of the draft. Should it be a rule too?",
+          "field": "authorization.billing_amount_chf"
+        },
+        {
+          "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+          "field": "items.item_category"
+        },
+        {
+          "text": "You also said something about delivery or collection, which I left out of the draft. Should it be a rule too?",
+          "field": "authorization.fulfillment_method"
+        },
+        {
+          "text": "You also said something about how much I may spend over 7 days, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about delivery or collection, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        }
+      ],
+      "status": "needs_answers",
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "prompt_version": "apertus-bc8f2970"
+    }
+  },
+  {
+    "scenario": "SCEN0002",
+    "result": {
+      "draft": {
+        "draft_id": "LD-bc9a66d2ec17",
+        "revision": 1,
+        "instruction": "Replace my worn road-running shoes in size 43. Buy only from a specialist sports retailer, only if the order can be returned within 14 days or more, and pay no more than CHF 200. Ask me when uncertain.",
+        "review": {
+          "must_follow": [
+            "At most CHF 200.00 per order, delivery included.",
+            "Size 43, as stated by the shop.",
+            "Returnable for at least 14 days.",
+            "Only the item you chose (IT0014).",
+            "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+            "One item per order.",
+            "Only shops of the kind: sporting goods.",
+            "Only shops of the kind: specialist sports retailer."
+          ],
+          "may_choose": [
+            "No explicit restriction on shop familiarity; all other checks still apply.",
+            "No explicit restriction on product category; all other checks still apply.",
+            "No explicit restriction on delivery or collection; all other checks still apply.",
+            "No explicit restriction on session risk threshold; all other checks still apply.",
+            "No explicit restriction on split-order threshold; all other checks still apply."
+          ],
+          "must_ask": [
+            "Another order after 1 approved purchase(s).",
+            "Missing or unclear evidence, including uncertain product details or return terms.",
+            "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+          ]
+        },
+        "status": "needs_answers",
+        "rules": [
+          {
+            "text": "At most CHF 200.00 per order, delivery included",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Size 43, as stated by the shop",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Returnable for at least 14 days; if the shop doesn't say, I ask you",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "\"worn road-running shoes\" = Road-running shoes (catalogue item IT0014)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "One item per order (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "One purchase: a second matching order asks you first (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "\"a specialist sports retailer\" = shops in the category sporting goods",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Only shops of the kind: specialist sports retailer",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          }
+        ],
+        "hard_rules": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 200,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "leash.items.size.v1",
+            "operator": "=",
+            "value": "43"
+          },
+          {
+            "field": "leash.order.return_days.v1",
+            "operator": ">=",
+            "value": 14
+          },
+          {
+            "field": "items.item_id",
+            "operator": "in",
+            "value": [
+              "IT0014"
+            ]
+          },
+          {
+            "field": "leash.items.unrequested_count.v1",
+            "operator": "=",
+            "value": 0
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "sporting_goods"
+            ]
+          },
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "specialist sports retailer"
+            ]
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 200
+          }
+        ],
+        "uncertainty_policy": "ask",
+        "notes": [
+          "At most CHF 200.00 per order, delivery included.",
+          "Size 43, as stated by the shop.",
+          "Returnable for at least 14 days; if the shop doesn't say, I ask you.",
+          "\"worn road-running shoes\" = Road-running shoes (catalogue item IT0014).",
+          "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+          "One item per order (DEC-013).",
+          "One purchase: a second matching order asks you first (DEC-013).",
+          "\"a specialist sports retailer\" = shops in the category sporting goods.",
+          "Only shops of the kind: specialist sports retailer.",
+          "When unsure, I ask you."
+        ],
+        "open_questions": [
+          {
+            "question_id": "Q-d9178536b4",
+            "text": "Your rules can't all be met together (merchant_categories): no purchase could pass them. A draft can only add to what you wrote, so start a new draft.",
+            "blocking": true
+          },
+          {
+            "question_id": "Q-84c75697b7",
+            "text": "If two orders at the same shop within an hour together go over CHF 200.00, should I ask you (it may be one order split in two)?",
+            "blocking": false,
+            "field": "leash.orders.split_check.v1",
+            "options": [
+              "Yes, ask me",
+              "No"
+            ]
+          },
+          {
+            "question_id": "AQ-9709eda138",
+            "text": "I'm not sure how to read \"Replace my worn road-running shoes in size 43.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+            "field": "instruction",
+            "blocking": true
+          }
+        ],
+        "unrestricted": [
+          "authorization.fulfillment_method",
+          "items.item_category",
+          "leash.merchant.prior_purchases.v1",
+          "leash.session.risk_score.v1",
+          "leash.orders.split_check.v1"
+        ],
+        "independently_read": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 200,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "leash.items.size.v1",
+            "operator": "=",
+            "value": "43"
+          },
+          {
+            "field": "leash.order.return_days.v1",
+            "operator": ">=",
+            "value": 14
+          },
+          {
+            "field": "items.item_id",
+            "operator": "in",
+            "value": [
+              "IT0014"
+            ]
+          },
+          {
+            "field": "leash.items.unrequested_count.v1",
+            "operator": "=",
+            "value": 0
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "sporting_goods"
+            ]
+          }
+        ],
+        "proposed": [
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "specialist sports retailer"
+            ]
+          },
+          {
+            "field": "leash.order.return_days.v1",
+            "operator": ">=",
+            "value": 14
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 200
+          }
+        ],
+        "answers": [],
+        "assistant": {
+          "rules": [
+            {
+              "field": "merchant.merchant_category",
+              "operator": "in",
+              "value": "('specialist sports retailer',)"
+            },
+            {
+              "field": "leash.order.return_days.v1",
+              "operator": ">=",
+              "value": "14"
+            },
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": "200"
+            }
+          ],
+          "questions": [
+            "I'm not sure how to read \"Replace my worn road-running shoes in size 43.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?"
+          ],
+          "status": "needs_answers",
+          "provenance": [
+            {
+              "field": "merchant.merchant_category",
+              "turn_id": "T1",
+              "says": "Buy only from a specialist sports retailer",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            },
+            {
+              "field": "leash.order.return_days.v1",
+              "turn_id": "T1",
+              "says": "only if the order can be returned within 14 days or more",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            },
+            {
+              "field": "authorization.billing_amount_chf",
+              "turn_id": "T1",
+              "says": "pay no more than CHF 200",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            }
+          ],
+          "model": "swiss-ai/Apertus-v1.5-70B",
+          "prompt_version": "apertus-bc8f2970",
+          "tool_calls": []
+        },
+        "simulation_scenario": "SCEN0002"
+      },
+      "consent_text": [
+        "At most CHF 200.00 per order, delivery included.",
+        "Size 43, as stated by the shop.",
+        "Returnable for at least 14 days; if the shop doesn't say, I ask you.",
+        "Only the item you chose (IT0014).",
+        "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+        "One item per order.",
+        "One purchase in total.",
+        "Only shops of the kind: sporting goods.",
+        "Only shops of the kind: specialist sports retailer."
+      ],
+      "questions": [
+        {
+          "text": "I'm not sure how to read \"Replace my worn road-running shoes in size 43.\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+          "field": "instruction"
+        },
+        {
+          "text": "I drafted a rule from \"Buy only from a specialist sports retailer\" that the rule engine read differently, so it stays an unconfirmed suggestion. Do you want it?",
+          "field": "merchant.merchant_category"
+        },
+        {
+          "text": "Your rules can't all be met together (merchant_categories): no purchase could pass them. A draft can only add to what you wrote, so start a new draft.",
+          "field": null
+        }
+      ],
+      "status": "needs_answers",
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "prompt_version": "apertus-bc8f2970"
+    }
+  },
+  {
+    "scenario": "SCEN0003",
+    "result": {
+      "draft": {
+        "draft_id": "LD-e0e707173ea9",
+        "revision": 1,
+        "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+        "review": {
+          "must_follow": [
+            "At most CHF 250.00 per order, delivery included.",
+            "Only clothing in the basket.",
+            "Only shops you have paid before.",
+            "Only shops of the kind: fashion or clothing."
+          ],
+          "may_choose": [
+            "No explicit restriction on exact product; all other checks still apply.",
+            "No explicit restriction on size; all other checks still apply.",
+            "No explicit restriction on return window; all other checks still apply.",
+            "No explicit restriction on delivery or collection; all other checks still apply.",
+            "No explicit restriction on item quantity; all other checks still apply.",
+            "No explicit restriction on number of purchases; all other checks still apply.",
+            "No explicit restriction on extra items; all other checks still apply.",
+            "No explicit restriction on split-order threshold; all other checks still apply."
+          ],
+          "must_ask": [
+            "Checkout risk score at or above 2.",
+            "Missing or unclear evidence, including uncertain product details or return terms.",
+            "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+          ]
+        },
+        "status": "needs_answers",
+        "rules": [
+          {
+            "text": "At most CHF 250.00 per order, delivery included",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Only clothing in the basket (a shop's category doesn't make every item in it that kind)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)",
+            "source": "team",
+            "decision": "DEC-015",
+            "tightened": false
+          },
+          {
+            "text": "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024)",
+            "source": "team",
+            "decision": "DEC-024",
+            "tightened": false
+          },
+          {
+            "text": "Only shops of the kind: fashion or clothing",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          }
+        ],
+        "hard_rules": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 250,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "clothing"
+            ]
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "field": "leash.session.risk_score.v1",
+            "operator": "<",
+            "value": 2
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 250
+          },
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "fashion",
+              "clothing"
+            ]
+          }
+        ],
+        "uncertainty_policy": "ask",
+        "notes": [
+          "At most CHF 250.00 per order, delivery included.",
+          "Only clothing in the basket (a shop's category doesn't make every item in it that kind).",
+          "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015).",
+          "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024).",
+          "Only shops of the kind: fashion or clothing.",
+          "When unsure, I ask you."
+        ],
+        "open_questions": [
+          {
+            "question_id": "Q-26f45fb5e5",
+            "text": "Should I only buy from clothing shops, or is any kind of shop fine?",
+            "blocking": false,
+            "field": "merchant.merchant_category",
+            "options": [
+              "Only clothing shops",
+              "Any kind of shop"
+            ]
+          },
+          {
+            "question_id": "Q-6e786d5935",
+            "text": "If two orders at the same shop within an hour together go over CHF 250.00, should I ask you (it may be one order split in two)?",
+            "blocking": false,
+            "field": "leash.orders.split_check.v1",
+            "options": [
+              "Yes, ask me",
+              "No"
+            ]
+          },
+          {
+            "question_id": "AQ-733bf4561e",
+            "text": "I read \"clothing\" as what kind of shops: Only shops of the kind: fashion or clothing. Those are my words, not yours \u2014 did you mean that?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-5bb4119d3c",
+            "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.merchant.prior_purchases.v1. Do you want it?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-14e1612646",
+            "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.session.risk_score.v1. Do you want it?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-62ae2d476a",
+            "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-71f2f1a7a7",
+            "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-1f5ddf700c",
+            "text": "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          }
+        ],
+        "unrestricted": [
+          "authorization.fulfillment_method",
+          "items.item_id",
+          "leash.items.size.v1",
+          "leash.order.return_days.v1",
+          "leash.items.unrequested_count.v1",
+          "leash.purchase.max_count.v2",
+          "leash.items.max_quantity.v1",
+          "leash.orders.split_check.v1"
+        ],
+        "independently_read": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 250,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "items.item_category",
+            "operator": "in",
+            "value": [
+              "clothing"
+            ]
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "field": "leash.session.risk_score.v1",
+            "operator": "<",
+            "value": 2
+          }
+        ],
+        "proposed": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 250
+          },
+          {
+            "field": "merchant.merchant_category",
+            "operator": "in",
+            "value": [
+              "fashion",
+              "clothing"
+            ]
+          }
+        ],
+        "answers": [],
+        "assistant": {
+          "rules": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": "250"
+            },
+            {
+              "field": "merchant.merchant_category",
+              "operator": "in",
+              "value": "('fashion', 'clothing')"
+            }
+          ],
+          "questions": [
+            "I read \"clothing\" as what kind of shops: Only shops of the kind: fashion or clothing. Those are my words, not yours \u2014 did you mean that?",
+            "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.merchant.prior_purchases.v1. Do you want it?",
+            "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.session.risk_score.v1. Do you want it?",
+            "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+            "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+            "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?"
+          ],
+          "status": "needs_answers",
+          "provenance": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "turn_id": "T1",
+              "says": "up to CHF 250 per order",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            },
+            {
+              "field": "merchant.merchant_category",
+              "turn_id": "T1",
+              "says": "clothing",
+              "confirmed": false,
+              "evidenced": false,
+              "corroborated": false
+            }
+          ],
+          "model": "swiss-ai/Apertus-v1.5-70B",
+          "prompt_version": "apertus-bc8f2970",
+          "tool_calls": []
+        },
+        "simulation_scenario": "SCEN0003"
+      },
+      "consent_text": [
+        "At most CHF 250.00 per order, delivery included.",
+        "Only clothing in the basket.",
+        "Only shops you have paid before.",
+        "Checkout risk score must be below 2.",
+        "Only shops of the kind: fashion or clothing."
+      ],
+      "questions": [
+        {
+          "text": "I read \"clothing\" as what kind of shops: Only shops of the kind: fashion or clothing. Those are my words, not yours \u2014 did you mean that?",
+          "field": "merchant.merchant_category"
+        },
+        {
+          "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.merchant.prior_purchases.v1. Do you want it?",
+          "field": "leash.merchant.prior_purchases.v1"
+        },
+        {
+          "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.session.risk_score.v1. Do you want it?",
+          "field": "leash.session.risk_score.v1"
+        },
+        {
+          "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+          "field": "items.item_category"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.merchant.prior_purchases.v1"
+        },
+        {
+          "text": "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.session.risk_score.v1"
+        },
+        {
+          "text": "I read \"clothing\" as what kind of shops: Only shops of the kind: fashion or clothing. Those are my words, not yours \u2014 did you mean that?",
+          "field": "instruction"
+        },
+        {
+          "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.merchant.prior_purchases.v1. Do you want it?",
+          "field": "instruction"
+        },
+        {
+          "text": "I drafted a rule you didn't say in those words, so it stays an unconfirmed suggestion: leash.session.risk_score.v1. Do you want it?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        }
+      ],
+      "status": "needs_answers",
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "prompt_version": "apertus-bc8f2970"
+    }
+  },
+  {
+    "scenario": "SCEN0004",
+    "result": {
+      "draft": {
+        "draft_id": "LD-44294d835a19",
+        "revision": 1,
+        "instruction": "Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less. Do not add anything I did not ask for. Ask me when uncertain.",
+        "review": {
+          "must_follow": [
+            "At most CHF 400.00 per order, delivery included.",
+            "Only the item you chose (IT0017).",
+            "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+            "One item per order.",
+            "Only shops you have paid before."
+          ],
+          "may_choose": [
+            "No explicit restriction on shop category; all other checks still apply.",
+            "No explicit restriction on product category; all other checks still apply.",
+            "No explicit restriction on size; all other checks still apply.",
+            "No explicit restriction on return window; all other checks still apply.",
+            "No explicit restriction on delivery or collection; all other checks still apply.",
+            "No explicit restriction on session risk threshold; all other checks still apply.",
+            "No explicit restriction on split-order threshold; all other checks still apply."
+          ],
+          "must_ask": [
+            "Another order after 1 approved purchase(s).",
+            "Missing or unclear evidence, including uncertain product details or return terms.",
+            "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+          ]
+        },
+        "status": "needs_answers",
+        "rules": [
+          {
+            "text": "At most CHF 400.00 per order, delivery included",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017)",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for",
+            "source": "customer",
+            "decision": null,
+            "tightened": false
+          },
+          {
+            "text": "One item per order (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "One purchase: a second matching order asks you first (DEC-013)",
+            "source": "team",
+            "decision": "DEC-013",
+            "tightened": false
+          },
+          {
+            "text": "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)",
+            "source": "team",
+            "decision": "DEC-015",
+            "tightened": false
+          }
+        ],
+        "hard_rules": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 400,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "items.item_id",
+            "operator": "in",
+            "value": [
+              "IT0017"
+            ]
+          },
+          {
+            "field": "leash.items.unrequested_count.v1",
+            "operator": "=",
+            "value": 0
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 400
+          }
+        ],
+        "uncertainty_policy": "ask",
+        "notes": [
+          "At most CHF 400.00 per order, delivery included.",
+          "\"27-inch monitor\" = 27-inch computer monitor (catalogue item IT0017).",
+          "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+          "One item per order (DEC-013).",
+          "One purchase: a second matching order asks you first (DEC-013).",
+          "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015).",
+          "When unsure, I ask you."
+        ],
+        "open_questions": [
+          {
+            "question_id": "Q-d18f84e81f",
+            "text": "Should I only buy from certain shops, or is any kind of shop fine?",
+            "blocking": false,
+            "field": "merchant.merchant_category",
+            "options": [
+              "Any kind of shop"
+            ]
+          },
+          {
+            "question_id": "Q-f6fea257c4",
+            "text": "If two orders at the same shop within an hour together go over CHF 400.00, should I ask you (it may be one order split in two)?",
+            "blocking": false,
+            "field": "leash.orders.split_check.v1",
+            "options": [
+              "Yes, ask me",
+              "No"
+            ]
+          },
+          {
+            "question_id": "AQ-040c5e7e51",
+            "text": "Which specific product/item_id is the 27-inch monitor you are referring to?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-022d80db32",
+            "text": "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          },
+          {
+            "question_id": "AQ-71f2f1a7a7",
+            "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+            "field": "instruction",
+            "blocking": true
+          }
+        ],
+        "unrestricted": [
+          "authorization.fulfillment_method",
+          "merchant.merchant_category",
+          "items.item_category",
+          "leash.items.size.v1",
+          "leash.order.return_days.v1",
+          "leash.session.risk_score.v1",
+          "leash.orders.split_check.v1"
+        ],
+        "independently_read": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 400,
+            "currency": "CHF",
+            "scope": "purchase"
+          },
+          {
+            "field": "items.item_id",
+            "operator": "in",
+            "value": [
+              "IT0017"
+            ]
+          },
+          {
+            "field": "leash.items.unrequested_count.v1",
+            "operator": "=",
+            "value": 0
+          },
+          {
+            "field": "leash.items.max_quantity.v1",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.purchase.max_count.v2",
+            "operator": "<=",
+            "value": 1
+          },
+          {
+            "field": "leash.merchant.prior_purchases.v1",
+            "operator": ">=",
+            "value": 1
+          }
+        ],
+        "proposed": [
+          {
+            "field": "authorization.billing_amount_chf",
+            "operator": "<=",
+            "value": 400
+          }
+        ],
+        "answers": [],
+        "assistant": {
+          "rules": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "operator": "<=",
+              "value": "400"
+            }
+          ],
+          "questions": [
+            "Which specific product/item_id is the 27-inch monitor you are referring to?",
+            "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+            "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?"
+          ],
+          "status": "needs_answers",
+          "provenance": [
+            {
+              "field": "authorization.billing_amount_chf",
+              "turn_id": "T1",
+              "says": "for CHF 400 or less",
+              "confirmed": false,
+              "evidenced": true,
+              "corroborated": false
+            }
+          ],
+          "model": "swiss-ai/Apertus-v1.5-70B",
+          "prompt_version": "apertus-bc8f2970",
+          "tool_calls": []
+        },
+        "simulation_scenario": "SCEN0004"
+      },
+      "consent_text": [
+        "At most CHF 400.00 per order, delivery included.",
+        "Only the item you chose (IT0017).",
+        "Nothing extra: no add-ons, protection plans or vouchers next to what you asked for.",
+        "One item per order.",
+        "One purchase in total.",
+        "Only shops you have paid before."
+      ],
+      "questions": [
+        {
+          "text": "Which specific product/item_id is the 27-inch monitor you are referring to?",
+          "field": null
+        },
+        {
+          "text": "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.items.unrequested_count.v1"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "leash.merchant.prior_purchases.v1"
+        },
+        {
+          "text": "Which specific product/item_id is the 27-inch monitor you are referring to?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about extra items you didn't ask for, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        },
+        {
+          "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+          "field": "instruction"
+        }
+      ],
+      "status": "needs_answers",
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "prompt_version": "apertus-bc8f2970"
+    }
+  }
+]

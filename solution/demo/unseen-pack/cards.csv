@@ -1,0 +1,6 @@
+card_id,account_id,card_type,card_purpose,status,first_used_on,expires_on,online_enabled,international_enabled,virtual_card
+CA0901,AC0901,debit,everyday,active,2024-05-01,2029-05-01,true,true,false
+CA0902,AC0902,debit,everyday,active,2024-05-01,2029-05-01,true,true,false
+CA0903,AC0903,debit,everyday,active,2024-05-01,2029-05-01,true,true,false
+CA0904,AC0904,debit,everyday,active,2024-05-01,2029-05-01,true,true,false
+CA0905,AC0905,debit,everyday,active,2024-05-01,2029-05-01,true,true,false

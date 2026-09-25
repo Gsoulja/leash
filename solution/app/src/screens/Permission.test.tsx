@@ -8,7 +8,8 @@ function mandate(extra: Partial<Mandate> = {}): Mandate {
   return {
     mandate_id: "TM-1", version: 1, status: "active",
     instruction: "Buy the 27-inch monitor I chose for CHF 400 or less. Ask me when uncertain.",
-    review: { must_follow: ["At most CHF 400.00 per order, delivery included."], may_choose: [], must_ask: ["Missing evidence."] },
+    review: { must_follow: [{ text: "At most CHF 400.00 per order, delivery included.", group: "price" as const }],
+              may_choose: [], must_ask: [{ text: "Missing evidence.", group: "uncertainty" as const }] },
     rules: [{ text: "At most CHF 400.00 per order, delivery included", source: "customer", decision: null, tightened: false },
             { text: "Only the 27-inch computer monitor", source: "customer", decision: null, tightened: false }],
     hard_rules: [{ field: "authorization.billing_amount_chf", operator: "<=", value: 400, currency: "CHF", scope: "purchase" },
@@ -173,41 +174,21 @@ describe("Permission screen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Revoke permission" }));
   });
-  it("starts a run with the active permission and shows the run it started", async () => {  // LEASH-066
-    const run = { run_id: "RUN-1", scenario_id: "SCEN0004", mandate_id: "TM-1", mandate_version: 1, status: "running" };
-    const calls = stubFetch({ "GET /api/mandates": [list(mandate())],
-                              "POST /api/runs": [{ status: 201, body: run }] });
+  it("leaves starting the agent to the conversation (LEASH-147)", async () => {
+    const calls = stubFetch({ "GET /api/mandates": [list(mandate())] });
     render(wrap(<Permission />));
-    fireEvent.change(await screen.findByLabelText("Scenario"), { target: { value: "SCEN0004" } });
-    fireEvent.click(screen.getByRole("button", { name: "Start a run" }));
-    await settle();
-    expect(calls).toContainEqual({ url: "/api/runs", method: "POST", body: { scenario_id: "SCEN0004", mandate_id: "TM-1" } });
-    expect(screen.getByRole("status")).toHaveTextContent("Simulation started.");
-  });
-
-  it("start a run needs a scenario and an active permission", async () => {
-    const calls = stubFetch({ "GET /api/mandates": [list(mandate({ status: "revoked", revocation: { platform_confirmed: true, note: null } }))] });
-    render(wrap(<Permission />));
-    await screen.findByText(/Viseca confirmed/i);
+    await screen.findByRole("heading", { name: "Must follow" });
+    // this screen is for reading, tightening and revoking boundaries — not for launching runs
     expect(screen.queryByRole("button", { name: "Start a run" })).toBeNull();
-    expect(calls.filter((c) => c.method === "POST")).toEqual([]);
-  });
-
-  it("a refused run start shows the engine's reason", async () => {
-    stubFetch({ "GET /api/mandates": [list(mandate())],
-                "POST /api/runs": [{ status: 409, body: { error: { code: "mandate_not_active", message: "This permission is not active." } } }] });
-    render(wrap(<Permission />));
-    const button = await screen.findByRole("button", { name: "Start a run" });
-    expect(button).toBeDisabled();  // no scenario typed yet
-    fireEvent.change(screen.getByLabelText("Scenario"), { target: { value: "SCEN0004" } });
-    fireEvent.click(button);
-    await settle();
-    expect(screen.getByRole("status")).toHaveTextContent("This permission is not active.");
+    expect(screen.queryByLabelText("Scenario")).toBeNull();
+    expect(screen.queryByText(/Simulation controls/)).toBeNull();
+    expect(calls.filter((c) => c.url === "/api/scenarios")).toEqual([]);  // and it no longer asks for them
   });
 });
 
 it("cancelling or editing a preview sends no change; stale confirmation requires a fresh review", async () => {
-  const preview = mandate({ version: 2, review: { must_follow: ["At most CHF 350.00 per order."], may_choose: [], must_ask: ["Missing evidence."] } });
+  const preview = mandate({ version: 2, review: { must_follow: [{ text: "At most CHF 350.00 per order.", group: "price" as const }],
+                        may_choose: [], must_ask: [{ text: "Missing evidence.", group: "uncertainty" as const }] } });
   const calls = stubFetch({ "GET /api/mandates": [list(mandate())],
     "POST /api/mandates/TM-1/tighten?preview=true": [{ status: 200, body: preview }],
     "POST /api/mandates/TM-1/tighten": [{ status: 409, body: { error: { code: "stale_version", message: "This permission changed. Review again." } } }] });

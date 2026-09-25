@@ -29,7 +29,7 @@ The product must feel like an agent that understands, clarifies and reports—no
 - [x] Reload and tab changes preserve the conversation without duplicating messages.
 - [x] The transcript never claims work that the backend has not recorded.
 - [x] Messages distinguish Leash’s permission assistant from the external shopping agent; Leash never claims to search or purchase on its own.
-- [ ] Context-based questions disclose their source as a preference or observation, permit disagreement, and do not imply prior customer approval.
+- [x] Context-based questions disclose their source as a preference or observation, permit disagreement, and do not imply prior customer approval.
 - [x] Corrections show the superseded and current draft revisions; reload preserves the latest revision and cannot restore a stale confirmation action.
 
 ## Technical Approach
@@ -285,3 +285,42 @@ could not start on this machine at all. Worth telling whoever reviews LEASH-130:
 evidence would have been checked against a suite that never ran.
 
 Verified together: engine 1600, app 131 across 13 files, e2e 1 passed, `tsc` clean.
+
+### 2026-09-25 — AC10 closed
+
+The ticket said this needed "a contract change (a `source` on `Question`)". It needed that and four
+things underneath it, because the provenance was being dropped in three places and the obvious one was
+not the one that mattered.
+
+What was actually wrong: `conversation._blocking` rewrites a blocking question's wording with the
+background's phrasing whenever the field matches, and discards the `SourceRef` one line earlier — but
+that rewrite never reaches the customer at all, because the chat renders the **draft's**
+`open_questions` and `client.ts` throws the assistant's reply array away (`.then(r => r.draft)`). So
+background was not silently mislabelled in the UI; it was invisible. The question the customer answers
+comes from the draft, which is where provenance had to land.
+
+The path now: `permission_context.SuggestedQuestion` carries `kind` and `evidence` (the recorded words
+themselves) alongside its existing `SourceRef` → `agent.Question` gains a `QuestionSource` →
+`Proposal.as_draft()` sends questions as objects instead of bare strings → `policy_api._assessed`
+attaches the source to the `open_question` it creates, still accepting bare strings so the existing
+contract holds → both contracts document it → the chat renders "From your saved preferences" with the
+recorded words quoted, and says it is not a rule yet and not something the customer told us.
+
+`_context_gaps`' two questions (conflicting background, truncated background) now carry a source too —
+they are about the bundle rather than one entry, so the source quotes the entries at issue. A customer
+asked to overrule something on file cannot do that fairly without seeing what it says.
+
+Tests, all written first and each red for the right reason:
+`test_a_background_question_carries_the_kind_and_words_it_came_from` (permission_context),
+`test_a_background_question_tells_the_customer_where_it_came_from` and
+`test_a_question_the_customer_prompted_claims_no_background_source` (assistant surface),
+`test_an_assistant_question_keeps_its_background_source_on_the_draft` and
+`test_a_question_with_no_background_behind_it_carries_no_source` (policy API, incl. reload),
+plus two in `Agent.test.tsx`. Every one has a mirror asserting an ordinary question wears no source —
+a provenance label that appears everywhere says nothing.
+
+Checks: permission_context 31 · assistant 154 · policy API 49 · app 144 with `tsc` clean.
+
+Still open on this ticket, unchanged: the Playwright browser test the Testing Requirements ask for is
+not written, and the "background preference accepted/rejected" case is component-level only. The note
+above saying Apertus is not behind this conversation is now stale — LEASH-175 wired it.

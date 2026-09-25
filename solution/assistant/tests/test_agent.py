@@ -193,12 +193,23 @@ def test_quote_capitalization_is_matched_but_original_customer_excerpt_is_preser
     assert proposal.questions == ()
 
 
-def test_a_rule_the_customer_never_said_is_labelled_an_unconfirmed_suggestion():
-    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says="invented", turn="T9")],
+# The values are deliberately ones the customer's sentence does NOT give: a suggestion the compiler
+# read identically from their own words is already in the draft, so it is dropped rather than asked
+# about (see test_a_suggestion_the_compiler_already_read_is_not_asked_about).
+@pytest.mark.parametrize("field,value,wording", [
+    (m.F_BILLING_CHF, "40", "At most CHF 40.00 per order, delivery included."),
+    (m.F_MAX_PURCHASES, "1", "One purchase in total."),
+    (m.F_MAX_PURCHASES, "3", "At most 3 purchases in total."),
+])
+def test_a_rule_the_customer_never_said_is_labelled_an_unconfirmed_suggestion(field, value, wording):
+    model = StubModel({"rules": [rule_json(field, "<=", value, says="invented", turn="T9")],
                        "questions": []})
     proposal = assistant(model).draft(CUSTOMER)
     assert proposal.candidates == ()
     assert any("didn't say" in q.text or "suggestion" in q.text for q in proposal.questions)
+    question = next(q for q in proposal.questions if q.field == field)
+    assert question.text == f"Unconfirmed suggestion: {wording} Do you want this rule?"
+    assert field not in question.text
 
 
 def test_a_profile_preference_is_never_labelled_a_customer_instruction():
@@ -286,15 +297,29 @@ def test_tool_calls_are_recorded_for_audit(catalogue):
 
 # --- omitted restrictions: the compiler re-reads the same words independently -----------------
 
-def test_a_restriction_the_customer_stated_but_the_model_omitted_becomes_a_question():
+def test_a_restriction_the_model_omitted_is_carried_by_the_draft(catalogue):
+    """A restriction the model dropped is not lost, and it is not a question either (DEC-058b).
+
+    The policy service compiles the customer's own words, so the compiler's readings are in `hard_rules`
+    whatever the model produced. Before, the assistant asked "which I left out of the draft" about each
+    of them — untrue, and unanswerable: live, a well-read English instruction carried one such blocking
+    question per rule. What the question used to convey that was real, *who* read the rule, is now in the
+    review's own labels (LEASH-146).
+    """
+    from leash.application.clarify import clarify
+    from leash.policy.compiler import CatalogueItem
+
     said = turns("Buy one grocery item for CHF 20 or less. Ask me when uncertain.")
     model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "20",
                                            says="CHF 20 or less", turn="T1")], "questions": []})
     proposal = assistant(model).draft(said)
     assert [c.rule.field for c in proposal.candidates] == [m.F_BILLING_CHF]
-    left_out = {q.field for q in proposal.questions if "left out" in q.text}
-    assert m.F_MAX_QUANTITY in left_out and m.F_ITEM_CATEGORY in left_out
-    assert proposal.status == "needs_answers"
+    assert not [q for q in proposal.questions if "left out" in q.text]
+
+    items = [CatalogueItem(i.item_id, i.name, i.category) for i in catalogue.search(name="").candidates]
+    held = {r["field"] for r in clarify(said[0].text, [], items,
+                                        proposed=[c.rule for c in proposal.candidates])["hard_rules"]}
+    assert {m.F_MAX_QUANTITY, m.F_ITEM_CATEGORY} <= held, held
 
 
 def test_nothing_omitted_leaves_no_extra_question():
@@ -337,23 +362,36 @@ def test_truncated_background_raises_a_visible_clarification():
     ("shops used before", "Buy clothing up to CHF 50 from shops I have used before.",
      m.F_PRIOR_PURCHASES),
 ])
-def test_the_cross_check_catches_a_restriction_the_model_dropped(dimension, said, omitted_field):
-    """The compiler re-reads the customer's own words, so a dropped restriction is never silent."""
+def test_a_restriction_the_model_dropped_still_binds(dimension, said, omitted_field, catalogue):
+    """The compiler re-reads the customer's own words, so a dropped restriction is never silent — it is
+    enforced rather than asked about (DEC-058b). Same five dimensions as the question it replaces."""
+    from leash.application.clarify import clarify
+    from leash.policy.compiler import CatalogueItem
+
+    items = [CatalogueItem(i.item_id, i.name, i.category) for i in catalogue.search(name="").candidates]
     model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50", says="CHF 50", turn="T1")],
                        "questions": []})
     proposal = assistant(model).draft(turns(said))
-    assert omitted_field in {q.field for q in proposal.questions if "left out" in q.text}, dimension
-    assert proposal.status == "needs_answers"
+    held = {r["field"] for r in clarify(said, [], items,
+                                        proposed=[c.rule for c in proposal.candidates])["hard_rules"]}
+    assert omitted_field in held, f"{dimension}: {held}"
 
 
-def test_a_total_across_days_is_not_satisfied_by_a_per_order_limit():
-    """total-versus-per-item: the same field at two periods is two restrictions, not one."""
-    said = turns("Keep each order under CHF 120 and the total across any seven days at or below CHF 300.")
+def test_a_total_across_days_is_not_satisfied_by_a_per_order_limit(catalogue):
+    """total-versus-per-order: the same field at two periods is two restrictions, and the draft holds
+    both even when the model read only the per-order one (DEC-058b)."""
+    from leash.application.clarify import clarify
+    from leash.policy.compiler import CatalogueItem
+
+    said = "Keep each order under CHF 120 and the total across any seven days at or below CHF 300."
     model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<", "120", says="under CHF 120", turn="T1")],
                        "questions": []})
-    proposal = assistant(model).draft(said)
-    left_out = [q for q in proposal.questions if "left out" in q.text]
-    assert left_out and "7 days" in left_out[0].text
+    proposal = assistant(model).draft(turns(said))
+    items = [CatalogueItem(i.item_id, i.name, i.category) for i in catalogue.search(name="").candidates]
+    held = [(r["field"], r.get("period_days")) for r in
+            clarify(said, [], items, proposed=[c.rule for c in proposal.candidates])["hard_rules"]]
+    assert (m.F_BILLING_CHF, 7) in held, held
+    assert (m.F_BILLING_CHF, None) in held, held
 
 
 def test_a_stated_uncertainty_choice_the_draft_omits_is_raised():
@@ -500,6 +538,7 @@ class StubPolicy:
         self.calls: list[tuple[str, dict]] = []
         self.sent_rules: list[dict] = []
         self.turns: list[tuple[str, str]] = []
+        self.messages: list[tuple[str, str, str]] = []
 
     def add_turn(self, draft_id, text, rules=(), **kwargs):
         self.turns.append((draft_id, text))
@@ -508,6 +547,12 @@ class StubPolicy:
                 "hard_rules": [*self.hard_rules, *self.sent_rules],
                 "independently_read": self.hard_rules,
                 "uncertainty_policy": "ask", "open_questions": self.open_questions}
+
+    def record_message(self, draft_id, text, reply, context):
+        self.messages.append((draft_id, text, reply))
+        return {"draft_id": draft_id, "status": "ready", "hard_rules": list(self.hard_rules),
+                "independently_read": self.hard_rules, "uncertainty_policy": "ask",
+                "open_questions": self.open_questions}
 
     def create_draft(self, instruction, context, rules=()):
         self.calls.append((instruction, dict(context)))
@@ -1079,3 +1124,220 @@ def test_a_single_restriction_sentence_the_model_read_is_not_asked_about():
                                            says="Höchstens CHF 50 pro Bestellung")], "questions": []})
     proposal = assistant(model).draft(turns("Höchstens CHF 50 pro Bestellung."))
     assert proposal.candidates and proposal.status == "ready"
+
+
+def test_a_category_the_loaded_catalogue_does_not_know_is_kept_and_asked_about(catalogue):
+    """On a scenario pack we have not loaded, the categories are the platform's, not ours.
+
+    Refusing an unknown one would drop a correct rule the moment the live pack differs from the one
+    this process happens to hold. Kept instead (it can only narrow what passes) and shown as our
+    reading, so the customer can reject it. Only a vocabulary the event schema fixes — the fulfillment
+    method, the split-check switch — is refused outright.
+    """
+    said = turns("Only pharmacy items.")
+    model = StubModel({"rules": [rule_json(m.F_ITEM_CATEGORY, "in", ["pharmacy"],
+                                           says="Only pharmacy items")], "questions": []})
+    proposal = assistant(model).draft(said, catalogue=catalogue)
+    kept = [c for c in proposal.candidates if c.rule.field == m.F_ITEM_CATEGORY]
+    assert kept, [q.text for q in proposal.questions]
+    assert kept[0].evidenced is False
+    assert any("pharmacy" in q.text for q in proposal.questions)
+
+
+# --- a turn that is an acknowledgement, not an instruction (live transcript, 2026-09-25) ----------
+
+def test_a_turn_that_adds_no_boundary_leaves_the_draft_alone(pack, scope):
+    """"yes i am go with that now" is not a boundary.
+
+    Live, it was appended to the draft's own `instruction` — the text the mandate carries to the
+    platform — burned a revision, and left a blocking question the grammar could never read. Answering
+    it again only made the unreadable tail longer, so the customer could not get out of the loop.
+    """
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "50")], "questions": []})
+    policy = StubPolicy([spend_hard_rule()])
+    said = (Turn("T1", "customer", "at most CHF 50 per order"),
+            Turn("T2", "customer", "yes i am go with that now"))
+    result = conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF, draft_id="LD-1")
+    assert policy.turns == [], "nothing may be added to the instruction"
+    assert [m[1] for m in policy.messages] == ["yes i am go with that now"], "but it is recorded"
+    assert result.reply and "unchanged" in result.reply
+    assert not any("not sure how to read" in q.text for q in result.questions)
+
+
+def test_a_turn_that_does_state_a_boundary_still_reaches_the_draft(pack, scope):
+    """The control: two readers must both find nothing, or the turn is an instruction as before."""
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "30", says="make it 30", turn="T2")],
+                       "questions": []})
+    policy = StubPolicy([spend_hard_rule("30")])
+    said = (Turn("T1", "customer", "at most CHF 50 per order"), Turn("T2", "customer", "make it 30"))
+    conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF, draft_id="LD-1")
+    assert policy.turns == [("LD-1", "make it 30")]
+    assert policy.messages == []
+
+
+def test_an_opening_turn_always_becomes_the_instruction(pack, scope):
+    """The first thing a customer says is the instruction, even if neither reader can read it.
+
+    There is no draft yet for it to leave unchanged, and the draft's own questions are what tell them
+    it was not understood — so the acknowledgement path applies to a continuing turn only.
+    """
+    policy = StubPolicy()
+    result = conversation(pack, scope, StubModel({"rules": [], "questions": []}), policy).clarify(
+        (Turn("T1", "customer", "buy me a jacket"),), cutoff=CUTOFF)
+    assert policy.calls and policy.calls[0][0] == "buy me a jacket"
+    assert result.reply is None
+
+
+def test_a_suggestion_the_draft_already_enforces_is_not_asked_again(pack, scope):
+    """From a live transcript: the draft held "One purchase in total." and still asked for it.
+
+    The model quoted "One purchase", which is not in the customer's words, so the quote gate refused
+    the rule and offered it as an unconfirmed suggestion — while the compiler had already read the
+    identical rule from "Buy one ordinary grocery item" (DEC-013) and it was in the draft, labelled as
+    the customer's own. Asking whether they want a rule they already have blocks the draft for nothing.
+    """
+    model = StubModel({"rules": [rule_json(m.F_MAX_PURCHASES, "<=", 1, says="One purchase"),
+                                 rule_json(m.F_BILLING_CHF, "<=", "20", says="CHF 20 or less")],
+                       "questions": []})
+    already = {"field": m.F_MAX_PURCHASES, "operator": "<=", "value": "1"}
+    policy = StubPolicy([spend_hard_rule("20"), already])
+    said = turns("Buy one ordinary grocery item for CHF 20 or less. Ask me when uncertain.")
+    result = conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF)
+    assert not any("One purchase" in q.text for q in result.questions), [q.text for q in result.questions]
+
+
+def test_a_stricter_suggestion_than_the_draft_holds_is_still_asked(pack, scope):
+    """The control: a suggestion that would tighten the draft is a correction, never noise."""
+    model = StubModel({"rules": [rule_json(m.F_BILLING_CHF, "<=", "30", says="at most CHF 30")],
+                       "questions": []})
+    policy = StubPolicy([spend_hard_rule("50")])
+    result = conversation(pack, scope, model, policy).clarify(
+        turns("at most CHF 50 per order. make it lower."), cutoff=CUTOFF)
+    assert any("30" in q.text for q in result.questions), [q.text for q in result.questions]
+
+
+def test_a_suggestion_the_compiler_already_read_is_not_asked_about():
+    """The redundant half of the same live transcript (2026-09-25).
+
+    The model quoted "One purchase" — words the customer never wrote — for a rule DEC-013 had already
+    read from "Buy one ordinary grocery item". The policy service compiles that same instruction, so the
+    rule reaches the draft either way; asking "do you want this rule?" about a boundary they already have
+    blocks the draft for nothing and shows the same rule twice, once as theirs and once as a suggestion.
+    """
+    said = turns("Buy one ordinary grocery item for CHF 20 or less. Ask me when uncertain.")
+    model = StubModel({"rules": [rule_json(m.F_MAX_PURCHASES, "<=", 1, says="One purchase")],
+                       "questions": []})
+    proposal = assistant(model).draft(said)
+    assert proposal.candidates == ()          # untraceable: still never a rule of ours
+    assert not any("Unconfirmed suggestion" in q.text for q in proposal.questions), \
+        [q.text for q in proposal.questions]
+    # The draft still carries the rule (the policy service reads the same sentence), and the omission
+    # net still mentions the field — see DEC-058 for why that second question is wrong too.
+
+
+# --- the assumption the "already read" filter rests on (DEC-058a) ----------------------------------
+# A suggestion is dropped when the compiler read the identical rule from the customer's own words,
+# because the policy service compiles the same instruction and the rule is in the draft either way.
+# That is an assumption about two readers agreeing, and on event day the scenarios, cards and wording
+# are ones we have not seen — so it is pinned here over a corpus rather than argued. If it ever fails,
+# the filter drops a question about a rule that is NOT in the draft, which loses a restriction.
+
+def _instructions() -> list[str]:
+    import csv
+    with (DATA / "scenario_catalogue.csv").open(encoding="utf-8") as f:
+        supplied = [r["cardholder_instruction"] for r in csv.DictReader(f)]
+    return supplied + [
+        # the languages the compiler cannot read, where the filter must simply never fire
+        "Bestelle unsere Lebensmittel für die Lieferung, höchstens CHF 120 pro Bestellung.",
+        "Commande nos courses en livraison, au maximum CHF 120 par commande.",
+        "Ordina la spesa con consegna, al massimo CHF 120 per ordine.",
+        # wording the grammar reads partly, which is where two readers can disagree
+        "Only groceries. At most CHF 20 per order, including delivery. At most 1 item per order. "
+        "At most 1 purchase in total. Only from shops with at least 3 previous purchases on this card.",
+        "Buy me a jacket, at most CHF 120 this week, and no subscriptions.",
+        "Any shop except second-hand marketplaces, at most CHF 60 per order.",
+        "At most CHF 1'200 per order. Only one item per order.",
+        "Replace my worn road-running shoes in size 43, returnable within 14 days, up to CHF 200.",
+        "Buy the 27-inch monitor I chose from a seller I have bought from before for CHF 400 or less.",
+    ]
+
+
+@pytest.mark.parametrize("instruction", _instructions())
+def test_every_rule_the_compiler_reads_is_carried_by_the_draft(instruction, catalogue):
+    """The filter's premise: what the compiler reads is in the draft, so dropping the question is safe."""
+    from leash.application.clarify import clarify
+    from leash.policy.compiler import CatalogueItem
+    from leash.policy.hard_rules import rule_from_api
+
+    from assistant.agent import _compiler_rules, _same_restriction
+
+    items = [CatalogueItem(i.item_id, i.name, i.category) for i in catalogue.search(name="").candidates]
+    read = _compiler_rules((Turn("T1", "customer", instruction),), catalogue)
+    # the draft the policy service builds from the same words, with no model rules at all
+    held = [rule_from_api(r) for r in clarify(instruction, [], items, proposed=[])["hard_rules"]]
+    for rule in read:
+        assert any(_same_restriction(rule, h) for h in held), \
+            f"{rule.field} {rule.operator} {rule.value} would be dropped but is not in the draft"
+
+
+@pytest.mark.parametrize("said,says", [
+    ("Höchstens CHF 50 pro Bestellung, nur ein Artikel pro Bestellung.", "nur ein Artikel"),
+    ("Au plus un article par commande.", "un article par commande"),
+    ("Al massimo un articolo per ordine.", "un articolo per ordine"),
+])
+def test_the_already_read_filter_never_fires_where_the_compiler_is_blind(said, says):
+    """The filter may only drop what the compiler independently read — which in German, French and
+    Italian is nothing at all. So a model reading in those languages is never suppressed by it: the
+    suggestion still reaches the customer, which is the whole point of reading with a model (DEC-045).
+    """
+    model = StubModel({"rules": [rule_json(m.F_MAX_QUANTITY, "<=", 1, says=says)], "questions": []})
+    proposal = assistant(model).draft(turns(said))
+    offered = [c.rule.field for c in proposal.candidates] + [q.field for q in proposal.questions]
+    assert m.F_MAX_QUANTITY in offered, [q.text for q in proposal.questions]
+
+
+def test_a_turn_the_model_misattributes_a_rule_to_is_still_an_acknowledgement(pack, scope):
+    """Live on SCEN0002: "yes i mean that" became revision 2 because the model tagged a rule `turn_id`
+    T2 while quoting T1. A claimed turn is not a read turn — the quote has to be the customer's words in
+    that turn, which is the same test the excerpt gate applies before a rule may exist at all.
+    """
+    model = StubModel({"rules": [
+        rule_json(m.F_BILLING_CHF, "<=", "200", says="pay no more than CHF 200", turn="T1"),
+        # the misattribution: quoted from the instruction, tagged to the acknowledgement
+        rule_json(m.F_MAX_QUANTITY, "<=", 1, says="road-running shoes", turn="T2"),
+    ], "questions": []})
+    policy = StubPolicy([spend_hard_rule("200")])
+    said = (Turn("T1", "customer", "Replace my worn road-running shoes in size 43, and pay no more "
+                                   "than CHF 200. Ask me when uncertain."),
+            Turn("T2", "customer", "yes i mean that"))
+    result = conversation(pack, scope, model, policy).clarify(said, cutoff=CUTOFF, draft_id="LD-1")
+    assert policy.turns == [], "the acknowledgement must not become instruction text"
+    assert result.reply and "unchanged" in result.reply
+
+
+SHOES = ("Replace my worn road-running shoes in size 43. Buy only from a specialist sports retailer, "
+         "only if the order can be returned within 14 days or more, and pay no more than CHF 200. "
+         "Ask me when uncertain.")
+
+
+def test_our_wording_is_not_asked_about_when_the_compiler_read_the_same_rule(catalogue):
+    """Live on SCEN0002: "I read 'specialist sports retailer' as … those are my words" blocked a draft
+    that already held that exact rule as the customer's own, because the compiler read it too (DEC-058a
+    generalised). A text value is our canonical term by definition (DEC-048) — but when the engine read
+    the same restriction from the same words, there is nothing for the customer to confirm.
+    """
+    model = StubModel({"rules": [rule_json(m.F_MERCHANT_CATEGORY, "in", ["sporting_goods"],
+                                           says="specialist sports retailer")], "questions": []})
+    proposal = assistant(model).draft(turns(SHOES), catalogue=catalogue)
+    assert any(c.rule.field == m.F_MERCHANT_CATEGORY for c in proposal.candidates)
+    assert not any("my words" in q.text for q in proposal.questions), [q.text for q in proposal.questions]
+
+
+def test_an_item_the_compiler_resolved_the_same_way_is_not_asked_about(catalogue):
+    """Same shape at the item branch: "Which exact catalogue product do you want?" blocked a draft whose
+    own rules named that catalogue item, read from the customer's words by the engine."""
+    model = StubModel({"rules": [rule_json(m.F_ITEM_ID, "in", ["IT0014"],
+                                           says="road-running shoes")], "questions": []})
+    proposal = assistant(model).draft(turns(SHOES), catalogue=catalogue)
+    assert not any("exact catalogue product" in q.text for q in proposal.questions), \
+        [q.text for q in proposal.questions]

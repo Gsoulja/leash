@@ -217,7 +217,7 @@ def test_review_is_read_only_and_confirmation_rejects_a_stale_version(api):
     assert reviewed.status_code == 200
     proposal = valid(reviewed.json(), "Mandate")
     assert proposal["version"] == 2
-    assert any("350.00" in rule for rule in proposal["review"]["must_follow"])
+    assert any("350.00" in rule["text"] for rule in proposal["review"]["must_follow"])
     assert viseca.patches == 0 and versions(url, mandate["mandate_id"]) == [1]
     assert fake.mandates[mandate["mandate_id"]].body["hard_rules"] == mandate["hard_rules"]
     applied = http.post(path, json=change)

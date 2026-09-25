@@ -10,6 +10,7 @@ from decimal import Decimal
 from enum import Enum
 
 from .clock import SimTime
+from .money import fmt_chf
 
 RELATED_STATUSES = frozenset({"pending", "approved", "declined", "cancelled"})
 
@@ -115,3 +116,35 @@ class Purchase:
     def item_fingerprint(self) -> tuple[tuple[str, int], ...]:
         """Sorted multiset of (item_id, quantity), one pair per line: independent of line order."""
         return tuple(sorted((item.item_id, item.quantity) for item in self.items))
+
+
+@dataclass(frozen=True)
+class Terms:
+    """What a verdict was given on: what was paid, to whom, for what (LEASH-102).
+
+    A redelivery of the same live authorization is only a retry while these are unchanged. Amend any of
+    them — a warranty line added, the amount raised, the shop swapped — and the earlier verdict says
+    nothing about what has just arrived.
+    """
+
+    merchant_id: str
+    billing_amount_chf: Decimal
+    item_fingerprint: tuple[tuple[str, int], ...]
+
+    @classmethod
+    def of(cls, purchase: "Purchase") -> "Terms":
+        return cls(purchase.merchant.merchant_id, purchase.billing_amount_chf, purchase.item_fingerprint)
+
+    def changed_from(self, decided: "Terms") -> tuple[str, ...]:
+        """How these terms differ from the ones a decision was made on, in words, for the audit log."""
+        differences = []
+        if self.merchant_id != decided.merchant_id:
+            differences.append(f"merchant_id: this delivery says {self.merchant_id}; "
+                               f"the decided one was {decided.merchant_id}")
+        if self.billing_amount_chf != decided.billing_amount_chf:
+            differences.append(f"billing_chf: this delivery says {fmt_chf(self.billing_amount_chf)}; "
+                               f"the decided one was {fmt_chf(decided.billing_amount_chf)}")
+        if self.item_fingerprint != decided.item_fingerprint:
+            differences.append(f"items: this delivery carries {[list(i) for i in self.item_fingerprint]}; "
+                               f"the decided one carried {[list(i) for i in decided.item_fingerprint]}")
+        return tuple(differences)

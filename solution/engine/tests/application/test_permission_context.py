@@ -285,3 +285,23 @@ def test_bundle_excludes_sensitive_identifiers_from_ordinary_logs(pack):
     bundle = context(pack, "CA0024", "Buy me a jacket for the autumn")
     assert "Giulia" not in bundle.log_line()
     assert "CA0024" in bundle.log_line()
+
+
+# --- LEASH-145 AC10: a question from background says so ---------------------------------------
+
+def test_a_background_question_carries_the_kind_and_words_it_came_from(pack):
+    """The customer must be able to tell "you told me this" from "your profile records this".
+
+    DEC-034: background suggests questions, it never grants authority. A question that arrives in
+    the customer's chat wearing no origin reads as something they already agreed to, which is the
+    one thing a preference must never look like. The recorded words travel with the question so the
+    screen can quote them back and let the customer disagree.
+    """
+    bundle = context(pack, "CA0024", "Buy me a jacket for the autumn")
+    returns = [q for q in bundle.suggested_questions if "return" in q.text.lower()]
+    assert returns, "the recorded clothing preference is relevant to a jacket"
+    asked = returns[0]
+    assert asked.kind == "preference"
+    assert asked.evidence and "return" in asked.evidence.lower(), \
+        "the preference's own words, so the screen can quote them rather than paraphrase"
+    assert asked.source is not None and asked.source.file == "customers.csv"

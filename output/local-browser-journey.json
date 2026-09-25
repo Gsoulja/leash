@@ -1,0 +1,688 @@
+{
+  "run": {
+    "run_id": "RUN-4e0354e121",
+    "scenario_id": "SCEN0000",
+    "mandate_id": "TM-d951e6dee0",
+    "mandate_version": 1,
+    "status": "finished",
+    "counters": {
+      "total": 1,
+      "delivered": 1,
+      "decided": 1,
+      "waiting_for_customer": 0,
+      "final": 1,
+      "remaining": 0
+    }
+  },
+  "payment": {
+    "authorization_id": "AZ-6e5c050ec7c1",
+    "source_authorization_id": "AU0001",
+    "run_id": "RUN-4e0354e121",
+    "merchant": {
+      "merchant_id": "ME0001",
+      "name": "Alpine Basket",
+      "category": "groceries",
+      "country": "CH",
+      "city": "Zurich"
+    },
+    "sim_time": "2026-08-09T10:04:00Z",
+    "amount": "20.00",
+    "currency": "CHF",
+    "billing_amount_chf": "20.00",
+    "items": [
+      {
+        "item_id": "IT0001",
+        "name": "Fresh produce selection",
+        "quantity": 1,
+        "unit_price": "13.00"
+      }
+    ],
+    "engine_verdict": "approve",
+    "final_state": "approved",
+    "delivery": "accepted",
+    "platform_outcome": "accepted",
+    "resolved_by": "engine",
+    "customer_message": "All your rules passed.",
+    "checks": [
+      {
+        "key": "price",
+        "label": "Price",
+        "actual": "CHF 20.00",
+        "agreed": "\u2264 CHF 20.00",
+        "detail": "CHF 20.00 is within your CHF 20.00 per-order limit.",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "key": "shoptype",
+        "label": "Shop type",
+        "actual": "Alpine Basket: groceries",
+        "agreed": "groceries shop",
+        "detail": "Alpine Basket is a groceries shop.",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "key": "known",
+        "label": "Known shop",
+        "actual": "26 earlier payments",
+        "agreed": "Paid there at least 3 times",
+        "detail": "Alpine Basket: 26 earlier payments on this card.",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "key": "items",
+        "label": "Items",
+        "actual": "Fresh produce selection",
+        "agreed": "Only groceries, at most 1",
+        "detail": "The basket holds only what you asked for.",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "key": "text",
+        "label": "Shop text",
+        "actual": "No instructions found",
+        "agreed": "Data only, never instructions",
+        "detail": "No instructions aimed at the agent or payment system.",
+        "status": "pass",
+        "reason_code": null
+      }
+    ],
+    "evidence": [
+      {
+        "check": "price",
+        "label": "Price",
+        "actual": "CHF 20.00",
+        "agreed": "\u2264 CHF 20.00",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "check": "shoptype",
+        "label": "Shop type",
+        "actual": "Alpine Basket: groceries",
+        "agreed": "groceries shop",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "check": "known",
+        "label": "Known shop",
+        "actual": "26 earlier payments",
+        "agreed": "Paid there at least 3 times",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "check": "items",
+        "label": "Items",
+        "actual": "Fresh produce selection",
+        "agreed": "Only groceries, at most 1",
+        "status": "pass",
+        "reason_code": null
+      },
+      {
+        "check": "text",
+        "label": "Shop text",
+        "actual": "No instructions found",
+        "agreed": "Data only, never instructions",
+        "status": "pass",
+        "reason_code": null
+      }
+    ],
+    "shop_texts": [
+      {
+        "item_id": "IT0001",
+        "text": "One small basket of seasonal fruit and vegetables"
+      }
+    ],
+    "sent_to_viseca": {
+      "decision": "approve",
+      "evidence": [
+        {
+          "check": "price",
+          "label": "Price",
+          "actual": "CHF 20.00",
+          "agreed": "\u2264 CHF 20.00",
+          "status": "pass",
+          "reason_code": null
+        },
+        {
+          "check": "shoptype",
+          "label": "Shop type",
+          "actual": "Alpine Basket: groceries",
+          "agreed": "groceries shop",
+          "status": "pass",
+          "reason_code": null
+        },
+        {
+          "check": "known",
+          "label": "Known shop",
+          "actual": "26 earlier payments",
+          "agreed": "Paid there at least 3 times",
+          "status": "pass",
+          "reason_code": null
+        },
+        {
+          "check": "items",
+          "label": "Items",
+          "actual": "Fresh produce selection",
+          "agreed": "Only groceries, at most 1",
+          "status": "pass",
+          "reason_code": null
+        },
+        {
+          "check": "text",
+          "label": "Shop text",
+          "actual": "No instructions found",
+          "agreed": "Data only, never instructions",
+          "status": "pass",
+          "reason_code": null
+        }
+      ],
+      "reason_codes": [],
+      "engine_version": "leash-0.fake",
+      "authorization_id": "AZ-6e5c050ec7c1",
+      "customer_message": "All your rules passed."
+    },
+    "engine_version": "leash-0.fake",
+    "reader": {
+      "name": "regex",
+      "model_unavailable": false
+    }
+  },
+  "draft": {
+    "notes": [
+      "At most CHF 20.00 per order, delivery included.",
+      "At most 1 item per order (DEC-013).",
+      "One purchase: a second matching order asks you first (DEC-013).",
+      "At most 1 purchases in total.",
+      "Only groceries in the basket (a shop's category doesn't make every item in it that kind).",
+      "Only shops with at least 3 earlier purchases on this card.",
+      "Only shops in the category groceries, as you answered.",
+      "Two orders at the same shop within an hour that together go over the limit: I ask you (it may be one order split in two).",
+      "One item per order.",
+      "One purchase in total.",
+      "Only groceries in the basket.",
+      "Only shops you have paid at least 3 times before.",
+      "When unsure, I ask you."
+    ],
+    "rules": [
+      {
+        "text": "At most CHF 20.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "At most 1 item per order (DEC-013)",
+        "source": "team",
+        "decision": "DEC-013",
+        "tightened": false
+      },
+      {
+        "text": "One purchase: a second matching order asks you first (DEC-013)",
+        "source": "team",
+        "decision": "DEC-013",
+        "tightened": false
+      },
+      {
+        "text": "At most 1 purchases in total",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only groceries in the basket (a shop's category doesn't make every item in it that kind)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops with at least 3 earlier purchases on this card",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops in the category groceries, as you answered",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Two orders at the same shop within an hour that together go over the limit: I ask you (it may be one order split in two)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "One item per order",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "One purchase in total",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only groceries in the basket",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid at least 3 times before",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      }
+    ],
+    "review": {
+      "must_ask": [
+        "Another order after 1 approved purchase(s).",
+        "Orders at the same shop within an hour that together exceed the spending limit.",
+        "Missing or unclear evidence, including uncertain product details or return terms.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ],
+      "may_choose": [
+        "No explicit restriction on exact product; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on extra items; all other checks still apply.",
+        "No explicit restriction on session risk threshold; all other checks still apply."
+      ],
+      "must_follow": [
+        "At most CHF 20.00 per order, delivery included.",
+        "One item per order.",
+        "Only groceries in the basket.",
+        "Only shops you have paid at least 3 times before.",
+        "Only shops of the kind: groceries."
+      ]
+    },
+    "status": "ready",
+    "answers": [
+      {
+        "answer": "Only groceries shops",
+        "question": "Should I only buy from groceries shops, or is any kind of shop fine?",
+        "question_id": "Q-12cd35fb42"
+      },
+      {
+        "answer": "Yes, ask me",
+        "question": "If two orders at the same shop within an hour together go over CHF 20.00, should I ask you (it may be one order split in two)?",
+        "question_id": "Q-06deafbb46"
+      }
+    ],
+    "draft_id": "LD-f21901811dc3",
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 20,
+        "operator": "<="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 20,
+        "operator": "<="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 3,
+        "operator": ">="
+      }
+    ],
+    "revision": 7,
+    "assistant": {
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "value": 20,
+          "operator": "<="
+        },
+        {
+          "field": "leash.items.max_quantity.v1",
+          "value": 1,
+          "operator": "<="
+        },
+        {
+          "field": "leash.purchase.max_count.v2",
+          "value": 1,
+          "operator": "<="
+        },
+        {
+          "field": "items.item_category",
+          "value": [
+            "groceries"
+          ],
+          "operator": "in"
+        },
+        {
+          "field": "leash.merchant.prior_purchases.v1",
+          "value": 3,
+          "operator": ">="
+        }
+      ],
+      "status": "ready",
+      "questions": [],
+      "provenance": [
+        {
+          "says": "for CHF 20 or less",
+          "field": "authorization.billing_amount_chf",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "At most 1 item per order",
+          "field": "leash.items.max_quantity.v1",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "At most 1 purchase",
+          "field": "leash.purchase.max_count.v2",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "ordinary grocery item",
+          "field": "items.item_category",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "By a regular shop I mean at least 3 earlier purchases on this card",
+          "field": "leash.merchant.prior_purchases.v1",
+          "turn_id": "T2",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        }
+      ],
+      "tool_calls": [],
+      "prompt_version": "apertus-4f4e0336"
+    },
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 20,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 3,
+        "operator": ">="
+      },
+      {
+        "field": "merchant.merchant_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.orders.split_check.v1",
+        "value": "on",
+        "operator": "="
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 20,
+        "operator": "<="
+      }
+    ],
+    "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. At most 1 item per order. At most 1 purchase. By a regular shop I mean at least 3 earlier purchases on this card. Ask me when uncertain. By a regular shop I mean at least 3 earlier purchases on this card.",
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "items.item_id",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.items.unrequested_count.v1",
+      "leash.session.risk_score.v1"
+    ],
+    "open_questions": [],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 20,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "leash.items.max_quantity.v1",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "leash.purchase.max_count.v2",
+        "value": 1,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 3,
+        "operator": ">="
+      },
+      {
+        "field": "merchant.merchant_category",
+        "value": [
+          "groceries"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.orders.split_check.v1",
+        "value": "on",
+        "operator": "="
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "simulation_scenario": "SCEN0000",
+    "confirmed_mandate": {
+      "mandate_id": "TM-d951e6dee0",
+      "version": 1,
+      "status": "active",
+      "instruction": "Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. At most 1 item per order. At most 1 purchase. By a regular shop I mean at least 3 earlier purchases on this card. Ask me when uncertain. By a regular shop I mean at least 3 earlier purchases on this card.",
+      "rules": [
+        {
+          "text": "At most CHF 20.00 per order, delivery included",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "At most 1 item per order (DEC-013)",
+          "source": "team",
+          "decision": "DEC-013",
+          "tightened": false
+        },
+        {
+          "text": "One purchase: a second matching order asks you first (DEC-013)",
+          "source": "team",
+          "decision": "DEC-013",
+          "tightened": false
+        },
+        {
+          "text": "At most 1 purchases in total",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Only groceries in the basket (a shop's category doesn't make every item in it that kind)",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Only shops with at least 3 earlier purchases on this card",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Only shops in the category groceries, as you answered",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Two orders at the same shop within an hour that together go over the limit: I ask you (it may be one order split in two)",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "One item per order",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "One purchase in total",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Only groceries in the basket",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        },
+        {
+          "text": "Only shops you have paid at least 3 times before",
+          "source": "customer",
+          "decision": null,
+          "tightened": false
+        }
+      ],
+      "hard_rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "scope": "purchase",
+          "value": 20,
+          "currency": "CHF",
+          "operator": "<="
+        },
+        {
+          "field": "leash.items.max_quantity.v1",
+          "value": 1,
+          "operator": "<="
+        },
+        {
+          "field": "leash.purchase.max_count.v2",
+          "value": 1,
+          "operator": "<="
+        },
+        {
+          "field": "items.item_category",
+          "value": [
+            "groceries"
+          ],
+          "operator": "in"
+        },
+        {
+          "field": "leash.merchant.prior_purchases.v1",
+          "value": 3,
+          "operator": ">="
+        },
+        {
+          "field": "merchant.merchant_category",
+          "value": [
+            "groceries"
+          ],
+          "operator": "in"
+        },
+        {
+          "field": "leash.orders.split_check.v1",
+          "value": "on",
+          "operator": "="
+        },
+        {
+          "field": "authorization.billing_amount_chf",
+          "value": 20,
+          "operator": "<="
+        }
+      ],
+      "uncertainty_policy": "ask",
+      "applies_from": "next run",
+      "revocation": null
+    }
+  }
+}

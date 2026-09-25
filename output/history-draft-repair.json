@@ -1,0 +1,469 @@
+{
+  "before": {
+    "notes": [
+      "At most CHF 250.00 per order, delivery included.",
+      "Only clothing in the basket (a shop's category doesn't make every item in it that kind).",
+      "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015).",
+      "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024).",
+      "When unsure, I ask you."
+    ],
+    "rules": [
+      {
+        "text": "At most CHF 250.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only clothing in the basket (a shop's category doesn't make every item in it that kind)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before on this card (an approval earlier in the run counts, DEC-015)",
+        "source": "team",
+        "decision": "DEC-015",
+        "tightened": false
+      },
+      {
+        "text": "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024)",
+        "source": "team",
+        "decision": "DEC-024",
+        "tightened": false
+      }
+    ],
+    "review": {
+      "must_ask": [
+        "Checkout risk score at or above 2.",
+        "Missing or unclear evidence needed to check the rules above.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ],
+      "may_choose": [
+        "No explicit restriction on shop category; all other checks still apply.",
+        "No explicit restriction on exact product; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on item quantity; all other checks still apply.",
+        "No explicit restriction on number of purchases; all other checks still apply.",
+        "No explicit restriction on extra items; all other checks still apply.",
+        "No explicit restriction on split-order threshold; all other checks still apply."
+      ],
+      "must_follow": [
+        "At most CHF 250.00 per order, delivery included.",
+        "Only clothing in the basket.",
+        "Only shops you have paid before."
+      ]
+    },
+    "status": "needs_answers",
+    "answers": [],
+    "draft_id": "LD-bf6b69b0fc16",
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 250,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 250,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      }
+    ],
+    "revision": 3,
+    "assistant": {
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "rules": [],
+      "status": "needs_answers",
+      "questions": [
+        "What exact value should be used for \"shops I have used before\" when checking merchant.prior_purchases.v1? (e.g., >= 1, >= 2, or another number)",
+        "Should the agent only buy from shops with a clothing category, or from any shop that you have used before?",
+        "If two orders at the same shop within an hour together exceed CHF 250, should the agent ask you before proceeding (split-check scenario)?",
+        "What is the maximum billing amount in CHF per order (including delivery)?",
+        "Should the agent pause if the session risk_score.v1 is greater than or equal to 2 (new device, bursts, night-time, or first-time country)?",
+        "You also said something about how much I may spend, which I left out of the draft. Should it be a rule too?",
+        "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+        "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+        "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?",
+        "I'm not sure how to read \"check the history you have access to my history data\". Could you say it as a simple rule (for example: at most CHF 50 per order)?"
+      ],
+      "provenance": [],
+      "tool_calls": [],
+      "prompt_version": "apertus-4a43448b",
+      "history_checked": "History checked: 151 approved purchases on card CA0023, through 2026-08-09. Past activity is evidence, not permission."
+    },
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 250,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 250,
+        "operator": "<="
+      }
+    ],
+    "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain. check the history you have access to my history data",
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "merchant.merchant_category",
+      "items.item_id",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.items.unrequested_count.v1",
+      "leash.purchase.max_count.v2",
+      "leash.items.max_quantity.v1",
+      "leash.orders.split_check.v1"
+    ],
+    "open_questions": [
+      {
+        "text": "I'm not sure how to read \"check the history you have access to my history data\". Could you say it as a simple rule (for example: at most CHF 50 per order)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "Q-257356979a"
+      },
+      {
+        "text": "Should I only buy from clothing shops, or is any kind of shop fine?",
+        "field": "merchant.merchant_category",
+        "options": [
+          "Only clothing shops",
+          "Any kind of shop"
+        ],
+        "blocking": false,
+        "question_id": "Q-26f45fb5e5"
+      },
+      {
+        "text": "If two orders at the same shop within an hour together go over CHF 250.00, should I ask you (it may be one order split in two)?",
+        "field": "leash.orders.split_check.v1",
+        "options": [
+          "Yes, ask me",
+          "No"
+        ],
+        "blocking": false,
+        "question_id": "Q-6e786d5935"
+      },
+      {
+        "text": "What exact value should be used for \"shops I have used before\" when checking merchant.prior_purchases.v1? (e.g., >= 1, >= 2, or another number)",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-5d0db2dba5"
+      },
+      {
+        "text": "Should the agent only buy from shops with a clothing category, or from any shop that you have used before?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-882db44bbe"
+      },
+      {
+        "text": "If two orders at the same shop within an hour together exceed CHF 250, should the agent ask you before proceeding (split-check scenario)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-c4875851c7"
+      },
+      {
+        "text": "What is the maximum billing amount in CHF per order (including delivery)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-d235bd2a8e"
+      },
+      {
+        "text": "Should the agent pause if the session risk_score.v1 is greater than or equal to 2 (new device, bursts, night-time, or first-time country)?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-4d8d1f246d"
+      },
+      {
+        "text": "You also said something about how much I may spend, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-f236b2450f"
+      },
+      {
+        "text": "You also said something about what kind of items, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-62ae2d476a"
+      },
+      {
+        "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-71f2f1a7a7"
+      },
+      {
+        "text": "You also said something about how risky the checkout looks, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-1f5ddf700c"
+      }
+    ],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 250,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "simulation_scenario": "SCEN0003"
+  },
+  "after": {
+    "draft_id": "LD-bf6b69b0fc16",
+    "revision": 4,
+    "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+    "review": {
+      "must_follow": [
+        "At most CHF 250.00 per order, delivery included.",
+        "Only clothing in the basket.",
+        "Only shops you have paid before."
+      ],
+      "may_choose": [
+        "No explicit restriction on shop category; all other checks still apply.",
+        "No explicit restriction on exact product; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on item quantity; all other checks still apply.",
+        "No explicit restriction on number of purchases; all other checks still apply.",
+        "No explicit restriction on extra items; all other checks still apply.",
+        "No explicit restriction on split-order threshold; all other checks still apply."
+      ],
+      "must_ask": [
+        "Checkout risk score at or above 2.",
+        "Missing or unclear evidence needed to check the rules above.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ]
+    },
+    "status": "ready",
+    "rules": [
+      {
+        "text": "At most CHF 250.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only clothing in the basket (a shop's category doesn't make every item in it that kind)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before on this card (an earlier approved purchase in the run counts)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024)",
+        "source": "team",
+        "decision": "DEC-024",
+        "tightened": false
+      }
+    ],
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250,
+        "currency": "CHF",
+        "scope": "purchase"
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "notes": [
+      "At most CHF 250.00 per order, delivery included.",
+      "Only clothing in the basket (a shop's category doesn't make every item in it that kind).",
+      "Only shops you have paid before on this card (an earlier approved purchase in the run counts).",
+      "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024).",
+      "When unsure, I ask you."
+    ],
+    "open_questions": [
+      {
+        "question_id": "Q-26f45fb5e5",
+        "text": "Should I only buy from clothing shops, or is any kind of shop fine?",
+        "blocking": false,
+        "field": "merchant.merchant_category",
+        "options": [
+          "Only clothing shops",
+          "Any kind of shop"
+        ]
+      },
+      {
+        "question_id": "Q-6e786d5935",
+        "text": "If two orders at the same shop within an hour together go over CHF 250.00, should I ask you (it may be one order split in two)?",
+        "blocking": false,
+        "field": "leash.orders.split_check.v1",
+        "options": [
+          "Yes, ask me",
+          "No"
+        ]
+      }
+    ],
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "merchant.merchant_category",
+      "items.item_id",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.items.unrequested_count.v1",
+      "leash.purchase.max_count.v2",
+      "leash.items.max_quantity.v1",
+      "leash.orders.split_check.v1"
+    ],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250,
+        "currency": "CHF",
+        "scope": "purchase"
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      }
+    ],
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250,
+        "currency": "CHF",
+        "scope": "purchase"
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250
+      }
+    ],
+    "answers": [],
+    "assistant": {
+      "model": "offline draft repair",
+      "prompt_version": "local-validation",
+      "status": "ready",
+      "rules": [],
+      "questions": [],
+      "history_checked": "History checked: 151 approved purchases on card CA0023, through 2026-08-09. Past activity is evidence, not permission."
+    },
+    "simulation_scenario": "SCEN0003"
+  },
+  "verification": "Offline repair; identical enforced rules; no model or platform calls."
+}

@@ -21,7 +21,7 @@ services:
     environment:
       LEASH_BASE_URL: http://fake:9000
       LEASH_POLICY_URL: http://api:8080
-      LEASH_ASSISTANT_MODEL: apertus
+      LEASH_ASSISTANT_MODEL: ${LEASH_ASSISTANT_MODEL:-openrouter}
       LEASH_SIMULATION: "1"
   fake:
     environment:

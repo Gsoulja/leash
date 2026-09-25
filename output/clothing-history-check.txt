@@ -1,0 +1,12 @@
+Offline history-rule check only; other checkout rules evaluated separately.
+AU0024: Loom and Pine: pass, 16 earlier payments
+AU0025: Milano Weave: pass, 15 earlier payments
+AU0026: Loom and Pine: pass, 16 earlier payments
+AU0027: RainThread: fail, Never paid here
+AU0028: Cobalt Coatworks: fail, Never paid here
+AU0029: Thames Weave: fail, Never paid here
+AU0030: Cobalt Coatworks: fail, Never paid here
+AU0031: Loom and Pine: pass, 16 earlier payments
+AU0032: Milano Weave: pass, 15 earlier payments
+AU0033: RainThread: fail, Never paid here
+AU0034: Loom and Pine: pass, 16 earlier payments

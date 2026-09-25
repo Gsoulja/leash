@@ -208,6 +208,9 @@ export function StepUp({ asks }: { asks: Ask[] }) {
         {!reason && <button type="button" className="pill" disabled={busy || !armed} onClick={() => answer("approve")}>Confirm payment</button>}
         <button type="button" className="link" disabled={busy || !armed} onClick={() => answer("decline")}>Reject</button>
         <button type="button" className="link later" disabled={busy} onClick={deferCurrent}>Decide later</button>
+        {/* LEASH-146: a purchase-specific answer is not a change of permission. Saying so keeps one
+            approval from reading as a standing allowance the customer never gave. */}
+        <p className="small">This answer covers this payment only; your permission stays as it is.</p>
       </div>
     </div>
   );

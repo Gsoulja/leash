@@ -42,6 +42,8 @@ from leash.ports.repository import SavedAuthorization
 log = logging.getLogger("leash.decide")
 
 TIMEOUT_CODE = "decision_timeout"
+#: A live ID redelivered with a different amount, shop or basket (LEASH-102).
+CHANGED_TERMS_CODE = "checkout_terms_changed"
 
 
 @dataclass(frozen=True)
@@ -151,6 +153,13 @@ def _mandate_id(event: Mapping[str, Any]) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _changed_terms_decision() -> Decision:
+    check = Check("terms", "Checkout terms", "integrity", "The terms I checked", "Different terms now",
+                  "This purchase came back with different terms than the ones I checked, so I'm asking you.",
+                  CHANGED_TERMS_CODE)
+    return Decision("step_up", (check,), (CHANGED_TERMS_CODE,))
+
+
 def _timeout_decision() -> Decision:
     check = Check("deadline", "Answer time", "integrity", "Checked before the deadline", "Ran out of time",
                   "I couldn't finish checking this purchase in time, so I'm asking you.", TIMEOUT_CODE)
@@ -231,6 +240,8 @@ class DecidePurchase:
         kind, payload = work.result()
         if kind == "repeat":
             assert isinstance(payload, SavedAuthorization) and payload.response is not None
+            if payload.changed_terms:
+                return await self._changed_terms(request, payload, result, timer)
             result.path, result.verdict, result.response = "repeat", payload.engine_verdict, payload.response
             await self._send(request, payload.response, result, timer)
             return result
@@ -272,6 +283,29 @@ class DecidePurchase:
         timer.inner(outcome.stages)
         timer.done("transaction")
         return outcome
+
+    async def _changed_terms(self, request: DecisionRequest, saved: SavedAuthorization, result: HandleResult,
+                             timer: "_StageTimer") -> HandleResult:
+        """This live ID has been decided already, but not on the terms just delivered (LEASH-102).
+
+        The saved verdict stays the record of what was decided and is not rewritten (DEC-003); it is
+        simply not an answer to this delivery. Re-deciding under the same ID would put a second verdict
+        on one authorization, so the honest answer is the safe one: ask the customer.
+        """
+        aid = request.purchase.authorization_id
+        for change in saved.changed_terms:
+            log.warning("INTEGRITY: the same authorization was redelivered with different terms (%s); "
+                        "the saved %s is not being replayed", change, saved.engine_verdict,
+                        extra={"authorization_id": aid})
+        body = explain(_changed_terms_decision(), authorization_id=aid,
+                       engine_version=self._engine_version)
+        body["evidence"] = [*body["evidence"],
+                            *({"check": "terms", "label": "Changed checkout terms", "status": "integrity",
+                               "agreed": "The terms this purchase was decided on", "actual": change[:300],
+                               "reason_code": CHANGED_TERMS_CODE} for change in saved.changed_terms)]
+        result.path, result.verdict, result.response = "changed_terms", "step_up", body
+        await self._send(request, body, result, timer)
+        return result
 
     async def _fallback(self, request: DecisionRequest, result: HandleResult, timer: "_StageTimer") -> HandleResult:
         timer.done("watchdog")

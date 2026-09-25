@@ -1,0 +1,1151 @@
+{
+  "before": {
+    "notes": [
+      "At most CHF 250.00 per order, delivery included.",
+      "Only clothing in the basket (a shop's category doesn't make every item in it that kind).",
+      "Only shops you have paid before on this card (an earlier approved purchase in the run counts).",
+      "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024).",
+      "When unsure, I ask you."
+    ],
+    "rules": [
+      {
+        "text": "At most CHF 250.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only clothing in the basket (a shop's category doesn't make every item in it that kind)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before on this card (an earlier approved purchase in the run counts)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024)",
+        "source": "team",
+        "decision": "DEC-024",
+        "tightened": false
+      }
+    ],
+    "review": {
+      "must_ask": [
+        "Checkout risk score at or above 2.",
+        "Missing or unclear evidence needed to check the rules above.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ],
+      "may_choose": [
+        "No explicit restriction on shop category; all other checks still apply.",
+        "No explicit restriction on exact product; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on item quantity; all other checks still apply.",
+        "No explicit restriction on number of purchases; all other checks still apply.",
+        "No explicit restriction on extra items; all other checks still apply.",
+        "No explicit restriction on split-order threshold; all other checks still apply."
+      ],
+      "must_follow": [
+        "At most CHF 250.00 per order, delivery included.",
+        "Only clothing in the basket.",
+        "Only shops you have paid before."
+      ]
+    },
+    "status": "needs_answers",
+    "answers": [],
+    "draft_id": "LD-5218640b0079",
+    "messages": [
+      {
+        "text": "2",
+        "reply": "I checked the supplied history for card CA0023, through 2026-08-09: 151 approved purchases, totalling CHF 10982.11. Refunds (CHF 149.01) and 4 declines are counted separately. Recorded shops include: 17 approved purchases at StoryArc Media; 16 approved purchases at Loom and Pine; 15 approved purchases at Milano Weave; 13 approved purchases at Sunrise Provisions; 10 approved purchases at Noon Spoon; 9 approved purchases at Cedar Table; 9 approved purchases at Basil and Board; 7 approved purchases at LakeLine Mobility; 7 approved purchases at Alto Charge; 7 approved purchases at NightOwl Kitchen. The history does not contain item-level baskets, so it cannot establish an exact past product. Source: authorization_history.csv, scoped by customer, account and card. This is evidence for checking your rules, not permission to buy. Your permission is unchanged.",
+        "context": {
+          "scope": {
+            "card_id": "CA0023",
+            "dataset": "data",
+            "account_id": "AC0018",
+            "customer_id": "CU0012"
+          },
+          "entries": [
+            {
+              "kind": "preference",
+              "text": "Mobile receipts, fast checkout, and Italian or Swiss fashion retailers with returns.",
+              "scope": {
+                "card_id": null,
+                "dataset": "data",
+                "account_id": null,
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "customers.csv",
+                "field": "shopping_preferences",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "freshness": "unknown",
+              "conflicting": false,
+              "merchant_id": null,
+              "observed_at": null,
+              "grants_authority": false
+            },
+            {
+              "kind": "preference",
+              "text": "High mobile-wallet usage for clothing, dining, groceries, and cross-border trips.",
+              "scope": {
+                "card_id": null,
+                "dataset": "data",
+                "account_id": null,
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "customers.csv",
+                "field": "typical_spending",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "freshness": "unknown",
+              "conflicting": false,
+              "merchant_id": null,
+              "observed_at": null,
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "17 approved purchases at StoryArc Media",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0017",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0017",
+              "observed_at": "2026-07-13T05:21:23+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "16 approved purchases at Loom and Pine",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0025",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0025",
+              "observed_at": "2026-05-19T18:47:03+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "15 approved purchases at Milano Weave",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0027",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0027",
+              "observed_at": "2026-07-18T19:42:38+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "13 approved purchases at Sunrise Provisions",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0004",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0004",
+              "observed_at": "2026-07-13T11:55:46+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "10 approved purchases at Noon Spoon",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0013",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0013",
+              "observed_at": "2026-06-09T15:34:43+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "9 approved purchases at Cedar Table",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0011",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0011",
+              "observed_at": "2026-07-07T20:30:00+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "9 approved purchases at Basil and Board",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0012",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0012",
+              "observed_at": "2026-07-03T13:22:20+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at LakeLine Mobility",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0008",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0008",
+              "observed_at": "2026-06-23T18:03:58+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at Alto Charge",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0010",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0010",
+              "observed_at": "2026-06-19T14:10:21+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at NightOwl Kitchen",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0016",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0016",
+              "observed_at": "2026-07-11T21:01:15+00:00",
+              "grants_authority": false
+            }
+          ],
+          "summary": {
+            "cutoff": "2026-08-09T00:00:00+00:00",
+            "declined": 4,
+            "merchants": {
+              "ME0004": 13,
+              "ME0008": 7,
+              "ME0010": 7,
+              "ME0011": 9,
+              "ME0012": 9,
+              "ME0013": 10,
+              "ME0015": 6,
+              "ME0016": 7,
+              "ME0017": 17,
+              "ME0025": 16,
+              "ME0027": 15,
+              "ME0038": 5
+            },
+            "spend_chf": "10982.11",
+            "refunds_chf": "149.01",
+            "cash_withdrawals": 0,
+            "net_of_refunds_chf": "10833.10",
+            "completed_purchases": 151
+          },
+          "questions": [
+            {
+              "text": "You usually buy where returns are possible. Should I only buy where the order can be returned?",
+              "source": {
+                "file": "customers.csv",
+                "field": "shopping_preferences",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "answered": false,
+              "needs_confirmation": false
+            },
+            {
+              "text": "Your history shows shops and amounts but not which items were in each order. Which product do you mean? Please confirm it.",
+              "source": null,
+              "answered": false,
+              "needs_confirmation": true
+            }
+          ],
+          "truncated": false,
+          "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain. 2",
+          "item_history": "unavailable",
+          "simulation_scenario": "SCEN0003"
+        },
+        "revision": 1
+      }
+    ],
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 250,
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      }
+    ],
+    "revision": 1,
+    "assistant": {
+      "model": "swiss-ai/Apertus-v1.5-70B",
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "value": 250,
+          "operator": "<="
+        },
+        {
+          "field": "items.item_category",
+          "value": [
+            "clothing"
+          ],
+          "operator": "in"
+        },
+        {
+          "field": "leash.session.risk_score.v1",
+          "value": 2,
+          "operator": "<"
+        }
+      ],
+      "status": "needs_answers",
+      "questions": [
+        "You said \"shops I have used before\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+        "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?"
+      ],
+      "provenance": [
+        {
+          "says": "up to CHF 250 per order",
+          "field": "authorization.billing_amount_chf",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "clothing",
+          "field": "items.item_category",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "says": "Pause anything that looks like someone other than me is driving the session",
+          "field": "leash.session.risk_score.v1",
+          "turn_id": "T1",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        }
+      ],
+      "tool_calls": [],
+      "prompt_version": "apertus-484da632",
+      "history_checked": "History checked: 151 approved purchases on card CA0023, through 2026-08-09. Past activity is evidence, not permission."
+    },
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 250,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "value": 250,
+        "operator": "<="
+      }
+    ],
+    "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "merchant.merchant_category",
+      "items.item_id",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.items.unrequested_count.v1",
+      "leash.purchase.max_count.v2",
+      "leash.items.max_quantity.v1",
+      "leash.orders.split_check.v1"
+    ],
+    "open_questions": [
+      {
+        "text": "Should I only buy from clothing shops, or is any kind of shop fine?",
+        "field": "merchant.merchant_category",
+        "options": [
+          "Only clothing shops",
+          "Any kind of shop"
+        ],
+        "blocking": false,
+        "question_id": "Q-26f45fb5e5"
+      },
+      {
+        "text": "If two orders at the same shop within an hour together go over CHF 250.00, should I ask you (it may be one order split in two)?",
+        "field": "leash.orders.split_check.v1",
+        "options": [
+          "Yes, ask me",
+          "No"
+        ],
+        "blocking": false,
+        "question_id": "Q-6e786d5935"
+      },
+      {
+        "text": "You said \"shops I have used before\", which doesn't give me 1 for shops you have used before. It stays an unconfirmed suggestion \u2014 what should the value be?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-9eac570757"
+      },
+      {
+        "text": "You also said something about shops you have used before, which I left out of the draft. Should it be a rule too?",
+        "field": "instruction",
+        "blocking": true,
+        "question_id": "AQ-71f2f1a7a7"
+      }
+    ],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "scope": "purchase",
+        "value": 250,
+        "currency": "CHF",
+        "operator": "<="
+      },
+      {
+        "field": "items.item_category",
+        "value": [
+          "clothing"
+        ],
+        "operator": "in"
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "value": 1,
+        "operator": ">="
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "value": 2,
+        "operator": "<"
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "simulation_scenario": "SCEN0003"
+  },
+  "offline_proposal": [
+    {
+      "field": "authorization.billing_amount_chf",
+      "value": 250,
+      "operator": "<=",
+      "says": "up to CHF 250 per order",
+      "turn_id": "T1"
+    },
+    {
+      "field": "items.item_category",
+      "value": [
+        "clothing"
+      ],
+      "operator": "in",
+      "says": "clothing",
+      "turn_id": "T1"
+    },
+    {
+      "field": "leash.session.risk_score.v1",
+      "value": 2,
+      "operator": "<",
+      "says": "Pause anything that looks like someone other than me is driving the session",
+      "turn_id": "T1"
+    },
+    {
+      "field": "leash.merchant.prior_purchases.v1",
+      "operator": ">=",
+      "value": 1,
+      "says": "shops I have used before",
+      "turn_id": "T1"
+    }
+  ],
+  "after": {
+    "draft_id": "LD-5218640b0079",
+    "revision": 2,
+    "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+    "review": {
+      "must_follow": [
+        "At most CHF 250.00 per order, delivery included.",
+        "Only clothing in the basket.",
+        "Only shops you have paid before."
+      ],
+      "may_choose": [
+        "No explicit restriction on shop category; all other checks still apply.",
+        "No explicit restriction on exact product; all other checks still apply.",
+        "No explicit restriction on size; all other checks still apply.",
+        "No explicit restriction on return window; all other checks still apply.",
+        "No explicit restriction on delivery or collection; all other checks still apply.",
+        "No explicit restriction on item quantity; all other checks still apply.",
+        "No explicit restriction on number of purchases; all other checks still apply.",
+        "No explicit restriction on extra items; all other checks still apply.",
+        "No explicit restriction on split-order threshold; all other checks still apply."
+      ],
+      "must_ask": [
+        "Checkout risk score at or above 2.",
+        "Missing or unclear evidence needed to check the rules above.",
+        "Suspected duplicates, off-purpose orders, merchant instructions or integrity problems."
+      ]
+    },
+    "status": "ready",
+    "rules": [
+      {
+        "text": "At most CHF 250.00 per order, delivery included",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only clothing in the basket (a shop's category doesn't make every item in it that kind)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Only shops you have paid before on this card (an earlier approved purchase in the run counts)",
+        "source": "customer",
+        "decision": null,
+        "tightened": false
+      },
+      {
+        "text": "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024)",
+        "source": "team",
+        "decision": "DEC-024",
+        "tightened": false
+      }
+    ],
+    "hard_rules": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250,
+        "currency": "CHF",
+        "scope": "purchase"
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      },
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250
+      }
+    ],
+    "uncertainty_policy": "ask",
+    "notes": [
+      "At most CHF 250.00 per order, delivery included.",
+      "Only clothing in the basket (a shop's category doesn't make every item in it that kind).",
+      "Only shops you have paid before on this card (an earlier approved purchase in the run counts).",
+      "Someone else driving = new device, bursts, night-time or a first-time country; two or more risk points (a new device alone is two) and I ask you (DEC-024).",
+      "When unsure, I ask you."
+    ],
+    "open_questions": [
+      {
+        "question_id": "Q-26f45fb5e5",
+        "text": "Should I only buy from clothing shops, or is any kind of shop fine?",
+        "blocking": false,
+        "field": "merchant.merchant_category",
+        "options": [
+          "Only clothing shops",
+          "Any kind of shop"
+        ]
+      },
+      {
+        "question_id": "Q-6e786d5935",
+        "text": "If two orders at the same shop within an hour together go over CHF 250.00, should I ask you (it may be one order split in two)?",
+        "blocking": false,
+        "field": "leash.orders.split_check.v1",
+        "options": [
+          "Yes, ask me",
+          "No"
+        ]
+      }
+    ],
+    "unrestricted": [
+      "authorization.fulfillment_method",
+      "merchant.merchant_category",
+      "items.item_id",
+      "leash.items.size.v1",
+      "leash.order.return_days.v1",
+      "leash.items.unrequested_count.v1",
+      "leash.purchase.max_count.v2",
+      "leash.items.max_quantity.v1",
+      "leash.orders.split_check.v1"
+    ],
+    "independently_read": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250,
+        "currency": "CHF",
+        "scope": "purchase"
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      }
+    ],
+    "proposed": [
+      {
+        "field": "authorization.billing_amount_chf",
+        "operator": "<=",
+        "value": 250
+      },
+      {
+        "field": "items.item_category",
+        "operator": "in",
+        "value": [
+          "clothing"
+        ]
+      },
+      {
+        "field": "leash.session.risk_score.v1",
+        "operator": "<",
+        "value": 2
+      },
+      {
+        "field": "leash.merchant.prior_purchases.v1",
+        "operator": ">=",
+        "value": 1
+      }
+    ],
+    "answers": [],
+    "assistant": {
+      "rules": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "operator": "<=",
+          "value": 250
+        },
+        {
+          "field": "items.item_category",
+          "operator": "in",
+          "value": [
+            "clothing"
+          ]
+        },
+        {
+          "field": "leash.session.risk_score.v1",
+          "operator": "<",
+          "value": 2
+        },
+        {
+          "field": "leash.merchant.prior_purchases.v1",
+          "operator": ">=",
+          "value": 1
+        }
+      ],
+      "questions": [],
+      "status": "ready",
+      "provenance": [
+        {
+          "field": "authorization.billing_amount_chf",
+          "turn_id": "T1",
+          "says": "up to CHF 250 per order",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "field": "items.item_category",
+          "turn_id": "T1",
+          "says": "clothing",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "field": "leash.session.risk_score.v1",
+          "turn_id": "T1",
+          "says": "Pause anything that looks like someone other than me is driving the session",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        },
+        {
+          "field": "leash.merchant.prior_purchases.v1",
+          "turn_id": "T1",
+          "says": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain.",
+          "confirmed": false,
+          "evidenced": true,
+          "corroborated": false
+        }
+      ],
+      "model": "offline quote regression replay",
+      "prompt_version": "short-quote-validation",
+      "tool_calls": [],
+      "history_checked": "History checked: 151 approved purchases on card CA0023, through 2026-08-09. Past activity is evidence, not permission."
+    },
+    "messages": [
+      {
+        "text": "2",
+        "reply": "I checked the supplied history for card CA0023, through 2026-08-09: 151 approved purchases, totalling CHF 10982.11. Refunds (CHF 149.01) and 4 declines are counted separately. Recorded shops include: 17 approved purchases at StoryArc Media; 16 approved purchases at Loom and Pine; 15 approved purchases at Milano Weave; 13 approved purchases at Sunrise Provisions; 10 approved purchases at Noon Spoon; 9 approved purchases at Cedar Table; 9 approved purchases at Basil and Board; 7 approved purchases at LakeLine Mobility; 7 approved purchases at Alto Charge; 7 approved purchases at NightOwl Kitchen. The history does not contain item-level baskets, so it cannot establish an exact past product. Source: authorization_history.csv, scoped by customer, account and card. This is evidence for checking your rules, not permission to buy. Your permission is unchanged.",
+        "context": {
+          "scope": {
+            "card_id": "CA0023",
+            "dataset": "data",
+            "account_id": "AC0018",
+            "customer_id": "CU0012"
+          },
+          "entries": [
+            {
+              "kind": "preference",
+              "text": "Mobile receipts, fast checkout, and Italian or Swiss fashion retailers with returns.",
+              "scope": {
+                "card_id": null,
+                "dataset": "data",
+                "account_id": null,
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "customers.csv",
+                "field": "shopping_preferences",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "freshness": "unknown",
+              "conflicting": false,
+              "merchant_id": null,
+              "observed_at": null,
+              "grants_authority": false
+            },
+            {
+              "kind": "preference",
+              "text": "High mobile-wallet usage for clothing, dining, groceries, and cross-border trips.",
+              "scope": {
+                "card_id": null,
+                "dataset": "data",
+                "account_id": null,
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "customers.csv",
+                "field": "typical_spending",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "freshness": "unknown",
+              "conflicting": false,
+              "merchant_id": null,
+              "observed_at": null,
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "17 approved purchases at StoryArc Media",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0017",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0017",
+              "observed_at": "2026-07-13T05:21:23+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "16 approved purchases at Loom and Pine",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0025",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0025",
+              "observed_at": "2026-05-19T18:47:03+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "15 approved purchases at Milano Weave",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0027",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0027",
+              "observed_at": "2026-07-18T19:42:38+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "13 approved purchases at Sunrise Provisions",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0004",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0004",
+              "observed_at": "2026-07-13T11:55:46+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "10 approved purchases at Noon Spoon",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0013",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0013",
+              "observed_at": "2026-06-09T15:34:43+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "9 approved purchases at Cedar Table",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0011",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0011",
+              "observed_at": "2026-07-07T20:30:00+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "9 approved purchases at Basil and Board",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0012",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0012",
+              "observed_at": "2026-07-03T13:22:20+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at LakeLine Mobility",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0008",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0008",
+              "observed_at": "2026-06-23T18:03:58+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at Alto Charge",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0010",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0010",
+              "observed_at": "2026-06-19T14:10:21+00:00",
+              "grants_authority": false
+            },
+            {
+              "kind": "history",
+              "text": "7 approved purchases at NightOwl Kitchen",
+              "scope": {
+                "card_id": "CA0023",
+                "dataset": "data",
+                "account_id": "AC0018",
+                "customer_id": "CU0012"
+              },
+              "source": {
+                "file": "authorization_history.csv",
+                "field": "merchant_id",
+                "row_id": "ME0016",
+                "dataset": "data"
+              },
+              "freshness": "fresh",
+              "conflicting": false,
+              "merchant_id": "ME0016",
+              "observed_at": "2026-07-11T21:01:15+00:00",
+              "grants_authority": false
+            }
+          ],
+          "summary": {
+            "cutoff": "2026-08-09T00:00:00+00:00",
+            "declined": 4,
+            "merchants": {
+              "ME0004": 13,
+              "ME0008": 7,
+              "ME0010": 7,
+              "ME0011": 9,
+              "ME0012": 9,
+              "ME0013": 10,
+              "ME0015": 6,
+              "ME0016": 7,
+              "ME0017": 17,
+              "ME0025": 16,
+              "ME0027": 15,
+              "ME0038": 5
+            },
+            "spend_chf": "10982.11",
+            "refunds_chf": "149.01",
+            "cash_withdrawals": 0,
+            "net_of_refunds_chf": "10833.10",
+            "completed_purchases": 151
+          },
+          "questions": [
+            {
+              "text": "You usually buy where returns are possible. Should I only buy where the order can be returned?",
+              "source": {
+                "file": "customers.csv",
+                "field": "shopping_preferences",
+                "row_id": "CU0012",
+                "dataset": "data"
+              },
+              "answered": false,
+              "needs_confirmation": false
+            },
+            {
+              "text": "Your history shows shops and amounts but not which items were in each order. Which product do you mean? Please confirm it.",
+              "source": null,
+              "answered": false,
+              "needs_confirmation": true
+            }
+          ],
+          "truncated": false,
+          "instruction": "The agent may buy clothing for me, up to CHF 250 per order, from shops I have used before. Pause anything that looks like someone other than me is driving the session. Ask me when uncertain. 2",
+          "item_history": "unavailable",
+          "simulation_scenario": "SCEN0003"
+        },
+        "revision": 1
+      }
+    ],
+    "simulation_scenario": "SCEN0003"
+  }
+}

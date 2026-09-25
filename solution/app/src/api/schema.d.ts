@@ -359,12 +359,23 @@ export interface components {
                 scenario_name: string;
                 cardholder_instruction: string;
                 event_count: number;
+                /** @description One line saying what this demonstration shows, from our copy of the supplied catalogue, joined by scenario ID. Absent when we hold no note for it (LEASH-147). */
+                summary?: string;
+                /** @description The demonstration to open with. At most one scenario carries it. */
+                recommended?: boolean;
             }[];
         };
+        /** @description One boundary in the customer's words, with the heading it is read under (LEASH-146). The text is generated from the stored rule, never from model prose (DEC-045). */
+        ReviewLine: {
+            text: string;
+            /** @enum {string} */
+            group: "item" | "price" | "merchant" | "frequency" | "uncertainty";
+        };
         PermissionReview: {
-            must_follow: string[];
-            may_choose: string[];
-            must_ask: string[];
+            must_follow: components["schemas"]["ReviewLine"][];
+            /** @description Includes every registry field this permission places no rule on, named in plain words: a restriction the model silently dropped is otherwise invisible (DEC-045). */
+            may_choose: components["schemas"]["ReviewLine"][];
+            must_ask: components["schemas"]["ReviewLine"][];
         };
         AssistantAssessment: {
             history_checked?: string;
@@ -412,6 +423,19 @@ export interface components {
             blocking: boolean;
             /** @description The rule this question is about, when it is about one. It lets a caller ask the question in the customer's own terms; answering it is what may create a rule. */
             field?: string | null;
+            /**
+             * @description Whose words this question is in. `leash` (the default when absent) is generated from a rule or a registry field; `model` is the permission assistant's own prose, carried as provenance and never as consent text (DEC-045, LEASH-174). A caller must not present the two alike.
+             * @enum {string}
+             */
+            origin?: "leash" | "model";
+            /** @description Where the question came from, when it came from the customer's background rather than from their own words. Absent for every question their instruction prompted. Background suggests questions and never grants authority (DEC-034), so a question it put here must say so: unattributed, it reads to the customer as something they already agreed to. `evidence` is the recorded wording itself, so the screen can quote it and the customer can disagree with the actual words rather than a paraphrase. */
+            source?: {
+                /** @enum {string} */
+                kind: "preference" | "history" | "statement" | "confirmed";
+                evidence: string;
+                file?: string | null;
+                row_id?: string | null;
+            } | null;
         };
         CreateDraftRequest: {
             instruction: string;
@@ -420,6 +444,12 @@ export interface components {
         };
         /** @description Local draft: not yet sent to Viseca (DEC-003, LEASH-123). */
         PolicyDraft: {
+            /** @description Stored conversation snapshots in revision order, including superseded drafts. Read-only history, never active rules. */
+            revisions?: components["schemas"]["PolicyDraft"][];
+            customer_turn?: {
+                text: string;
+                replaced: boolean;
+            };
             messages?: {
                 text: string;
                 reply: string;
@@ -449,7 +479,7 @@ export interface components {
             independently_read?: components["schemas"]["HardRule"][];
             /** @description Registry fields this draft places no rule on (DEC-045). The model reads the customer's words, so a restriction it silently drops leaves every rule shown correct and the omission invisible; the review names these so the customer can spot what is missing. */
             unrestricted?: string[];
-            /** @description The answers this draft view was actually built from, in replay order (LEASH-145). A turn can drop an earlier answer when its question closed or was re-asked under another id, so a transcript must render answered points from here rather than from what it remembers. */
+            /** @description The answers this draft view was actually built from, in replay order (LEASH-145). A turn can drop an earlier answer when its question closed or was re-asked under another id. Earlier answers remain in revisions for the conversation history. */
             answers?: {
                 question_id: string;
                 /** @description The question as it was worded when it was answered. */

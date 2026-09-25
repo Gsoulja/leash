@@ -94,20 +94,35 @@ from leash.policy.registry import (EVALUATORS, NOT_A_FIELD_MEANING, PENDING_EVAL
 #     the `.v1` rules inside mandates already submitted to the platform *unsupported*, which never
 #     approves, so introducing it would decline more, not less. Deliberate, and the loosening is bounded
 #     to "we know nothing at all about this card": it can still never approve on its own.
+#
+# Re-pinned 2026-09-25 (LEASH-102, the changed-cart criterion). Two hashed modules changed, and no field's
+# meaning did:
+#   * `domain/purchase.py` gained the `Terms` value object (shop, billing amount, item fingerprint) with
+#     `Terms.of` and `changed_from`. It is derived from `item_fingerprint`, which is why it lives here, and
+#     nothing inside `decide()` reads it: it is used by the stores to tell a retried delivery from a
+#     different attempt. A new class in a hashed module moves every fingerprint on its own.
+#   * `application/decide_purchase.py` (SHARED_ENFORCEMENT) gained one branch on the **repeat** path, which
+#     never calls `decide()`: a redelivery whose shop, amount or basket differs from the terms the stored
+#     verdict was given on is answered with a `step_up` naming the mismatch instead of the saved verdict,
+#     and an `integrity_alert` is written. The stored decision is not rewritten (DEC-003).
+#
+# This does change what is *sent* for such a redelivery — a saved `approve` is no longer posted for terms it
+# was never checked against — and that is the point of the criterion. It only ever moves a verdict towards
+# caution (approve → step_up), reads no rule, fact, check or amount, and cannot affect a first delivery.
 LOCK = {
-    "authorization.billing_amount_chf@v1": "75889d72b86a",
-    "authorization.fulfillment_method@v1": "da68e6176fbc",
-    "merchant.merchant_category@v1": "3e29bb226d3d",
-    "items.item_category@v1": "cdbc86071085",
-    "items.item_id@v1": "b62fd14c37e3",
-    "leash.items.size.v1@v1": "b7443a18d79f",
-    "leash.merchant.prior_purchases.v1@v1": "73d1cdd51233",
-    "leash.order.return_days.v1@v1": "e87213bfbc91",
-    "leash.items.unrequested_count.v1@v1": "78d378461edb",
-    "leash.purchase.max_count.v2@v2": "35417d6613ff",
-    "leash.items.max_quantity.v1@v1": "e8d1c9b059f8",
-    "leash.session.risk_score.v1@v1": "5bcbfaf1b6f9",
-    "leash.orders.split_check.v1@v1": "54ea54887ce0",
+    "authorization.billing_amount_chf@v1": "93437733ba9e",
+    "authorization.fulfillment_method@v1": "3eaaa5f96d74",
+    "merchant.merchant_category@v1": "7d9694745f6f",
+    "items.item_category@v1": "3f0599f57585",
+    "items.item_id@v1": "a9ee61cb31ef",
+    "leash.items.size.v1@v1": "2312127c48bb",
+    "leash.merchant.prior_purchases.v1@v1": "a4f0f111c147",
+    "leash.order.return_days.v1@v1": "6538d40e3894",
+    "leash.items.unrequested_count.v1@v1": "1a917ef30abe",
+    "leash.purchase.max_count.v2@v2": "b891e23cd5d8",
+    "leash.items.max_quantity.v1@v1": "3cd7d78d798c",
+    "leash.session.risk_score.v1@v1": "52061d132442",
+    "leash.orders.split_check.v1@v1": "8403b04f8e77",
 }
 
 
