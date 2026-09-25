@@ -79,6 +79,9 @@ jobs:
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read                    # gitleaks lists a pull request's commits (LEASH-197)
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:

@@ -110,6 +110,14 @@ def test_the_secret_scan_reads_the_whole_history(ci):
     assert checkout["with"]["fetch-depth"] == 0, "a secret committed and removed is still a leaked secret"
 
 
+def test_the_secret_scan_may_list_a_pull_requests_commits(ci):
+    """LEASH-197: on pull_request events gitleaks-action reads the PR's commits through the API; with
+    only `contents: read` that is a 403 and the scan dies before scanning anything."""
+    granted = ci["jobs"]["secrets"].get("permissions", ci.get("permissions", {}))
+    assert granted.get("pull-requests") == "read"
+    assert granted.get("contents") == "read", "a job's permissions replace the workflow's; keep contents"
+
+
 def test_the_lockfiles_decide_what_is_installed(ci):
     runs = " ".join(s.get("run", "") for job in ci["jobs"].values() for s in job["steps"])
     assert "uv sync --frozen" in runs and "npm ci" in runs
