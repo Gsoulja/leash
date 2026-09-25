@@ -103,7 +103,7 @@ describe("Cockpit", () => {
     };
     expect(await label("A")).toEqual(["Approved", "ok"]);
     expect(await label("C")).toEqual(["Approved · you approved", "ok"]);
-    expect(await label("B")).toEqual(["Waiting for you", "warn"]);
+    expect(await label("B")).toEqual(["Waiting for you", "ask"]);
     expect(await label("D")).toEqual(["Blocked", "bad"]);
     expect(await label("E")).toEqual(["You declined", "bad"]);
     expect(await label("F")).toEqual(["No answer", "dim"]);

@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { deliveryNote, statusOf } from "./status";
 import { ApiError, api, type Ask, type Payment } from "../api/client";
+import { Icon } from "../components/icons";
 
 const ARM_MS = 800;
 const ANSWER_TIMEOUT_MS = 15_000;
@@ -141,7 +142,7 @@ export function StepUp({ asks }: { asks: Ask[] }) {
       <div className="prompt" role="dialog" aria-modal="true" aria-label="Payment waiting for your answer" tabIndex={-1}
            ref={dialog}>
         <p className="p-outcome" aria-live="polite">{text}</p>
-        <button type="button" className="pill" onClick={closeNotice}>OK</button>
+        <button type="button" className="btn primary lg" onClick={closeNotice}>OK</button>
       </div>
     );
   }
@@ -185,9 +186,10 @@ export function StepUp({ asks }: { asks: Ask[] }) {
          ref={dialog}>
       <div className="p-top">
         <span>{p.sim_time ? when.format(new Date(p.sim_time)) : ""}</span>
-        <span className="agentbadge">AI agent{waiting.length > 1 ? ` · 1 of ${waiting.length}` : ""}</span>
+        <span className="agentbadge"><Icon name="agent" size={16} />AI agent{waiting.length > 1 ? ` · 1 of ${waiting.length}` : ""}</span>
       </div>
       <div className="p-mid">
+        <span className="p-turn"><Icon name="ask" size={20} />Your turn</span>
         <div className="p-amt">CHF {p.billing_amount_chf}</div>
         <div className="p-shop">{p.merchant.name}</div>
         <div className="p-card">
@@ -201,13 +203,14 @@ export function StepUp({ asks }: { asks: Ask[] }) {
       </section>
       <div className="p-foot">
         <p className="timer">
+          <Icon name="timer" size={16} />
           {left > 0 ? `Answer within ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`
             : "The time may have run out. You can still answer; the platform decides whether it counts."}
         </p>
         <div aria-live="polite">{reason && <p className="p-blocked">{reason}</p>}</div>
-        {!reason && <button type="button" className="pill" disabled={busy || !armed} onClick={() => answer("approve")}>Confirm payment</button>}
-        <button type="button" className="link" disabled={busy || !armed} onClick={() => answer("decline")}>Reject</button>
-        <button type="button" className="link later" disabled={busy} onClick={deferCurrent}>Decide later</button>
+        {!reason && <button type="button" className="btn approve lg" disabled={busy || !armed} onClick={() => answer("approve")}>Confirm payment</button>}
+        <button type="button" className="btn secondary lg" disabled={busy || !armed} onClick={() => answer("decline")}>Reject</button>
+        <button type="button" className="btn ghost later" disabled={busy} onClick={deferCurrent}>Decide later</button>
         {/* LEASH-146: a purchase-specific answer is not a change of permission. Saying so keeps one
             approval from reading as a standing allowance the customer never gave. */}
         <p className="small">This answer covers this payment only; your permission stays as it is.</p>

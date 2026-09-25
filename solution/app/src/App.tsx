@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAsks } from "./api/useAsks";
 import { useSelectedRun } from "./api/useSelectedRun";
+import { Logo } from "./components/icons";
 import { PhoneFrame } from "./components/PhoneFrame";
 import { TABS, TabBar, type Tab } from "./components/TabBar";
 import { Inspector } from "./inspector/Inspector";
@@ -22,6 +23,8 @@ function Shell() {
   const selection = useSelectedRun();
   const label = TABS.find((t) => t.id === tab)!.label;
   return (
+    <>
+    <header className="brand"><Logo tagline /></header>
     <div className="shell">
       <PhoneFrame>
         <main className={`view${tab === "agent" ? " chat-view" : ""}`}>
@@ -33,6 +36,7 @@ function Shell() {
       </PhoneFrame>
       <Inspector runId={selection.runId} />
     </div>
+    </>
   );
 }
 

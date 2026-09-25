@@ -9,7 +9,8 @@
 // label here claims any of those.
 import type { Payment } from "../api/client";
 
-export type Tone = "ok" | "warn" | "bad" | "dim" | "off";
+// "ask" is the customer's turn (violet in the visual system); "warn" is only "sent, not acknowledged yet".
+export type Tone = "ok" | "ask" | "warn" | "bad" | "dim" | "off";
 
 /** The four delivery stages the ticket names, for anyone who needs them without the label. */
 export type Stage = "decided" | "submitted" | "accepted" | "not_sent";
@@ -36,7 +37,7 @@ export function statusOf(p: Payment): [string, Tone] {
       if (p.delivery !== "accepted") return [byCustomer ? "You declined · sending" : "Declined · sending", "warn"];
       return [byCustomer ? "You declined" : "Blocked", "bad"];
     case "waiting":
-      return ["Waiting for you", "warn"];
+      return ["Waiting for you", "ask"];
     case "timed_out":
       return ["No answer", "dim"];
     case "not_sent":

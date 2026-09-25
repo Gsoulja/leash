@@ -12,6 +12,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type HardRule, type PlatformDraft, type PolicyDraft, type Question, type Run } from "../api/client";
+import { Icon, LogoMark } from "../components/icons";
 import { PermissionSummary } from "../components/PermissionSummary";
 
 const KEY = "leash.draft_id";
@@ -105,7 +106,7 @@ function Clarification({ q, busy, onAnswer }: { q: Question; busy: boolean;
     <div role="group" aria-labelledby={id} className="bubble leash question">
       <div className="question-heading">
         <div className="who">Leash</div>
-        <span className={q.blocking ? "chip warn" : "chip dim"}>{q.blocking ? "Needs your answer" : "Optional"}</span>
+        <span className={q.blocking ? "chip ask" : "chip dim"}>{q.blocking ? "Needs your answer" : "Optional"}</span>
       </div>
       <p id={id} className="message">{questionText(q.text)}</p>
       {q.origin === "model" && (
@@ -132,7 +133,7 @@ function Clarification({ q, busy, onAnswer }: { q: Question; busy: boolean;
       {q.options && q.options.length > 0 && (
         <div className="options">
           {q.options.map((o) => (
-            <button key={o} type="button" className="pill light" disabled={busy} onClick={() => send(o, true)}>{o}</button>
+            <button key={o} type="button" className="btn secondary sm" disabled={busy} onClick={() => send(o, true)}>{o}</button>
           ))}
         </div>
       )}
@@ -358,8 +359,8 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
   return (
     <div className="perm talk">
       <header className="chat-header">
-        {onBack && <button className="chat-back" type="button" aria-label="Back to Cockpit" onClick={onBack}>‹</button>}
-        <div className="chat-avatar" aria-hidden="true">L<span className={confirmedId ? "active" : ""} /></div>
+        {onBack && <button className="chat-back" type="button" aria-label="Back to Cockpit" onClick={onBack}><Icon name="back" /></button>}
+        <div className="chat-avatar" aria-hidden="true"><LogoMark state={confirmedId ? "active" : "idle"} size={24} onDark /></div>
         <div className="chat-heading"><h1>Leash</h1><p>{activity ?? (query.isLoading ? "Loading your conversation…" : confirmedId ? "Permission confirmed" : "Let’s set your shopping boundaries")}</p></div>
         {draftId !== null && <details className="chat-menu">
           <summary aria-label="Conversation options">•••</summary>
@@ -373,7 +374,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
         </details>}
       </header>
       <div className={`mandate-bar${confirmedId ? " active" : ""}`}>
-        <span aria-hidden="true">◇</span>
+        <Icon name="leash" />
         <div><strong>{confirmedId ? "Permission active" : posted ? "Ready for your confirmation" : "Permission draft"}</strong>
           <span>{d ? `${d.rules.length} rules · ${blocking ? `${blocking} clarification${blocking === 1 ? "" : "s"} left` : confirmedId ? "Confirmed by you" : "You review before anything is active"}` : "Nothing is active yet"}</span></div>
         <div className="chat-steps" aria-label={confirmedId ? "Permission confirmed" : posted ? "Review prepared" : "Setting up permission"}>
@@ -424,7 +425,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
         <Bubble from="leash" label="Leash">
           <p role="alert" className="p-blocked">I couldn't load your draft, so I can't show you where it
             got to. Nothing becomes active without your confirmation.</p>
-          <button type="button" className="link" onClick={startOver}>Start a new conversation</button>
+          <button type="button" className="btn ghost" onClick={startOver}>Start a new conversation</button>
         </Bubble>
       )}
 
@@ -498,7 +499,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
 
       {d && d.status === "ready" && !posted && !confirmedId && (
         <section className="card" aria-label="Review">
-          <button type="button" className="pill" disabled={busy || d.status !== "ready"}
+          <button type="button" className="btn primary" disabled={busy || d.status !== "ready"}
                   onClick={async () => {
                     const p = await act(() => api().submitDraft(d.draft_id, d.revision), "Preparing your review…");
                     if (p) { setPosted(p); setReviewed(d.revision); }
@@ -545,7 +546,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
             <p className="small">Uncertainty policy: <code>{posted.uncertainty_policy}</code>.</p>
           </details>
           {!confirmedId && done === null && (
-            <button type="button" className="pill" disabled={busy}
+            <button type="button" className="btn primary" disabled={busy}
                     onClick={async () => {
                       // the revision reviewed, not whatever the draft is now: a stale tab is refused
                       const m = await act(() => api().confirmDraft(posted.draft_id, reviewed ?? undefined), "Confirming your permission…");
@@ -569,7 +570,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
             ? <p className="message" role="status">Run {started.run_id} · {started.status}. I check every
                 checkout it sends and ask you about anything the boundaries don't settle.</p>
             : <>
-                <button type="button" className="pill" disabled={busy} onClick={() => handOff()}>Start shopping</button>
+                <button type="button" className="btn primary" disabled={busy} onClick={() => handOff()}>Start shopping</button>
                 <p className="small">Leash checks each checkout; the simulated platform records whether it accepts
                   the decision. A started run is not proof of a real merchant integration, and no real payment is made.</p>
               </>}
@@ -592,8 +593,8 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
           </label>
           <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing ? "Your answer or question…" : "Message Leash…"} aria-describedby={asking && !editing ? `q-${asking.question_id}` : undefined} value={composer}
                     onChange={(e) => setComposer(e.target.value)} />
-          <button type="button" className="pill" disabled={busy || sending !== null || !composer.trim()}
-                  onClick={() => say(composer.trim())} aria-label="Send"><span aria-hidden="true">↑</span></button></div>
+          <button type="button" className="btn primary" disabled={busy || sending !== null || !composer.trim()}
+                  onClick={() => say(composer.trim())} aria-label="Send"><Icon name="send" /></button></div>
         </section>
       )}
     </div>

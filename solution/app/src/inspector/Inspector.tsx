@@ -87,7 +87,7 @@ function PaymentRow({ payment, selected, onSelect }: { payment: Payment; selecte
 }
 
 const CHECK_TONE: Record<Check["status"], string> = {
-  pass: "ok", fail: "bad", warn: "warn", info: "dim", integrity: "warn",
+  pass: "ok", fail: "bad", warn: "step_up", info: "dim", integrity: "warn",
 };
 
 function Checks({ checks }: { checks: Check[] }) {

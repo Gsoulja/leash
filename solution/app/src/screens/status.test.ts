@@ -49,7 +49,7 @@ describe("delivery and verdict are separate", () => {
 
   it("an ask is still the customer's to answer, whatever the delivery says", () => {
     expect(statusOf(payment({ final_state: "waiting", delivery: "pending", resolved_by: null })))
-      .toEqual(["Waiting for you", "warn"]);
+      .toEqual(["Waiting for you", "ask"]);
   });
 
   it("no label claims the order was settled, shipped or delivered", () => {

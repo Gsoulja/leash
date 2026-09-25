@@ -4,8 +4,8 @@ export type Tab = "home" | "agent" | "rules";
 
 export const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: "home", label: "Cockpit", icon: "home" },
-  { id: "agent", label: "Agent", icon: "chat" },
-  { id: "rules", label: "Permission", icon: "shield" },
+  { id: "agent", label: "Agent", icon: "agent" },
+  { id: "rules", label: "Permission", icon: "leash" },
 ];
 
 export function TabBar({ current, onSelect }: { current: Tab; onSelect: (tab: Tab) => void }) {

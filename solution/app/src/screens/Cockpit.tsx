@@ -8,8 +8,9 @@ import { useEffect, useState } from "react";
 import { PaymentDetail } from "./PaymentDetail";
 import { stageOf, statusOf, type Stage } from "./status";
 import { PATHS, api, type Payment, type Run, type Spending } from "../api/client";
-import { perOrderLimit, permissionStatus } from "../components/PermissionSummary";
+import { perOrderLimit, logoState, permissionStatus } from "../components/PermissionSummary";
 import type { RunSelection } from "../api/useSelectedRun";
+import { Icon, LogoMark } from "../components/icons";
 
 const zurichDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", year: "numeric" });
 const zurichTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" });
@@ -41,10 +42,8 @@ function useCockpitData(runId: string | null) {
 }
 
 function SpendingCard({ spending, state, payments }: { spending?: Spending; state: string; payments: Payment[] }) {
-  // Counted by verdict *and* delivery stage (LEASH-130), not by tone: a decision the bank has not
-  // acknowledged yet shares the "warn" tone with a genuine ask, and summing those would tell the
-  // customer they have orders to answer that they do not. A decline the bank accepted is not an
-  // approval either, so the stage alone is not enough.
+  // Counted by verdict *and* delivery stage (LEASH-130), not by tone: a tone is how a label looks, and a
+  // decline the bank accepted is not an approval, so the stage alone is not enough either.
   const at = (stage: Stage, state?: Payment["final_state"]) =>
     payments.filter((p) => stageOf(p) === stage && (state === undefined || p.final_state === state)).length;
   const waiting = payments.filter((p) => p.final_state === "waiting").length;
@@ -88,7 +87,7 @@ function SpendingCard({ spending, state, payments }: { spending?: Spending; stat
         {/* "approved", never "paid": the bank accepting a decision is not evidence of settlement. */}
         <span className="chip ok">{at("accepted", "approved")} approved</span>
         {at("submitted") > 0 && <span className="chip warn">{at("submitted")} sending</span>}
-        <span className="chip warn">{waiting} waiting for you</span>
+        <span className="chip ask">{waiting} waiting for you</span>
         <span className="chip bad">{blocked} blocked</span>
         {at("not_sent") > 0 && <span className="chip dim">{at("not_sent")} not accepted</span>}
       </div>
@@ -102,7 +101,7 @@ function PaymentRow({ payment, onOpen }: { payment: Payment; onOpen: (id: string
   const more = payment.items.length > 1 ? ` +${payment.items.length - 1}` : "";
   return (
     <button type="button" className="row" onClick={() => onOpen(payment.authorization_id)}>
-      <div className="ico" aria-hidden="true" />
+      <div className="ico" aria-hidden="true"><Icon name="merchant" size={20} /></div>
       <div className="rmain">
         <div className="rname">{payment.merchant.name}</div>
         <div className="rsub">{zurichTime.format(new Date(payment.sim_time))} · via agent · {first}{more}</div>
@@ -157,19 +156,19 @@ export function Cockpit({ selection, onPermission, onChat }: { selection: RunSel
   if (selection.loading) return <p className="empty">Loading your runs…</p>;
   if (selection.error) return <p className="empty">Your runs couldn't be loaded.</p>;
   if (selection.runId === null) return <section className="card"><p className="empty">No runs yet. Start one from your permission.</p>
-    {onChat && <button className="pill" onClick={onChat}>Set boundaries in chat</button>}
-    {onPermission && <button className="link" onClick={onPermission}>View permission</button>}</section>;
+    {onChat && <button className="btn primary" onClick={onChat}>Set boundaries in chat</button>}
+    {onPermission && <button className="btn ghost" onClick={onPermission}>View permission</button>}</section>;
   return (
     <>
       <section className="card cockpit-status" aria-label="Agent spending status">
         <div className="k">{catalogue.data?.scenarios?.find((s) => s.scenario_id === selection.run?.scenario_id)?.scenario_name ?? "Shopping simulation"}</div>
         <h2>{selection.run?.status === "finished" ? "Simulation finished" : selection.run?.status === "failed" ? "Simulation stopped" : "Simulation running"}</h2>
-        <div className="counts"><span className={`chip ${mandate.data?.status === "active" ? "ok" : "dim"}`}>
+        <div className="counts"><LogoMark state={logoState(mandate.data?.status)} size={24} /><span className={`chip ${mandate.data?.status === "active" ? "ok" : "dim"}`}>
           {mandate.data?.status ? permissionStatus(mandate.data) : mandate.isError ? "Permission status unavailable" : "Checking permission…"}</span>
           <span className="chip dim">Uses version {selection.run?.mandate_version}</span></div>
         {limit !== null && <p className="order-boundary">CHF {limit.toFixed(2)} <span>per order{snapshot?.hard_rules.some((r) => r.field === "authorization.billing_amount_chf" && r.operator === "<" && r.value === limit && !r.period_days) ? " · strictly below this amount" : " maximum"}</span></p>}
         <p className="small">{mandate.data?.status === "active" ? "This permission still allows new simulations. Each checkout must pass its confirmed rules." : "The simulation status and spending permission are tracked separately."}</p>
-        {onPermission && <button className="link" onClick={onPermission}>View permission and controls</button>}
+        {onPermission && <button className="btn ghost" onClick={onPermission}>View permission and controls</button>}
       </section>
       {waiting.length > 0 && <section aria-label="Needs your decision" className="attention-section">
         <h2 className="glabel">Needs your decision · {waiting.length}</h2>
@@ -188,7 +187,7 @@ export function Cockpit({ selection, onPermission, onChat }: { selection: RunSel
       <details className="card context-details simulation-picker"><summary>Simulation controls &amp; history</summary>
         <RunPicker runs={selection.runs} run={selection.run} onSelect={selection.select} names={Object.fromEntries((catalogue.data?.scenarios ?? []).map((s) => [s.scenario_id, s.scenario_name]))} />
         <p className="small">Permission {selection.run?.mandate_id} · Version {selection.run?.mandate_version}. Checkout times follow the scenario data.</p>
-        {onPermission && <button className="link" onClick={onPermission}>Start another simulation</button>}
+        {onPermission && <button className="btn ghost" onClick={onPermission}>Start another simulation</button>}
       </details>
       {open && <PaymentDetail authorizationId={open} onClose={() => setOpen(null)} />}
     </>

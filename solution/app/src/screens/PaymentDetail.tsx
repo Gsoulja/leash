@@ -97,7 +97,7 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
             </details>
           </>
         )}
-        <button type="button" className="link" onClick={onClose}>Close</button>
+        <button type="button" className="btn ghost" onClick={onClose}>Close</button>
       </div>
     </div>
   );

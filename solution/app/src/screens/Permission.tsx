@@ -4,7 +4,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Mandate, type Run, type TightenRequest } from "../api/client";
-import { PermissionSummary, perOrderLimit, permissionStatus } from "../components/PermissionSummary";
+import { PermissionSummary, perOrderLimit, logoState, permissionStatus } from "../components/PermissionSummary";
+import { LogoMark } from "../components/icons";
 
 const chf = (value: number) => `CHF ${value.toFixed(2)}`;
 type Proposal = { mandate: Mandate; change: TightenRequest; title: string };
@@ -35,7 +36,7 @@ export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?
   const all = query.data?.mandates ?? [];
   const m = all.find((x) => x.mandate_id === query.data?.current_mandate_id) ?? all[all.length - 1];
   if (!m) return <section className="card"><p>No permission yet.</p>
-    {onChat && <button className="pill" onClick={onChat}>Set boundaries in chat</button>}</section>;
+    {onChat && <button className="btn primary" onClick={onChat}>Set boundaries in chat</button>}</section>;
 
   const current = perOrderLimit(m.hard_rules);
   const wanted = /^\d+(\.\d{1,2})?$/.test(limit.trim()) ? Number(limit.trim()) : NaN;
@@ -82,18 +83,18 @@ export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?
 
   return <div className="perm">
     <section className="card permission-control" aria-label="Permission status">
-      <div className="sum-row"><strong>{permissionStatus(m)}</strong><span className="chip dim">Version {m.version}</span></div>
+      <div className="sum-row"><span className="status-head"><LogoMark state={logoState(m.status)} size={28} /><strong>{permissionStatus(m)}</strong></span><span className="chip dim">Version {m.version}</span></div>
       <p className="small">{active ? "These boundaries apply to new simulations. Finishing a simulation does not revoke permission." : "Check the permission status before starting another simulation."}</p>
-      {active && (!confirming ? <button className="pill light revoke-control" disabled={busy} ref={revokeButton}
+      {active && <div className="destructive-zone">{!confirming ? <button className="btn destructive revoke-control" disabled={busy} ref={revokeButton}
         onClick={() => { setConfirming(true); setFocusNext("confirm"); }}>Revoke permission</button> : <>
         <p className="small">Stop further spending under this permission? We will show whether the platform confirms the revocation.</p>
-        <button className="pill danger" disabled={busy} ref={confirmButton} onClick={() => run(async () => {
+        <button className="btn destructive" disabled={busy} ref={confirmButton} onClick={() => run(async () => {
           const revoked = await api().revoke(m.mandate_id);
           if (!revoked.revocation?.platform_confirmed) throw new ApiError(202, "unconfirmed", "Viseca hasn't confirmed the revocation yet; the permission may still be active.");
           setProposal(null);
         }, "Revoked. Viseca confirmed: the agent can no longer pay.").finally(() => setConfirming(false))}>Yes, revoke</button>
-        <button className="link" disabled={busy} onClick={() => { setConfirming(false); setFocusNext("revoke"); }}>Keep it</button>
-      </>)}
+        <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setFocusNext("revoke"); }}>Keep it</button>
+      </>}</div>}
     </section>
     <div role="status" aria-live="polite" className="small">{busy ? "Checking with Leash…" : message ?? revocation}</div>
 
@@ -103,11 +104,11 @@ export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?
       <p className="small">Version {proposal.change.expected_version} → {proposal.mandate.version}. Applies only to new simulations. Existing simulations keep their confirmed rules.</p>
       <PermissionSummary review={proposal.mandate.review} expanded />
       {stale && <p role="alert">This permission changed. Cancel and review it again.</p>}
-      <button className="pill" disabled={busy || stale} onClick={() => run(async () => {
+      <button className="btn primary" disabled={busy || stale} onClick={() => run(async () => {
         await api().tighten(proposal.mandate.mandate_id, proposal.change);
         setProposal(null); setLimit("");
       }, "Permission updated. The platform accepted the change for new simulations.")}>Confirm permission change</button>
-      <button className="link" disabled={busy} onClick={() => setProposal(null)}>Cancel change</button>
+      <button className="btn ghost" disabled={busy} onClick={() => setProposal(null)}>Cancel change</button>
     </section>}
 
     {selectedRun && <details className="card context-details">
@@ -135,12 +136,12 @@ export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?
       <label className="k" htmlFor="limit">New limit per order (CHF)</label>
       <input id="limit" className="field" disabled={busy} inputMode="decimal" value={limit} onChange={(e) => { setLimit(e.target.value); setProposal(null); }} aria-describedby="limit-hint" />
       <p id="limit-hint" className="small">{current === null ? "Set a limit per order." : `A limit can only go down from ${chf(current)}.`}</p>
-      <button className="pill" disabled={busy || !lower} onClick={() => preview({ add_hard_rules: [
+      <button className="btn primary" disabled={busy || !lower} onClick={() => preview({ add_hard_rules: [
         { field: "authorization.billing_amount_chf", operator: "<=", value: wanted, currency: "CHF", scope: "purchase" }] },
         `${current === null ? "Set" : `Lower from ${chf(current)} to`} ${chf(wanted)} per order.`)}>Review lower limit</button>
-      {m.uncertainty_policy !== "decline" && <button className="pill light" disabled={busy}
+      {m.uncertainty_policy !== "decline" && <button className="btn secondary" disabled={busy}
         onClick={() => preview({ uncertainty_policy: "decline" }, "Decline uncertain checkouts instead of asking you.")}>Review declining when uncertain</button>}
-      {onChat && <button className="link" onClick={onChat}>Discuss a new permission in chat</button>}
+      {onChat && <button className="btn ghost" onClick={onChat}>Discuss a new permission in chat</button>}
     </section>}
 
   </div>;

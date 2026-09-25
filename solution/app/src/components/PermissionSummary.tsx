@@ -4,6 +4,7 @@
 // prose never becomes consent text. This component only decides the order and the headings — it never
 // writes, shortens or combines a boundary, because what is read out has to be what is enforced.
 import type { HardRule, Mandate } from "../api/client";
+import type { LogoState } from "./icons";
 
 export type ReviewLine = NonNullable<Mandate["review"]>["must_follow"][number];
 
@@ -17,6 +18,11 @@ export function perOrderLimit(rules: HardRule[]): number | null {
     && (r.scope ?? "purchase") === "purchase" && (r.currency ?? "CHF") === "CHF"
     && (r.operator === "<=" || r.operator === "<") && typeof r.value === "number");
   return limits.length ? Math.min(...limits.map((r) => Number(r.value))) : null;
+}
+
+/** The logo's dot is a status: green while a permission is active, red once spending is stopped, grey otherwise. */
+export function logoState(status: Mandate["status"] | undefined): LogoState {
+  return status === "active" ? "active" : status === "revoked" ? "frozen" : "idle";
 }
 
 export function permissionStatus(m: Mandate): string {

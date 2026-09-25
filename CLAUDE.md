@@ -76,7 +76,7 @@ Avoid: a model making approve/decline calls, `float` money, naive datetimes, glo
 
 - **Backend:** Python 3.12 managed with `uv`, FastAPI, Pydantic v2, asyncpg, httpx, Alembic.
 - **Database:** Postgres 17 (Docker Compose for local). `NUMERIC(12,2)` for money, `timestamptz` everywhere, per-card `pg_advisory_xact_lock` around each decision and each customer resolution.
-- **Frontend (planned):** React + TypeScript + Vite, TanStack Query, `EventSource` for asks. Reuse the prototype's design tokens (one-app look). No Next.js, no React Native.
+- **Frontend:** React + TypeScript + Vite, TanStack Query, `EventSource` for asks. Styles follow the Wallet Control visual system in `designPrototype/Visual System.dc.html` (DEC-060); `src/theme.test.ts` pins the palette. No Next.js, no React Native.
 - **Model plan:** the current checkout worker uses regex. Optional Laya shop-text reading is planned in `solution/docs/laya-training-pipeline.html`; permission verification is a separate baseline/evaluation task (LEASH-155). No model may activate permission or approve payment. Model choice, fine-tuning need and verifier release thresholds remain open.
 
 ## Development workflow: TDD
