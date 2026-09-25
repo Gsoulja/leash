@@ -6,6 +6,8 @@ import { api } from "../api/client";
 import { deliveryNote, statusOf } from "./status";
 
 const STATUS: Record<string, string> = { pass: "Passed", fail: "Failed", warn: "Check", info: "Info", integrity: "Check" };
+// What stopped the payment reads first: failed and doubtful rows, then info, then passed ones.
+const RANK: Record<string, number> = { fail: 0, integrity: 1, warn: 2, info: 3, pass: 4 };
 const ENGINE: Record<string, string> = { approve: "Engine: approved", decline: "Engine: declined", step_up: "Engine: asked you" };
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -76,7 +78,7 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
                   <tr><th scope="col">Rule</th><th scope="col">You agreed</th><th scope="col">This payment</th><th scope="col">Status</th></tr>
                 </thead>
                 <tbody>
-                  {p.checks.map((c) => (
+                  {[...p.checks].sort((a, b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3)).map((c) => (
                     <tr key={c.key}>
                       <td>{c.label}</td><td>{c.agreed}</td><td>{c.actual}</td>
                       <td className={`st st-${c.status}`}>{STATUS[c.status] ?? c.status}</td>

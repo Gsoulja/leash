@@ -1,6 +1,6 @@
 # LEASH-178: Payment detail lists checks in fixed engine order, so the row that stopped the payment sits below the passed ones
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P1
 **Type**: bug
 **Estimated Effort**: S
@@ -32,12 +32,12 @@ The one row that caused the ask, "Already bought", is fourth. The customer has t
 The customer and the judges read the failed or doubtful rule first, without scanning the rows that passed. Same information, less effort, at the moment the customer is trying to understand a stopped or timed-out payment.
 
 ## Acceptance Criteria
-- [ ] In the detail sheet, checks with status `fail`, `integrity` or `warn` render before checks with status `pass`; within each group the engine's order is preserved (stable sort).
-- [ ] `info` rows render after the doubt rows and before the passed rows, so the top of the table never contains a "Passed" row while a non-passed row exists.
-- [ ] The sort happens in the app's view layer only. `GET /api/payments/{id}` keeps returning the engine's order, and `evidence`, `sent_to_viseca` and the platform payload are unchanged.
-- [ ] For the payment above, the first row is "Already bought · Buy it once · 1 approved · Check", followed by the four passed rows in their existing order.
-- [ ] A payment whose checks all passed renders exactly as today.
-- [ ] Screen-reader order follows the visual order (no CSS-only reordering).
+- [x] In the detail sheet, checks with status `fail`, `integrity` or `warn` render before checks with status `pass`; within each group the engine's order is preserved (stable sort).
+- [x] `info` rows render after the doubt rows and before the passed rows, so the top of the table never contains a "Passed" row while a non-passed row exists.
+- [x] The sort happens in the app's view layer only. `GET /api/payments/{id}` keeps returning the engine's order, and `evidence`, `sent_to_viseca` and the platform payload are unchanged.
+- [x] For the payment above, the first row is "Already bought · Buy it once · 1 approved · Check", followed by the four passed rows in their existing order.
+- [x] A payment whose checks all passed renders exactly as today.
+- [x] Screen-reader order follows the visual order (no CSS-only reordering).
 
 ## Technical Approach
 `solution/app/src/screens/PaymentDetail.tsx`: before the `p.checks.map(...)` at line 79, derive `ordered` with a stable sort by a status rank (`fail` 0, `integrity` 1, `warn` 2, `info` 3, `pass` 4) and map over that. Keep `STATUS` labels and the untrusted-text container untouched. No engine, API or contract change.
@@ -56,3 +56,15 @@ Write first, in `solution/app/src/screens/PaymentDetail.test.tsx`: `test_renders
 - Changing the engine's check order, reason codes or `customer_message` (`domain/decide.py`, `domain/explain.py`).
 - Reordering anything in the step-up prompt, which already leads with the reasons.
 - Grouping or wording of the rows (LEASH-146 and LEASH-170 own those).
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: `[...p.checks].sort(...)` by rank fail 0, integrity 1, warn 2, info 3, pass 4; `Array.prototype.sort` is stable; the 10-check interleaved test asserts F1 F2 G1 G2 W1 W2 I1 I2 P1 P2.
+- [x] met — criterion 2: `info` ranks between `warn` and `pass`, asserted by the same test; unknown statuses also rank 3, so they never sit below a Passed row.
+- [x] met — criterion 3: the array is copied before sorting; no changes under `solution/engine` or `solution/app/src/api`.
+- [x] met — criterion 4: the PixelHarbor fixture's first row is exactly "Already bought · Buy it once · 1 approved · Check", followed by Price, Known shop, Items, Shop text.
+- [x] met — criterion 5: an all-passed list keeps its order (C, A, B stays C, A, B).
+- [x] met — criterion 6: rows are reordered in the DOM, not with CSS.
+Note: the existing "every check row" test was updated to the new order. The tests use vitest `it` names that describe the same behaviours as the ticket's `test_…` names. App suite: 12 files, 116 tests passing.
+Verdict: moved to review.
