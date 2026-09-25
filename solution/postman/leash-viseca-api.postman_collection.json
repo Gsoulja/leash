@@ -302,6 +302,219 @@
           }
         }
       ]
+    },
+    {
+      "name": "5. Connection check walkthrough (SCEN0101)",
+      "description": "A verified, healthy end-to-end run recorded against the live sandbox on 2026-09-25 (run_id run_d514beb5eb4199c5). Run these in order with Postman's Collection Runner. Confirms why /v1/decision-requests/next?wait=25 returns 204: it only has work after step 3 queues a run, and it goes back to 204 once every event in that run is finalized (step 9). Each POST /v1/scenario-runs call is permanent on this team key -- reset is disabled during judging -- so only re-run this folder when you actually want a new run on the books.",
+      "item": [
+        {
+          "name": "1. POST /v1/mandates (create draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.draft_id) { pm.collectionVariables.set('draft_id', body.draft_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"instruction\": \"Buy one ordinary grocery item for CHF 20 or less from a shop I use regularly. Ask me when uncertain.\",\n  \"hard_rules\": [\n    {\n      \"field\": \"authorization.billing_amount_chf\",\n      \"operator\": \"<=\",\n      \"value\": 20,\n      \"currency\": \"CHF\",\n      \"scope\": \"purchase\"\n    }\n  ],\n  \"uncertainty_policy\": \"ask\",\n  \"guidance\": [],\n  \"open_questions\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/v1/mandates", "host": ["{{base_url}}"], "path": ["v1", "mandates"] }
+          }
+        },
+        {
+          "name": "2. POST /v1/mandates/{draft_id}/confirm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.mandate_id) { pm.collectionVariables.set('mandate_id', body.mandate_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/mandates/{{draft_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "mandates", "{{draft_id}}", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "3. POST /v1/scenario-runs (start SCEN0101 -- this is what queues work for /next)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.run_id) { pm.collectionVariables.set('run_id', body.run_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario_id\": \"SCEN0101\",\n  \"mandate_id\": \"{{mandate_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/v1/scenario-runs", "host": ["{{base_url}}"], "path": ["v1", "scenario-runs"] }
+          }
+        },
+        {
+          "name": "4. GET /v1/decision-requests/next?wait=25 (poll #1 -- expect 200, AU10001, CHF 18 groceries)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  const id = body?.data?.authorization?.authorization_id;",
+                  "  if (id) { pm.collectionVariables.set('authorization_id', id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/decision-requests/next?wait=25",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "decision-requests", "next"],
+              "query": [{ "key": "wait", "value": "25" }]
+            }
+          }
+        },
+        {
+          "name": "5. POST .../decision -> step_up (amount/item pass, shop familiarity is uncertain)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authorization_id\": \"{{authorization_id}}\",\n  \"decision\": \"step_up\",\n  \"reason_codes\": [\"shop_familiarity_uncertain\"],\n  \"customer_message\": \"Amount and item look fine, but shop familiarity cannot be confirmed, so per the instruction (ask when uncertain) this is routed to the customer.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/authorizations/{{authorization_id}}/decision",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "authorizations", "{{authorization_id}}", "decision"]
+            }
+          }
+        },
+        {
+          "name": "6. POST .../resolve -> approve (simulated customer answers the step_up)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"customer_message\": \"The customer confirmed the CHF 18 grocery order.\",\n  \"evidence\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/authorizations/{{authorization_id}}/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "authorizations", "{{authorization_id}}", "resolve"]
+            }
+          }
+        },
+        {
+          "name": "7. GET /v1/decision-requests/next?wait=25 (poll #2 -- expect 200, AU10002, CHF 38.90, two lines)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  const id = body?.data?.authorization?.authorization_id;",
+                  "  if (id) { pm.collectionVariables.set('authorization_id', id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/decision-requests/next?wait=25",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "decision-requests", "next"],
+              "query": [{ "key": "wait", "value": "25" }]
+            }
+          }
+        },
+        {
+          "name": "8. POST .../decision -> decline (over the CHF 20 limit and more than one item)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authorization_id\": \"{{authorization_id}}\",\n  \"decision\": \"decline\",\n  \"reason_codes\": [\"over_limit\", \"item_count_exceeded\"],\n  \"customer_message\": \"CHF 38.90 exceeds the CHF 20 limit and this basket has two lines, not one ordinary grocery item.\",\n  \"evidence\": [\n    { \"field\": \"authorization.billing_amount_chf\", \"value\": 38.9 },\n    { \"field\": \"authorization.items.length\", \"value\": 2 }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/authorizations/{{authorization_id}}/decision",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "authorizations", "{{authorization_id}}", "decision"]
+            },
+            "description": "If you take longer than the 8s deadline_at, the watchdog auto-declines first and this call returns the saved verdict with idempotent_replay: true instead of an error -- that is expected idempotent behavior, not a bug."
+          }
+        },
+        {
+          "name": "9. GET /v1/scenario-runs/{run_id} (confirm status: completed, 2/2 finalized)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/scenario-runs/{{run_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "scenario-runs", "{{run_id}}"]
+            }
+          }
+        },
+        {
+          "name": "10. GET /v1/decision-requests/next?wait=3 (confirm clean 204 -- no work left, not an error)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/decision-requests/next?wait=3",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "decision-requests", "next"],
+              "query": [{ "key": "wait", "value": "3" }]
+            }
+          }
+        }
+      ]
     }
   ]
 }
