@@ -96,7 +96,7 @@ export function Permission({ selectedRun, onChat }: { selectedRun?: Run; onChat?
         <button className="btn ghost" disabled={busy} onClick={() => { setConfirming(false); setFocusNext("revoke"); }}>Keep it</button>
       </>}</div>}
     </section>
-    <div role="status" aria-live="polite" className="small">{busy ? "Checking with Leash…" : message ?? revocation}</div>
+    <div role="status" aria-live="polite" className="small">{busy ? "Checking with Wallet Control…" : message ?? revocation}</div>
 
     {proposal && <section className="card change-review" aria-label="Review permission change" tabIndex={-1} ref={reviewPanel}>
       <span className="chip warn">Not confirmed</span><h2>Review permission change</h2>

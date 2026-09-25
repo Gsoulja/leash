@@ -159,10 +159,10 @@ describe("Agent conversation (LEASH-145)", () => {
     expect(screen.queryByText(/leash\.purchase\.max_count/)).not.toBeInTheDocument();
   });
 
-  it("opens with a greeting and one composer, and says what Leash is not", async () => {
+  it("opens with a greeting and one composer, and says what Wallet Control is not", async () => {
     stubFetch({});
     render(wrap(<Agent />));
-    const greeting = screen.getByText(/I'm Leash, your permission assistant/);
+    const greeting = screen.getByText(/I'm your Wallet Control, your permission assistant/);
     expect(greeting).toBeInTheDocument();
     expect(greeting).toHaveTextContent(/don't search or buy anything myself/);  // not the shopping agent
     expect(screen.getByLabelText("What may the agent buy?")).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe("Agent conversation (LEASH-145)", () => {
     expect(screen.queryByRole("list", { name: "Rules as I read them" })).not.toBeInTheDocument();
   });
 
-  it("shows the customer's words as their own message, then how Leash read them", async () => {
+  it("shows the customer's words as their own message, then how Wallet Control read them", async () => {
     const calls = await start(draft());
     expect(posts(calls, "/api/permission/drafts")[0].body).toEqual({ text: INSTRUCTION });
     expect(within(screen.getByRole("log")).getByText(INSTRUCTION)).toBeInTheDocument();
@@ -245,7 +245,7 @@ describe("Agent conversation (LEASH-145)", () => {
     render(wrap(<Agent />));
     await screen.findByRole("list", { name: "Rules as I read them" });
     expect(within(screen.getByRole("log")).getAllByText(INSTRUCTION)).toHaveLength(1);
-    expect(screen.getAllByText(/I'm Leash, your permission assistant/)).toHaveLength(1);
+    expect(screen.getAllByText(/I'm your Wallet Control, your permission assistant/)).toHaveLength(1);
   });
 
   it("does not show a remembered turn the service has no record of", async () => {
@@ -448,7 +448,7 @@ describe("Agent conversation (LEASH-145)", () => {
     // Reported live: "the chat is not well organized, all my messages are together". The draft is
     // produced by the turn above it, so an acknowledgement (DEC-059) recorded afterwards must render
     // after the interpretation it replied to — not above it, which read as the customer's messages
-    // bunched together with Leash answering at the end.
+    // bunched together with Wallet Control answering at the end.
     const reply = "I didn't find a new boundary in that, so your draft is unchanged.";
     const same = draft({ messages: [{ text: "yes", reply, revision: 1, context: {} }] });
     await start(draft(), { "POST /api/permission/drafts/LD-1/turns": [
@@ -661,7 +661,7 @@ describe("the permission review (LEASH-146)", () => {
     expect(open.textContent).toContain("two orders at the same shop");
   });
 
-  it("says what happens next in a message from Leash once confirmed", async () => {
+  it("says what happens next in a message from Wallet Control once confirmed", async () => {
     const { card } = await review();
     fireEvent.click(within(card).getByRole("button", { name: "Confirm this permission" }));
     const said = await screen.findByText(/Version 1 is active/);

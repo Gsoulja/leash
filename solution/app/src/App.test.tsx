@@ -27,23 +27,29 @@ describe("tab bar", () => {
     expect(screen.getByRole("heading", { name: "Permission" })).toBeInTheDocument();
     screen.getByRole("button", { name: "Agent" }).focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("heading", { name: "Leash" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Wallet Control agent" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "App sections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Engine inspector" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Back to Cockpit" }));
     expect(screen.getByRole("button", { name: "Cockpit" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("puts the logo mark in front of the Cockpit heading", () => {
+    render(<App />);
+    const heading = screen.getByRole("heading", { name: "Cockpit" });
+    expect(heading.firstElementChild).toHaveClass("logo-mark");
+  });
+
   it("renders inside a labelled phone frame", () => {
     render(<App />);
-    expect(screen.getByRole("region", { name: "Leash app" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Wallet Control app" })).toBeInTheDocument();
   });
 
   it("keeps the engine inspector beside the chat on desktop", async () => {
     vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
     render(<App />);
     await userEvent.click(screen.getByRole("button", { name: "Agent" }));
-    expect(screen.getByRole("heading", { name: "Leash" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Wallet Control agent" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Engine inspector" })).toBeInTheDocument();
   });
 });
