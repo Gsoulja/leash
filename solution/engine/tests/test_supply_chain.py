@@ -119,8 +119,18 @@ def test_the_lockfiles_decide_what_is_installed(ci):
 def test_the_image_is_built_once_and_promoted_by_digest(ci):
     sign = " ".join(s.get("run", "") for s in ci["jobs"]["release"]["steps"])
     assert "cosign sign" in sign and "steps.push.outputs.digest" in sign, "sign the digest, not a tag"
-    provenance = _step(ci, "release", "actions/attest-build-provenance")
-    assert provenance["with"]["subject-digest"] == "${{ steps.push.outputs.digest }}"
+
+
+def test_provenance_is_a_cosign_attestation_on_the_pushed_digest(ci):
+    """LEASH-196: GitHub's attestation store refuses user-owned private repositories, so provenance
+    travels with the image in the registry instead, where `cosign verify-attestation` finds it."""
+    uses = [str(s.get("uses", "")) for s in ci["jobs"]["release"]["steps"]]
+    assert not any(u.startswith("actions/attest") for u in uses), \
+        "GitHub attestations fail on a private user-owned repository"
+    step = next(s for s in ci["jobs"]["release"]["steps"] if "cosign attest" in s.get("run", ""))
+    assert "--type slsaprovenance1" in step["run"]
+    assert "steps.push.outputs.digest" in str(step), "attest the digest, not a tag"
+    assert "attestations" not in ci["jobs"]["release"]["permissions"], "no longer needed; least privilege"
 
 
 def test_the_release_notes_name_the_commit_the_schema_and_the_evidence(ci):

@@ -28,6 +28,7 @@ Keeps defect tracking on the same board as planned work, joined by ID like every
 - [ ] LEASH-177 (174-T3): Instruction compiler reads zero rules from "buy me nike running shoes size 44 up to 40 CHF" · M · P1
 - [ ] LEASH-178 (174-T4): Payment detail lists checks in fixed engine order, so the row that stopped the payment sits below the passed ones · S · P1
 - [ ] LEASH-195 (174-T5): Customer app doesn't follow the Hi-Fi v4 design handoff — fixed by completing LEASH-179 · S · P1
+- [ ] LEASH-196 (174-T6): Release job fails to store build provenance — GitHub attestations are refused for user-owned private repos · S · P0
 
 ## Technical Approach
 No production code changes from this ticket itself. Each child ticket follows the normal TDD workflow in `CLAUDE.md`: a failing test that reproduces the bug, then the fix.
