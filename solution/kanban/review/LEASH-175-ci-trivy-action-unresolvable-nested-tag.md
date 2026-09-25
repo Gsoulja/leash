@@ -1,6 +1,6 @@
 # LEASH-175: CI image-scan job fails to resolve a nested action tag
 
-**Status**: BACKLOG
+**Status**: REVIEW
 **Priority**: P0
 **Type**: bug
 **Estimated Effort**: S
@@ -11,7 +11,7 @@
 **Task ID**: 174-T1
 **Blocked by**: none
 **Blocks**: LEASH-141
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 The `image` job in `.github/workflows/ci.yml` fails before Trivy ever runs:
@@ -30,15 +30,15 @@ This is the same class of problem LEASH-141 pinned every top-level action agains
 The `image` job feeds the container-scanning gate, which `release` requires (LEASH-141, AC3). While this is broken, no build can pass CI, so nothing can be verified as safe to release.
 
 ## Acceptance Criteria
-- [ ] `.github/workflows/ci.yml` pins `aquasecurity/trivy-action` to `ed142fd0673e97e23eac54620cfb913e5ce36c25` (`v0.36.0`), with the version in a trailing comment per the existing convention.
+- [x] `.github/workflows/ci.yml` pins `aquasecurity/trivy-action` to `ed142fd0673e97e23eac54620cfb913e5ce36c25` (`v0.36.0`), with the version in a trailing comment per the existing convention.
 - [ ] A real GitHub Actions run reaches and completes the Trivy scan step in the `image` job (fails only on scan findings, never on action resolution).
-- [ ] `test_supply_chain.py`'s action-pinning tests still pass with the updated SHA.
+- [x] `test_supply_chain.py`'s action-pinning tests still pass with the updated SHA.
 
 ## Technical Approach
 One-line pin bump in `.github/workflows/ci.yml`. No change to `domain/`, `application/` or any pure code — this is CI/supply-chain wiring only (`adapters`-adjacent, outside the hexagon).
 
 ### Dependencies
-- Blocks LEASH-141 (its AC5–AC7 need a real green CI run, which this failure currently prevents).
+- Blocks LEASH-141 (this failure prevents the real green CI run its AC5–AC7 call for).
 
 ## Testing Requirements
 `uv run pytest solution/engine/tests/test_supply_chain.py -x -q` locally, then push and confirm in the Actions run that the `image` job's Trivy step executes (not just that the job is queued).
@@ -48,3 +48,11 @@ One-line pin bump in `.github/workflows/ci.yml`. No change to `domain/`, `applic
 
 ## Out of scope
 - Re-auditing every other action's nested dependencies for the same floating-tag pattern (worth a follow-up ticket if this recurs, but not needed to close this one).
+
+## Review log
+
+### 2026-09-25 — independent agent review
+- [x] met — criterion 1: `ci.yml:136` pins `trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0`; `git ls-remote` confirms `refs/tags/v0.36.0^{}` peels to that commit, its `action.yaml` still defines `image-ref`, `severity`, `exit-code`, `ignore-unfixed`, and pins `setup-trivy@3fb12ec… # v0.2.6` by SHA.
+- [?] unverifiable — criterion 2: the change is not pushed, so no Actions run exists. Evidence needed: a run URL where the `image` job's "container scan" step executes and completes.
+- [x] met — criterion 3: `uv run pytest tests/test_supply_chain.py -q` → 23 passed.
+Verdict: moved to review; criterion 2 is left for the human gate (needs a push and a CI run).

@@ -133,7 +133,7 @@ jobs:
           load: true
           provenance: false                  # provenance is attached at release, to the pushed digest
       - name: container scan
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: leash-engine:${{ github.sha }}
           severity: HIGH,CRITICAL
