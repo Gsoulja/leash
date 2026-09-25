@@ -79,6 +79,9 @@ jobs:
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read                    # gitleaks lists a pull request's commits (LEASH-197)
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -133,7 +136,7 @@ jobs:
           load: true
           provenance: false                  # provenance is attached at release, to the pushed digest
       - name: container scan
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: leash-engine:${{ github.sha }}
           severity: HIGH,CRITICAL
@@ -161,7 +164,6 @@ jobs:
       contents: write
       packages: write
       id-token: write                        # keyless signing and provenance
-      attestations: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: the registry only accepts a lowercase name; github.repository is not one
@@ -182,15 +184,29 @@ jobs:
           build-args: APP_REVISION=${{ github.sha }}
           tags: ${{ steps.name.outputs.image }}:${{ github.sha }}
           push: true
-      - name: provenance, bound to the pushed digest
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
-        with:
-          subject-name: ${{ steps.name.outputs.image }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: sign
         run: cosign sign --yes ${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}
+      # GitHub's attestation store refuses user-owned private repositories (LEASH-196), so the SLSA
+      # provenance is a cosign attestation stored in the registry beside the signature.
+      - name: provenance, bound to the pushed digest
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}
+          WORKFLOW: ${{ github.server_url }}/${{ github.workflow_ref }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}
+        run: |
+          jq -n --arg ref "$GITHUB_REF" --arg repo "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+                --arg sha "$GITHUB_SHA" --arg event "$GITHUB_EVENT_NAME" \
+                --arg builder "$WORKFLOW" --arg run "$RUN" '{
+            buildDefinition: {
+              buildType: "https://actions.github.io/buildtypes/workflow/v1",
+              externalParameters: {workflow: {ref: $ref, repository: $repo, path: ".github/workflows/ci.yml"}},
+              internalParameters: {github: {event_name: $event, runner_environment: "github-hosted"}},
+              resolvedDependencies: [{uri: "git+\($repo)@\($ref)", digest: {gitCommit: $sha}}]
+            },
+            runDetails: {builder: {id: $builder}, metadata: {invocationId: $run}}
+          }' > provenance.json
+          cosign attest --yes --type slsaprovenance1 --predicate provenance.json "$IMAGE"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: sbom

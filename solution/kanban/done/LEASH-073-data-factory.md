@@ -11,7 +11,7 @@
 **Task ID**: 006-T4
 **Blocked by**: LEASH-070
 **Blocks**: LEASH-075
-**Updated**: 2026-09-24
+**Updated**: 2026-09-25
 
 ## Description
 Generate labelled product-text lines from items.csv templates: benign lines, planted injections by family, position and language, hard negatives with trigger words.

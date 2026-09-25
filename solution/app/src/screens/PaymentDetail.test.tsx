@@ -52,9 +52,9 @@ describe("PaymentDetail", () => {
     const table = await screen.findByRole("table", { name: "What you agreed vs this payment" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows.map((r) => within(r).getAllByRole("cell").map((c) => c.textContent))).toEqual([
-      ["Price", "≤ CHF 400.00 per order", "CHF 289.00", "Passed"],
-      ["Repeat order", "Each order once", "Same as the 11:40 order (approved)", "Check"],
       ["Known shop", "Paid there before", "Never paid here", "Failed"],
+      ["Repeat order", "Each order once", "Same as the 11:40 order (approved)", "Check"],
+      ["Price", "≤ CHF 400.00 per order", "CHF 289.00", "Passed"],
     ]);
   });
 
@@ -113,6 +113,45 @@ describe("PaymentDetail review fixes", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(opener).toHaveFocus();
+  });
+});
+
+describe("PaymentDetail check order", () => {
+  type Check = Detail["checks"][number];
+  const check = (key: string, label: string, status: Check["status"]): Check =>
+    ({ key, label, status, agreed: `${label} agreed`, actual: `${label} actual`, detail: "", reason_code: null });
+  const labels = async () => {
+    const table = await screen.findByRole("table", { name: "What you agreed vs this payment" });
+    return within(table).getAllByRole("row").slice(1).map((r) => within(r).getAllByRole("cell")[0].textContent);
+  };
+
+  it("renders doubt and failed checks before passed ones", async () => {
+    // The timed-out PixelHarbor ask: the engine saved "Already bought" fourth, behind three passed rows.
+    setup(detail({ checks: [
+      { key: "price", label: "Price", status: "pass", agreed: "≤ CHF 400.00", actual: "CHF 399.90", detail: "", reason_code: null },
+      { key: "known", label: "Known shop", status: "pass", agreed: "Paid there before", actual: "7 earlier payments", detail: "", reason_code: null },
+      { key: "items", label: "Items", status: "pass", agreed: "Only the requested item, nothing extra", actual: "27-inch computer monitor", detail: "", reason_code: null },
+      { key: "bought", label: "Already bought", status: "warn", agreed: "Buy it once", actual: "1 approved", detail: "", reason_code: "already_purchased" },
+      { key: "text", label: "Shop text", status: "pass", agreed: "Data only, never instructions", actual: "No instructions found", detail: "", reason_code: null },
+    ] }));
+    const table = await screen.findByRole("table", { name: "What you agreed vs this payment" });
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(within(rows[0]).getAllByRole("cell").map((c) => c.textContent)).toEqual(["Already bought", "Buy it once", "1 approved", "Check"]);
+    expect(await labels()).toEqual(["Already bought", "Price", "Known shop", "Items", "Shop text"]);
+  });
+
+  it("keeps engine order inside each status group, with info between doubts and passes", async () => {
+    setup(detail({ checks: [
+      check("p1", "P1", "pass"), check("i1", "I1", "info"), check("w1", "W1", "warn"), check("f1", "F1", "fail"),
+      check("p2", "P2", "pass"), check("g1", "G1", "integrity"), check("w2", "W2", "warn"), check("f2", "F2", "fail"),
+      check("i2", "I2", "info"), check("g2", "G2", "integrity"),
+    ] }));
+    expect(await labels()).toEqual(["F1", "F2", "G1", "G2", "W1", "W2", "I1", "I2", "P1", "P2"]);
+  });
+
+  it("all passed checks keep their order", async () => {
+    setup(detail({ checks: [check("c", "C", "pass"), check("a", "A", "pass"), check("b", "B", "pass")] }));
+    expect(await labels()).toEqual(["C", "A", "B"]);
   });
 });
 
