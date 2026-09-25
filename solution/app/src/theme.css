@@ -1,14 +1,25 @@
-/* Design tokens ported from solution/prototype/index.html (DEC-021); src/theme.test.ts keeps them equal. */
+/* Design tokens: the phone follows the Hi-Fi v4 handoff (DEC-044, designPrototype/README.md); the inspector keeps solution/prototype/index.html's. src/theme.test.ts keeps both equal. */
 :root{
   --page:#E7E9EE; --panel:#FFFFFF; --ink:#15171C; --muted:#5F6573; --line:#D6DAE2; --accent:#1463F3; --accent-soft:#E6EEFE; --code:#EEF0F4;
   --ok:#1C7F4C; --ok-soft:#E2F3E9; --warn:#A35E00; --warn-soft:#FCEFD9; --bad:#BD3328; --bad-soft:#FBE6E3; --dim:#8A909C;
-  /* the phone always renders the light app */
-  --a-bg:#F2F2F6; --a-card:#FFFFFF; --a-ink:#111216; --a-muted:#767B86; --a-line:#E4E5EA; --a-blue:#1463F3;
-  --a-ok:#1E8E55; --a-ok-soft:#E3F5EA; --a-warn:#B06A00; --a-warn-soft:#FDF1DC; --a-bad:#C8372D; --a-bad-soft:#FCE8E6;
-  --sans:"Figtree",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  /* additions: text variants that meet WCAG AA (4.5:1) where the prototype colours are used as text */
-  --a-muted-text:#696D77; --a-ok-text:#1A7B49; --a-warn-text:#9C5E00; --a-bad-text:#C2352B;
+  /* Hi-Fi v4 handoff colours (DEC-044). Green = allowed, violet = your turn, red = stopped; the three are exclusive. */
+  --hf-allowed:#2E7D45; --hf-allowed-tint:#E6F2E8; --hf-allowed-ink:#1F5C33;
+  --hf-stopped:#C0203A; --hf-stopped-tint:#F9E9EB; --hf-stopped-ink:#8E1729;
+  --hf-your-turn:#8A1FA8; --hf-your-turn-tint:#F3E6F7; --hf-your-turn-ink:#6A1783;
+  --hf-agent-tint:#EDEBF8; --hf-agent-ink:#3D3478;
+  --hf-ink:#14151A; --hf-muted:#7C7C74; --hf-line:#DCDBD5; --hf-divider:#EFEEEA; --hf-canvas:#F4F4F2; --hf-on-dark:#7BC48F;
+  /* the phone always renders the light app; its names point at the handoff (primary actions are ink-filled) */
+  --a-bg:var(--hf-canvas); --a-card:#FFFFFF; --a-ink:var(--hf-ink); --a-muted:var(--hf-muted); --a-line:var(--hf-line); --a-blue:var(--hf-ink);
+  --a-ok:var(--hf-allowed); --a-ok-soft:var(--hf-allowed-tint); --a-warn:var(--hf-your-turn); --a-warn-soft:var(--hf-your-turn-tint);
+  --a-bad:var(--hf-stopped); --a-bad-soft:var(--hf-stopped-tint);
+  --sans:"Inter",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* handoff type scale (DEC-044); mono is for identifiers and API sources only */
+  --fs-amount:28px; --fs-greeting:22px; --fs-title:19px; --fs-body:14px; --fs-body-sm:13px; --fs-chip:12px;
+  --fs-overline:11px; --ls-overline:.07em; --fs-mono:10px;
+  /* additions: text variants that meet WCAG AA (4.5:1) where a handoff colour is used as text (#7C7C74 is 3.8:1 on canvas) */
+  --hf-muted-text:#6B6B64;
+  --a-muted-text:var(--hf-muted-text); --a-ok-text:var(--hf-allowed-ink); --a-warn-text:var(--hf-your-turn-ink); --a-bad-text:var(--hf-stopped-ink);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -39,28 +50,34 @@ button{cursor:pointer}
 .phone{width:100%;max-width:390px;height:812px;margin:0 auto;background:#0B0C0E;border-radius:54px;padding:10px;box-shadow:0 30px 60px -30px rgba(10,20,40,.45)}
 .screen{position:relative;height:100%;border-radius:44px;overflow:hidden;background:var(--a-bg);color:var(--a-ink);display:flex;flex-direction:column;font-family:var(--sans)}
 @media (max-width:480px){.phone{height:760px;border-radius:40px;padding:6px}.screen{border-radius:34px}}
-.sbar{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:14px;font-weight:700}
-.sbar .island{width:110px;height:30px;border-radius:20px;background:#0B0C0E}
-.view{flex:1;overflow-y:auto;padding:6px 18px 24px;display:flex;flex-direction:column;gap:14px}
-.view h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:8px 0 0}
+/* focus inside the phone: the handoff's 3px violet ring at 2px. Full-bleed surfaces ring inward, because
+   .screen clips anything outside them (.prompt fills the screen, .sheet spans it edge to edge). */
+.screen :focus-visible{outline:3px solid var(--hf-your-turn);outline-offset:2px}
+.screen .sheet:focus-visible,.screen .prompt:focus-visible{outline-offset:-5px}
+.sbar{height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:600;color:var(--a-ink)}
+.sbar .sig{font-weight:500}
+/* a grid with max-content rows, as in the handoff: scrolled cards keep their natural height instead of squashing */
+.view{flex:1;min-height:0;overflow-y:auto;padding:4px 18px 20px;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;align-content:start;gap:16px}
+.view > .link{justify-self:center}
+.view h1{font-size:var(--fs-title);font-weight:700;letter-spacing:-.01em;margin:8px 0 0}
 .view .empty{color:var(--a-muted-text)}
 
 /* tab bar: inactive labels use the accessible muted text (the prototype's #9A9EA8 is 2.7:1 on white) */
-.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--a-line);background:rgba(255,255,255,.92);padding:8px 10px 22px}
-.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--a-muted-text);position:relative;padding:4px 0;border-radius:10px}
-.tabs button[aria-current="page"]{color:var(--a-ink)}
-.tabs button:focus-visible{outline:2px solid var(--a-blue);outline-offset:0}
-.tabs svg{width:24px;height:24px}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;min-height:64px;border-top:1px solid var(--hf-divider);background:var(--a-card);padding:0 8px}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:48px;font-size:10px;font-weight:500;color:var(--a-muted-text);position:relative;padding:4px 0;border-radius:10px}
+.tabs button[aria-current="page"]{color:var(--a-ink);font-weight:600}
+.tabs svg{width:21px;height:21px}
 
 /* cockpit (ported from the prototype; text colours use the accessible -text variants) */
 .card{background:var(--a-card);border-radius:18px;padding:16px}
 .sum-row{display:flex;justify-content:space-between;gap:12px}
 .sum-row .k{font-size:12.5px;color:var(--a-muted-text)}
 .sum-row .k.right{text-align:right}
-.sum-row .v{font-size:26px;font-weight:800;letter-spacing:-.02em}
-.sum-row .v2{font-size:17px;font-weight:700;text-align:right}
-.bar{height:10px;border-radius:5px;background:#E6E7EC;overflow:hidden;margin-top:12px}
-.bar span{display:block;height:100%;background:var(--a-blue);border-radius:5px;transition:width .4s}
+.sum-row .v{font-size:var(--fs-amount);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.sum-row .v2{font-size:17px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+/* spending bar in the semantic hues: green while within the limit, red once it is used up (.full) */
+.bar{height:10px;border-radius:5px;background:var(--hf-divider);overflow:hidden;margin-top:12px}
+.bar span{display:block;height:100%;background:var(--hf-allowed);border-radius:5px;transition:width .4s}
 .bar.full span{background:var(--a-bad)}
 .counts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
@@ -69,24 +86,115 @@ button{cursor:pointer}
 .chip.bad{background:var(--a-bad-soft);color:var(--a-bad-text)}
 .chip.dim{background:#ECEDF1;color:#5B606B}
 .chip.off{background:transparent;color:#5B606B;box-shadow:inset 0 0 0 1px #9A9EA8}
+/* handoff primitives (LEASH-184, DEC-044): components/ui/. Tokens only; every tone also carries words. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;border:1.5px solid transparent;font-weight:600;font-size:var(--fs-body)}
+.btn-decision{min-height:48px;border-radius:14px;font-size:15px}
+.btn-primary{background:var(--hf-ink);color:#fff}
+.btn-secondary{background:var(--a-card);color:var(--hf-ink);border-color:var(--hf-ink)}
+.btn-destructive{background:var(--a-card);color:var(--hf-stopped);border-color:var(--hf-stopped)}
+.btn-destructive-fill{background:var(--hf-stopped);color:#fff}
+.btn-approve{background:var(--hf-allowed);color:#fff}
+.btn-attention{background:var(--hf-your-turn);color:#fff}
+.btn:disabled{background:var(--hf-line);color:var(--hf-muted-text);border-color:transparent;cursor:not-allowed}
+.tile{flex:1;border-radius:11px;padding:9px}
+.tile-over{font-size:var(--fs-overline);font-weight:600;letter-spacing:var(--ls-overline);text-transform:uppercase}
+.tile-amt{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;color:var(--hf-ink)}
+.tile-allowed{background:var(--hf-allowed-tint)} .tile-allowed .tile-over{color:var(--hf-allowed-ink)}
+.tile-attention{background:var(--hf-your-turn-tint)} .tile-attention .tile-over{color:var(--hf-your-turn-ink)}
+.tile-stopped{background:var(--hf-stopped-tint)} .tile-stopped .tile-over{color:var(--hf-stopped-ink)}
+.badge{display:inline-block;border-radius:12px;padding:3px 9px;font-size:var(--fs-overline);font-weight:600;letter-spacing:var(--ls-overline)}
+.badge-draft{background:var(--hf-divider);color:var(--hf-muted-text)}
+.badge-active{background:var(--hf-allowed-tint);color:var(--hf-allowed-ink)}
+.badge-revoked{background:var(--hf-stopped-tint);color:var(--hf-stopped-ink)}
+.chip.allowed{background:var(--hf-allowed-tint);color:var(--hf-allowed-ink)}
+.chip.attention{background:var(--hf-your-turn-tint);color:var(--hf-your-turn-ink)}
+.chip.stopped{background:var(--hf-stopped-tint);color:var(--hf-stopped-ink)}
+.chip.agent{background:var(--hf-agent-tint);color:var(--hf-agent-ink);letter-spacing:var(--ls-overline)}
+.chip.neutral{background:var(--hf-divider);color:var(--hf-muted-text)}
+/* chat primitives (LEASH-189, handoff V4): components/chat/ */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.transcript{display:grid;grid-auto-rows:max-content;align-content:start;gap:9px;overflow-y:auto;min-height:0;padding:14px 0 10px}
+.turn{display:flex;flex-direction:column;min-width:0}
+.bubble{max-width:82%;padding:10px 13px;font-size:var(--fs-body-sm);line-height:1.5;overflow-wrap:anywhere}
+.bubble-assistant{align-self:flex-start;background:var(--a-card);color:var(--hf-ink);border-radius:18px 18px 18px 6px}
+.bubble-customer{align-self:flex-end;max-width:80%;background:var(--hf-ink);color:#fff;border-radius:18px 18px 6px 18px}
+.rule-chip{align-self:flex-start;display:flex;align-items:center;gap:8px;border-radius:12px;padding:7px 11px;max-width:86%;animation:chip-in .25s ease-out}
+.rule-chip svg{width:16px;height:16px;flex:none}
+.rule-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rule-over{font-size:9.5px;font-weight:600;letter-spacing:.06em}
+.rule-value{font-size:12.5px;font-weight:600;color:var(--hf-ink);overflow-wrap:anywhere}
+.rule-chip.allowed{background:var(--hf-allowed-tint);color:var(--hf-allowed-ink)}
+.rule-chip.attention{background:var(--hf-your-turn-tint);color:var(--hf-your-turn-ink)}
+.rule-chip.stopped{background:var(--hf-stopped-tint);color:var(--hf-stopped-ink)}
+.rule-chip.neutral{background:var(--hf-divider);color:var(--hf-muted-text)}
+.rule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rule-list li{display:flex}
+.rule-decision{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--a-card);color:var(--hf-muted-text)}
+.question-turn{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.question-turn .composer{align-self:stretch;border-top:0;border-radius:16px}
+.bubble.refused{background:var(--hf-stopped-tint);color:var(--hf-stopped-ink)}
+.perm.chat .transcript{overflow:visible;padding-top:0}
+.perm.chat > .composer{border-radius:16px;border-top:0}
+.summary-card{align-self:stretch;background:var(--a-card);border:1.5px solid var(--hf-ink);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.exact-rules summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--hf-ink);min-height:44px;display:flex;align-items:center}
+.reply svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.chat-head{display:flex;align-items:center;gap:10px}
+.chat-name{font-size:14px;font-weight:600;color:var(--hf-ink)}
+.chat-status{font-size:11px;color:var(--a-muted-text)}
+.chat-status.active{color:var(--hf-allowed-ink)} .chat-status.revoked{color:var(--hf-stopped-ink)}
+.mandate-bar{border-radius:12px;background:var(--hf-divider)}
+.mandate-bar.active{background:var(--hf-allowed-tint)}
+.mandate-bar button{width:100%;min-height:44px;display:flex;justify-content:space-between;align-items:center;border:0;background:none;padding:0 12px;font-size:12px;font-weight:600;color:var(--hf-ink)}
+.mandate-bar ul{margin:0;padding:0 12px 10px 28px;font-size:12px;color:var(--hf-ink);display:flex;flex-direction:column;gap:4px}
+.consent .composer{border-top:0;border-radius:16px}
+@keyframes chip-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.rule-chip{animation:none}}
+.system-chip{align-self:center;display:flex;align-items:center;gap:7px;border-radius:14px;padding:6px 12px;font-size:10.5px;font-weight:600;text-align:center;max-width:92%}
+.system-chip svg{width:12px;height:12px;flex:none}
+.system-chip.allowed{background:var(--hf-allowed-tint);color:var(--hf-allowed-ink)}
+.system-chip.stopped{background:var(--hf-stopped-tint);color:var(--hf-stopped-ink)}
+.typing{justify-self:start;background:var(--a-card);border-radius:18px 18px 18px 6px;padding:12px 14px;display:flex;gap:4px}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--hf-muted)}
+.typing span:nth-child(2){opacity:.6} .typing span:nth-child(3){opacity:.35}
+.composer{background:var(--a-card);border-top:1px solid var(--hf-divider);padding:10px 12px 14px;display:flex;flex-direction:column;gap:9px}
+.replies{display:flex;flex-wrap:wrap;gap:7px}
+.reply{min-height:44px;border-radius:22px;border:1.5px solid var(--hf-ink);background:var(--a-card);color:var(--hf-ink);padding:0 14px;font-size:var(--fs-chip);font-weight:600}
+.reply.primary{background:var(--hf-ink);color:#fff}
+.reply:disabled{border-color:var(--hf-line);color:var(--hf-muted-text);background:var(--a-card)}
+.compose-row{display:flex;align-items:center;gap:8px}
+.compose-field{flex:1;min-width:0;height:44px;border-radius:22px;border:1px solid var(--hf-line);background:var(--hf-canvas);padding:0 15px;font-size:16px}
+.send{width:44px;height:44px;border-radius:50%;border:0;background:var(--hf-ink);color:#fff;display:grid;place-items:center;flex:none}
+.send svg{width:20px;height:20px}
+.send:disabled{background:var(--hf-line);color:var(--hf-muted-text);cursor:not-allowed}
 .glabel{font-size:13px;font-weight:700;color:var(--a-muted-text);margin:6px 4px 0}
-.list{background:var(--a-card);border-radius:18px;padding:4px 0}
+.list{background:var(--a-card);border-radius:16px;padding:4px 0}
 .row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;border:0;background:none;text-align:left;padding:10px 14px}
 .row + .row{border-top:1px solid var(--a-line)}
-.row:focus-visible{outline:2px solid var(--a-blue);outline-offset:-2px;border-radius:12px}
-.ico{width:40px;height:40px;border-radius:50%;background:#ECEDF1}
+.row:focus-visible{border-radius:12px}
+.ico{width:40px;height:40px;border-radius:50%;background:var(--hf-divider);color:var(--hf-ink);display:grid;place-items:center}
+.ico svg{width:20px;height:20px}
 .rmain{min-width:0}
 .rname{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rname .chip{font-size:9.5px;font-weight:600;padding:2px 6px;vertical-align:2px}
+/* a long merchant name truncates, but never hides the AGENT tag behind its ellipsis (found in LEASH-194) */
+.row .rname{display:flex;align-items:center;gap:6px;overflow:visible}
+.row .rname-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .rname .chip{flex:none}  /* handoff: 8.5px; 9.5 kept for legibility */
 .rsub{font-size:12.5px;color:var(--a-muted-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ramt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:700;font-size:14px}
+.ramt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
 .ramt small{font-size:11px;font-weight:500;color:var(--a-muted-text)}
 
 /* payment detail sheet */
 .scrim{position:absolute;inset:0;background:rgba(10,12,16,.35);display:flex;align-items:flex-end;z-index:5}
 .sheet{background:var(--a-card);width:100%;max-height:85%;overflow-y:auto;border-radius:22px 22px 0 0;padding:18px;display:flex;flex-direction:column;gap:12px}
-.sheet:focus-visible{outline:2px solid var(--a-blue);outline-offset:-2px}
-.sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
-.sheet-head > div:first-child{min-width:0;overflow-wrap:anywhere}
+/* the 28px amount gets its own line, so merchant, product and time are not squeezed (found in LEASH-194) */
+.sheet-head{display:grid;grid-template-columns:40px minmax(0,1fr);gap:4px 12px;align-items:center}
+.sheet-head .ramt{grid-column:1/-1;align-items:flex-start;font-size:var(--fs-amount);font-weight:700}
+.sheet-head .rsub{white-space:normal}
+.why-card{background:var(--hf-canvas);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.overline{font-size:var(--fs-overline);font-weight:600;letter-spacing:var(--ls-overline);text-transform:uppercase;color:var(--a-muted-text)}
+.why-card .source{margin:0;font-family:var(--mono);font-size:10.5px;color:var(--a-muted-text);overflow-wrap:anywhere}
+.sheet-head > div:nth-child(2){min-width:0;overflow-wrap:anywhere}
 .sheet-head .rname{white-space:normal}
 .message{margin:0;font-size:14px}
 .cmp{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
@@ -98,35 +206,80 @@ button{cursor:pointer}
 .st-fail{color:var(--a-bad-text)}
 .st-warn,.st-integrity{color:var(--a-warn-text)}
 .st-info{color:var(--a-muted-text)}
-.untrusted{background:#F6F6F9;border:1px dashed #9A9EA8;border-radius:12px;padding:10px;font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.untrusted{background:var(--hf-canvas);border:1px dashed var(--hf-muted);border-radius:12px;padding:10px;font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere}
 .untrusted b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-muted-text);margin-bottom:4px}
 .link{border:0;background:none;color:var(--a-blue);font-weight:600;padding:8px;align-self:center}
 
 /* Step-up prompt (LEASH-094): full screen over the app, in the 3-D Secure style of the prototype */
 .prompt{position:absolute;inset:0;background:var(--a-card);z-index:20;display:flex;flex-direction:column;padding:56px 24px 30px;gap:12px;overflow-y:auto}
-.prompt:focus-visible{outline:2px solid var(--a-blue);outline-offset:-4px}
 .p-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600}
 .agentbadge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;background:#F0F1F5;border-radius:999px;padding:4px 9px}
 .p-mid{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;margin-top:10px}
-.p-amt{font-size:36px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* step-up prompt (LEASH-192): the customer's turn, in violet; decisions are the LEASH-184 buttons */
+.prompt.your-turn{background:linear-gradient(var(--hf-your-turn-tint) 0 132px,var(--a-card) 132px)}
+.p-turn{align-self:center;font-size:var(--fs-overline);font-weight:600;letter-spacing:var(--ls-overline);color:var(--hf-your-turn-ink)}
+.p-amt{font-size:var(--fs-amount);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .p-shop{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .p-card{font-size:13.5px;color:var(--a-muted-text)}
-.why{background:#F6F6F9;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.why{background:var(--hf-canvas);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
 .why-title{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-muted-text)}
-.why .st-warn{color:var(--a-warn-text)}
+.why .st-warn{color:var(--hf-your-turn-ink);display:flex;gap:6px;align-items:flex-start}
+.why .st-warn svg{width:16px;height:16px;flex:none;margin-top:1px}
+.why .passed{display:flex;flex-wrap:wrap;gap:6px}
 .why .st-pass{color:var(--a-ok-text)}
-.p-foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:4px}
-.p-blocked{margin:0;padding:10px 12px;border-radius:12px;background:var(--a-bad-soft);color:var(--a-bad-text);font-size:13.5px;text-align:center}
+.p-foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:6px}
+.p-foot .btn{width:100%}
+.p-blocked{margin:0;padding:10px 12px;border-radius:12px;background:var(--hf-stopped-tint);color:var(--hf-stopped-ink);font-size:13.5px;text-align:center}
 .p-outcome{margin:auto 0 0;font-size:16px;font-weight:600;text-align:center}
 .timer{font-size:12.5px;color:var(--a-muted-text);font-variant-numeric:tabular-nums;text-align:center;margin:0}
 .pill{border:0;border-radius:999px;background:var(--a-ink);color:#fff;font-weight:700;padding:13px 18px;font-size:15px;width:100%}
 .pill:disabled,.link:disabled{opacity:.4;cursor:not-allowed}
-.pill:focus-visible,.link:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
-.link.later{font-size:13px;color:var(--a-muted-text)}
+.link.later{font-size:13px;color:var(--a-muted-text);min-height:48px}  /* a decision target too (LEASH-192) */
 
 /* Permission screen (LEASH-096) */
 .perm{display:flex;flex-direction:column;gap:12px}
 .perm .card{display:flex;flex-direction:column;gap:10px}
+/* Home (LEASH-198, handoff V1): greeting, the agent's card, quick actions; the Cockpit follows below */
+.view h1.greeting{font-size:var(--fs-greeting);font-weight:700;letter-spacing:-.01em}
+.card-row{display:flex;gap:12px;overflow:hidden}
+/* the handoff's host card colour (V1, DEC-046); a generic card, not any issuer's real design */
+.card-hero{flex:none;width:300px;max-width:calc(100% - 24px);min-height:180px;border-radius:18px;background:#1E2A38;color:#fff;padding:18px;display:flex;flex-direction:column;justify-content:space-between}
+.card-peek{flex:none;width:60px;height:180px;border-radius:18px;background:var(--hf-line)}
+.hero-top{display:flex;justify-content:space-between;align-items:center}
+.hero-chip{width:36px;height:24px;border-radius:5px;background:rgba(255,255,255,.25)}
+.hero-number{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.08em}
+.hero-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.hero-k{font-size:10.5px;color:#D5DAE1}
+.hero-top .hero-k{font-size:12px;font-weight:600}
+.hero-v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.agent-banner{width:100%;min-height:68px;background:var(--a-card);border:1.5px solid var(--hf-line);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;text-align:left}
+.banner-ico{width:40px;height:40px;border-radius:12px;background:var(--hf-divider);color:var(--hf-ink);display:grid;place-items:center;flex:none}
+.banner-ico svg{width:22px;height:22px}
+.banner-text{flex:1;display:flex;flex-direction:column;gap:2px}
+.banner-title{font-size:13px;font-weight:600;color:var(--hf-ink)}
+.banner-sub{font-size:11.5px;color:var(--a-muted-text)}
+.banner-go{font-size:14px;font-weight:600;color:var(--a-muted-text)}
+.tiles-row{display:flex;gap:10px}
+.tile-btn{flex:1;min-width:0;min-height:44px;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10.5px;font-weight:500;color:var(--hf-ink);padding:0}
+.tile-ico{width:52px;height:52px;border-radius:16px;background:var(--a-card);display:grid;place-items:center}
+.tile-ico svg{width:22px;height:22px}
+.tile-btn.dark .tile-ico{background:var(--hf-ink);color:#fff}
+.home-payments{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;scroll-margin-top:8px}
+/* AI agent access status card (handoff V3, LEASH-187) */
+.access{background:var(--hf-ink);color:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.access-over{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:600;letter-spacing:var(--ls-overline);color:#9FA0A8}  /* handoff value, 7.0:1 on ink */
+.access-over .logo-mark{color:#fff}
+.access-head{font-size:24px;font-weight:700;line-height:1.25;letter-spacing:-.02em}
+.perm-tags{display:inline-flex;gap:6px;align-items:center}
+.tiles{display:flex;gap:8px}
+/* V7 decision sheet (LEASH-188): 45% dim, radius-24 top, grab handle, red title, red consequences block */
+.scrim.dim-45{background:rgba(20,21,26,.45)}
+.sheet-v7{border-radius:24px 24px 0 0;padding:10px 18px 22px}
+.sheet-v7 .grab{width:36px;height:4px;border-radius:2px;background:var(--hf-line);margin:0 auto 6px}
+.sheet-title{margin:0;font-size:20px;font-weight:700;color:var(--hf-stopped)}
+.consequences{margin:0;padding:12px 14px 12px 30px;border-radius:12px;background:var(--hf-stopped-tint);color:var(--hf-stopped-ink);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.sheet-v7 .btn-destructive-fill{min-height:54px}
+.rules li.none{color:var(--a-muted-text)}
 .options{display:flex;flex-wrap:wrap;gap:8px}
 .options .pill{width:auto;flex:1 1 auto}
 .notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
@@ -135,11 +288,9 @@ button{cursor:pointer}
 .rules li{display:flex;justify-content:space-between;gap:8px;align-items:center;overflow-wrap:anywhere}
 .small{margin:0;font-size:12.5px;color:var(--a-muted-text)}
 .field{border:1px solid #8A8F99;border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit}
-.field:focus-visible{outline:2px solid var(--a-blue);outline-offset:1px}
 .pill.light{background:var(--a-card);color:var(--a-ink);border:1px solid #8A8F99}  /* 3.3:1, WCAG 1.4.11 */
 .pill.danger{background:var(--a-bad-text)}
 .review-banner{position:absolute;left:12px;right:12px;bottom:84px;z-index:15;border:0;border-radius:14px;background:var(--a-ink);color:#fff;font-weight:700;font-size:14px;padding:12px 14px;text-align:left}
-.review-banner:focus-visible{outline:2px solid var(--a-blue);outline-offset:2px}
 
 /* Engine inspector (LEASH-097): the judges' panel beside the phone. It sits outside the phone screen, so it
    uses the page palette (--panel/--ink/--line), not the in-app --a-* one. Tokens follow prototype/index.html. */

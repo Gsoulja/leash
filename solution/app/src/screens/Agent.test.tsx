@@ -77,7 +77,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Agent screen", () => {
   it("confirm is disabled while questions are open", async () => {
     const calls = await start(draft());
-    const review = screen.getByRole("button", { name: "Review what Viseca will receive" });
+    const review = screen.getByRole("button", { name: "Review permission" });
     expect(review).toBeDisabled();
     expect(screen.getByText(/answer the questions marked/i)).toBeInTheDocument();
     fireEvent.click(review);
@@ -114,7 +114,7 @@ describe("Agent screen", () => {
     expect(posts(calls, "/api/policies/drafts/LD-1/answers")[0].body)
       .toEqual({ answers: [{ question_id: "Q-unsure", answer: "Decline" }] });
     expect(screen.queryByRole("group", { name: /When I'm unsure/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review what Viseca will receive" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Review permission" })).toBeEnabled();
   });
 
   it("a refused free-text answer shows the reason and keeps the question", async () => {
@@ -127,7 +127,7 @@ describe("Agent screen", () => {
     await settle();
     expect(within(group).getByRole("alert")).toHaveTextContent("doesn't answer this question");
     expect(screen.getByRole("group", { name: /When I'm unsure/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review what Viseca will receive" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review permission" })).toBeDisabled();
   });
 
   it("the confirm step shows the exact platform draft, and only Confirm activates it", async () => {
@@ -138,7 +138,7 @@ describe("Agent screen", () => {
         mandate_id: "TM-9", version: 1, status: "active", instruction: INSTRUCTION, rules: READY.rules,
         hard_rules: POSTED.hard_rules, uncertainty_policy: "decline", applies_from: "next run", revocation: null } }],
     });
-    fireEvent.click(screen.getByRole("button", { name: "Review what Viseca will receive" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
     const exact = await screen.findByRole("region", { name: "What Viseca received" });
     expect(within(exact).getByText("PD-77")).toBeInTheDocument();
     expect(within(exact).getByText("authorization.billing_amount_chf <= 50 CHF per purchase")).toBeInTheDocument();
@@ -148,21 +148,130 @@ describe("Agent screen", () => {
     expect(within(unasked).getByText(/two orders at the same shop/)).toBeInTheDocument();
     expect(posts(calls, "/api/policies/drafts/LD-1/confirm")).toEqual([]);  // nothing is active before the tap
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirm this permission" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm permission" }));
     await settle();
     expect(posts(calls, "/api/policies/drafts/LD-1/confirm")[0].body).toEqual({ confirmed: true });
     expect(screen.getByRole("status")).toHaveTextContent("Confirmed. Version 1 is active for runs started from now on.");
-    expect(screen.queryByRole("button", { name: "Confirm this permission" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm permission" })).not.toBeInTheDocument();
   });
 
   it("a submit refused by the service shows why and posts nothing more", async () => {
     await start(READY);
     const calls = stubFetch({ "POST /api/policies/drafts/LD-1/submit": [{ status: 409, body: { error: {
       code: "questions_open", message: "blocking questions remain" } } }] });
-    fireEvent.click(screen.getByRole("button", { name: "Review what Viseca will receive" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
     await settle();
     expect(screen.getByRole("status")).toHaveTextContent("blocking questions remain");
-    expect(screen.queryByRole("button", { name: "Confirm this permission" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm permission" })).not.toBeInTheDocument();
     expect(posts(calls, "/api/policies/drafts/LD-1/confirm")).toEqual([]);
+  });
+});
+
+describe("Agent screen as a conversation (LEASH-190)", () => {
+  it("greets without claiming to search, shop or pay (DEC-033)", () => {
+    stubFetch({});
+    render(wrap(<Agent />));
+    const log = screen.getByRole("log", { name: "Conversation" });
+    expect(log).toHaveTextContent(/Nothing is active until you confirm/);
+    expect(log.textContent).not.toMatch(/search|shopping|I'll buy|I'll pay/i);
+  });
+
+  it("shows the instruction as the customer's turn and each rule as a chip", async () => {
+    await start(draft());
+    const log = screen.getByRole("log", { name: "Conversation" });
+    expect(within(log).getByText(INSTRUCTION).closest(".bubble")).toHaveClass("bubble-customer");
+    const rules = within(log).getByRole("list", { name: "Rules as I read them" });
+    expect(within(rules).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(rules).getAllByText(/^ADDED TO PERMISSION · /)).toHaveLength(2);
+  });
+
+  it("a reload with a stored draft rebuilds the same transcript, without duplicates", async () => {
+    sessionStorage.setItem("leash.draft_id", "LD-1");
+    stubFetch({ "GET /api/policies/drafts/LD-1": [{ status: 200, body: draft() }] });
+    render(wrap(<Agent />));
+    const rules = await screen.findByRole("list", { name: "Rules as I read them" });
+    expect(within(rules).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getAllByText(INSTRUCTION)).toHaveLength(1);
+    expect(screen.getAllByRole("group", { name: /When I'm unsure/ })).toHaveLength(1);
+  });
+});
+
+describe("the consent moment in the chat (LEASH-191)", () => {
+  const TWO_RULES: PlatformDraft = { ...POSTED, hard_rules: [
+    ...POSTED.hard_rules, { field: "items.quantity", operator: "<=", value: 1, scope: "purchase" }] };
+  const ACTIVE = { mandate_id: "TM-9", version: 3, status: "active", instruction: INSTRUCTION, rules: READY.rules,
+                   hard_rules: POSTED.hard_rules, uncertainty_policy: "decline", applies_from: "next run", revocation: null };
+
+  it("confirm is not offered before the draft is posted", async () => {
+    await start(READY);
+    stubFetch({});
+    expect(screen.getByRole("button", { name: "Review permission" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Confirm permission" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "What Viseca received" })).toBeNull();
+  });
+
+  it("summary card lists every posted hard rule", async () => {
+    await start(READY);
+    stubFetch({ "POST /api/policies/drafts/LD-1/submit": [{ status: 200, body: TWO_RULES }] });
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
+    const card = await screen.findByRole("region", { name: "What Viseca received" });
+    expect(within(screen.getByRole("log", { name: "Conversation" })).getByRole("region", { name: "What Viseca received" })).toBe(card);
+    const exact = within(card).getByRole("list", { name: "Exact rules sent to Viseca" });
+    expect(within(exact).getAllByRole("listitem").map((li) => li.textContent)).toEqual(
+      ["authorization.billing_amount_chf <= 50 CHF per purchase", "items.quantity <= 1 per purchase"]);
+    expect(within(card).getByRole("group", { name: "Hard stop at CHF 50.00" })).toBeInTheDocument();
+    expect(card.textContent).not.toMatch(/Face ID|approve every purchase|search|I'll buy/i);
+  });
+
+  it("a confirmed permission posts one active system chip", async () => {
+    await start(READY);
+    stubFetch({ "POST /api/policies/drafts/LD-1/submit": [{ status: 200, body: POSTED }],
+                "POST /api/policies/drafts/LD-1/confirm": [{ status: 200, body: ACTIVE }] });
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm permission" }));
+    await settle();
+    expect(screen.getAllByText("Permission active · version 3")).toHaveLength(1);
+    expect(screen.getByText("Permission active · version 3").closest(".system-chip")).toHaveClass("allowed");
+    expect(screen.queryByRole("button", { name: "Confirm permission" })).toBeNull();
+    expect(screen.getByRole("img", { name: "Agent permission: active" })).toBeInTheDocument();
+  });
+
+  it("a failed confirm stays actionable and says why", async () => {
+    await start(READY);
+    stubFetch({ "POST /api/policies/drafts/LD-1/submit": [{ status: 200, body: POSTED }],
+                "POST /api/policies/drafts/LD-1/confirm": [{ status: 409, body: { error: { code: "stale", message: "draft changed" } } }] });
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm permission" }));
+    await settle();
+    expect(screen.getByRole("status")).toHaveTextContent("draft changed");
+    expect(screen.getByRole("button", { name: "Confirm permission" })).toBeEnabled();
+  });
+
+  it("the header names the assistant and the bar counts the draft's rules", async () => {
+    await start(READY);
+    expect(screen.getByRole("banner", { name: "Permission assistant" })).toHaveTextContent("Setting up your permission");
+    expect(screen.getByRole("img", { name: "Agent permission: none" })).toBeInTheDocument();
+    const bar = screen.getByRole("button", { name: /Permission draft · 2 rules/ });
+    expect(bar).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(bar);
+    expect(bar).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("list", { name: "Rules in this permission" })).toBeInTheDocument();
+  });
+});
+
+describe("the handoff's Do not ship list (LEASH-194)", () => {
+  it("no chat message can alter a confirmed permission: after Confirm the chat takes no input", async () => {
+    await start(READY);
+    stubFetch({ "POST /api/policies/drafts/LD-1/submit": [{ status: 200, body: POSTED }],
+                "POST /api/policies/drafts/LD-1/confirm": [{ status: 200, body: {
+                  mandate_id: "TM-9", version: 1, status: "active", instruction: INSTRUCTION, rules: READY.rules,
+                  hard_rules: POSTED.hard_rules, uncertainty_policy: "decline", applies_from: "next run", revocation: null } }] });
+    fireEvent.click(screen.getByRole("button", { name: "Review permission" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm permission" }));
+    await settle();
+    expect(screen.getByText("Permission active · version 1")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    const buttons = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(buttons.filter((t) => !/^(Permission active · 1 rule|Permission active · \d+ rules|Start a new instruction)/.test(t ?? ""))).toEqual([]);
   });
 });

@@ -6,8 +6,7 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
       <section className="screen" aria-label="Leash app">
         <div className="sbar" aria-hidden="true">
           <span>9:41</span>
-          <span className="island" />
-          <span>100%</span>
+          <span className="sig">●●● ⌁</span>
         </div>
         {children}
       </section>

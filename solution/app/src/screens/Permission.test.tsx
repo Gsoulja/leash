@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import type { Mandate } from "../api/client";
 import { Permission } from "./Permission";
@@ -192,5 +193,108 @@ describe("Permission screen", () => {
     fireEvent.click(button);
     await settle();
     expect(screen.getByRole("status")).toHaveTextContent("This permission is not active.");
+  });
+});
+
+describe("Permission screen as AI agent access (LEASH-187)", () => {
+  const PURCHASE = { field: "authorization.billing_amount_chf", operator: "<=", currency: "CHF", scope: "purchase" } as const;
+
+  it("hard stop tile shows the strictest per-purchase limit", async () => {
+    stubFetch({ "GET /api/mandates": [list(mandate({ hard_rules: [{ ...PURCHASE, value: 400 }, { ...PURCHASE, value: 350 }] }))] });
+    render(wrap(<Permission />));
+    expect(await screen.findByRole("group", { name: "Hard stop at CHF 350.00" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /CHF 400\.00/ })).toBeNull();
+  });
+
+  it("no budget tile without a guidance budget", async () => {
+    stubFetch({ "GET /api/mandates": [list(mandate())] });
+    render(wrap(<Permission />));
+    await screen.findByRole("group", { name: "Hard stop at CHF 400.00" });
+    expect(screen.queryByRole("group", { name: /budget/i })).toBeNull();
+    expect(screen.queryByText(/budget/i)).toBeNull();
+  });
+
+  it("without a per-purchase limit there is no hard stop tile, and the rules say so", async () => {
+    stubFetch({ "GET /api/mandates": [list(mandate({ hard_rules: [{ field: "items.item_id", operator: "in", value: ["IT0017"] }] }))] });
+    render(wrap(<Permission />));
+    expect(await screen.findByText("No limit per order")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /Hard stop at/ })).toBeNull();
+  });
+
+  it.each([
+    [{ status: "active" }, "ACTIVE", "Agent permission: active", "ACTIVE"],
+    [{ status: "revoked", revocation: { platform_confirmed: true } }, "REVOKED", "Agent permission: revoked", "REVOKED"],
+    [{ status: "revoked", revocation: { platform_confirmed: false } }, "REVOCATION NOT CONFIRMED", "Agent permission: active", null],
+    [{ status: "expired" }, "NO ACTIVE PERMISSION", "Agent permission: none", null],
+  ] as const)("the status card for %j reads %s", async (extra, overline, logo, badge) => {
+    stubFetch({ "GET /api/mandates": [list(mandate(extra as Partial<Mandate>))] });
+    render(wrap(<Permission />));
+    const card = await screen.findByRole("region", { name: "AI agent access" });
+    expect(card).toHaveTextContent(overline);
+    expect(screen.getByRole("img", { name: logo })).toBeInTheDocument();
+    if (badge) expect(screen.getByText(badge, { selector: ".badge" })).toBeInTheDocument();
+    else expect(document.querySelector(".badge")).toBeNull();  // "Revoked" only once Viseca confirmed it (DEC-017)
+  });
+});
+
+describe("revoke as a bottom sheet (LEASH-188)", () => {
+  async function openSheet() {
+    stubFetch({ "GET /api/mandates": [list(mandate())] });
+    render(wrap(<Permission />));
+    fireEvent.click(await screen.findByRole("button", { name: "Revoke permission" }));
+    return screen.getByRole("dialog", { name: "Revoke permission?" });
+  }
+
+  it("opens a labelled modal sheet with the consequences", async () => {
+    const sheet = await openSheet();
+    expect(sheet).toHaveAttribute("aria-modal", "true");
+    expect(sheet).toHaveTextContent(/can't pay anything more/i);
+    expect(within(sheet).getByRole("button", { name: "Yes, revoke" })).toHaveClass("btn-decision");
+    expect(within(sheet).getByRole("button", { name: "Keep it" })).toHaveClass("btn-decision");
+  });
+
+  it("revoke sheet is not dismissed by clicking the backdrop", async () => {
+    const sheet = await openSheet();
+    fireEvent.click(sheet.parentElement!);  // the dim
+    expect(screen.getByRole("dialog", { name: "Revoke permission?" })).toBeInTheDocument();
+  });
+
+  it("Escape cancels, like Keep it", async () => {
+    await openSheet();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Revoke permission" }));
+  });
+
+  it("focus returns to Revoke permission after Keep it", async () => {
+    await openSheet();
+    fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Revoke permission" }));
+  });
+
+  it("keeps Tab inside the sheet", async () => {
+    const user = userEvent.setup();
+    const sheet = await openSheet();
+    for (let i = 0; i < 4; i++) {
+      await user.tab();
+      expect(sheet.contains(document.activeElement)).toBe(true);
+    }
+  });
+});
+
+describe("opened from Home's Revoke tile (LEASH-198)", () => {
+  it("shows the revoke sheet straight away, with Yes, revoke focused", async () => {
+    stubFetch({ "GET /api/mandates": [list(mandate())] });
+    render(wrap(<Permission startRevoke />));
+    const sheet = await screen.findByRole("dialog", { name: "Revoke permission?" });
+    expect(within(sheet).getByRole("button", { name: "Yes, revoke" })).toHaveFocus();
+  });
+
+  it("never shows the sheet for a permission that is not active", async () => {
+    stubFetch({ "GET /api/mandates": [list(mandate({ status: "expired" }))] });
+    render(wrap(<Permission startRevoke />));
+    await screen.findByRole("region", { name: "AI agent access" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

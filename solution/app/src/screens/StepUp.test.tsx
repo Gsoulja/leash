@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { Ask, Payment } from "../api/client";
 import { StepUp } from "./StepUp";
@@ -87,7 +87,8 @@ describe("Step-up prompt", () => {
     expect(dialog).toHaveTextContent("CHF 289.00");
     expect(dialog).toHaveTextContent("PixelHarbor AZ-1");
     expect(dialog).toHaveTextContent("Same shop and price as the order at 11:40.");
-    expect(dialog).toHaveTextContent("Price, Known shop: OK");
+    expect(within(dialog).getByText("Price OK")).toBeInTheDocument();  // one chip per passed check (LEASH-192)
+    expect(within(dialog).getByText("Known shop OK")).toBeInTheDocument();
   });
 
   it("counts down from the server's expires_at", async () => {
@@ -319,5 +320,47 @@ describe("Step-up prompt, switching asks", () => {
     const seen = shownAmounts(() => fireEvent.click(screen.getByRole("button", { name: "Decide later" })));
     expect(seen.slice(1).join(" ")).not.toMatch(/289\.00/);  // seen[0] is the frame before the tap
     expect(screen.getByText("CHF 391.50")).toBeInTheDocument();
+  });
+});
+
+describe("step-up prompt in the handoff style (LEASH-192)", () => {
+  it("approve button is at least decision size", () => {
+    stubFetch({});
+    render(wrap(<StepUp asks={[ask("AZ-1")]} />));
+    expect(screen.getByRole("button", { name: "Confirm payment" })).toHaveClass("btn", "btn-approve", "btn-decision");
+    expect(screen.getByRole("button", { name: "Reject" })).toHaveClass("btn", "btn-secondary", "btn-decision");
+    expect(screen.getByRole("button", { name: "Decide later" })).toHaveClass("link", "later");
+  });
+
+  it("every decision target, Decide later included, is at least 48px tall", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const css = readFileSync(resolve(__dirname, "../theme.css"), "utf8");
+    expect(css).toMatch(/\.btn-decision\{[^}]*min-height:48px/);
+    expect(css).toMatch(/\.link\.later\{[^}]*min-height:48px/);
+  });
+
+  it("marks the prompt as the customer's turn, in words", () => {
+    stubFetch({});
+    render(wrap(<StepUp asks={[ask("AZ-1")]} />));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("prompt", "your-turn");
+    expect(within(dialog).getByText("YOUR ANSWER NEEDED")).toBeInTheDocument();
+  });
+
+  it("shows what passed as green chips that say OK", () => {
+    stubFetch({});
+    render(wrap(<StepUp asks={[ask("AZ-1")]} />));
+    const why = screen.getByRole("region", { name: "Why I'm asking" });
+    const chips = within(why).getAllByText(/ OK$/);
+    expect(chips.length).toBeGreaterThan(0);
+    for (const c of chips) expect(c).toHaveClass("chip", "allowed");
+  });
+
+  it("a hard rule that now fails replaces Approve with the reason, in the stopped tone (DEC-012)", () => {
+    stubFetch({});
+    render(wrap(<StepUp asks={[ask("AZ-1", { can_approve: false, cannot_approve_reason: "Over your CHF 400.00 limit." })]} />));
+    expect(screen.queryByRole("button", { name: "Confirm payment" })).toBeNull();
+    expect(screen.getByText("Over your CHF 400.00 limit.")).toHaveClass("p-blocked");
   });
 });

@@ -164,3 +164,35 @@ it("Shift+Tab right after opening stays inside the dialog", async () => {
   await user.tab({ shift: true });
   expect(dialog.contains(document.activeElement)).toBe(true);
 });
+
+describe("payment detail in the handoff style (LEASH-193)", () => {
+  it("why section shows the engine verdict and the recorded outcome as text", async () => {
+    setup(detail());
+    const why = await screen.findByRole("region", { name: "Why" });
+    expect(within(why).getByText("Please check: same order as at 11:40.")).toBeInTheDocument();
+    expect(why.querySelector(".source")).toHaveTextContent("step_up → approved by customer → platform accepted");
+  });
+
+  it("tags the payment as the agent's, with its outcome in words and hue", async () => {
+    setup(detail());
+    await screen.findByText("AGENT");  // the dialog opens before its data arrives
+    const dialog = screen.getByRole("dialog", { name: "Payment details" });
+    expect(within(dialog).getByText("AGENT")).toHaveClass("chip", "agent");
+    expect(within(dialog).getByText("Approved · you approved")).toHaveClass("chip", "allowed");
+  });
+
+  it("never calls an approval settled or delivered (DEC-037)", async () => {
+    setup(detail());
+    await screen.findByText("AGENT");
+    const dialog = screen.getByRole("dialog", { name: "Payment details" });
+    expect(dialog.querySelectorAll(".chip").length).toBeGreaterThan(0);
+    // labels only; the delivery note may say that acceptance is *not* proof of shipping
+    for (const chip of dialog.querySelectorAll(".chip")) expect(chip.textContent).not.toMatch(/paid|settled|delivered|shipped/i);
+  });
+
+  it("a payment with no engine verdict says so rather than inventing one", async () => {
+    setup(detail({ engine_verdict: null, final_state: "not_sent", resolved_by: null, delivery: "refused", platform_outcome: null }));
+    const why = await screen.findByRole("region", { name: "Why" });
+    expect(why.querySelector(".source")).toHaveTextContent("no engine verdict → not_sent → platform refused");
+  });
+});

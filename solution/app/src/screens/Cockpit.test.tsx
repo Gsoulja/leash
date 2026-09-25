@@ -86,6 +86,13 @@ describe("Cockpit", () => {
     expect(within(row).getByText("Waiting for you")).toBeInTheDocument();
   });
 
+  it("tags each payment row as made by the agent (LEASH-186)", async () => {
+    setup([[payment("A", "approved")]]);
+    const row = await screen.findByRole("button", { name: /Shop A/ });
+    expect(within(row).getByText("AGENT")).toHaveClass("chip", "agent");
+    expect(row).toHaveAccessibleName(/Shop A.*CHF .*Approved/);
+  });
+
   it("paid, waiting, blocked, no answer and not sent are distinct", async () => {
     setup([[
       payment("A", "approved"),

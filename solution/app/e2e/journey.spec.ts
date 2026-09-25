@@ -21,6 +21,11 @@ async function runOf(request: APIRequestContext, id: string): Promise<Run> {
   return (await request.get(`/api/runs/${id}`)).json();
 }
 
+// LEASH-194: the redesign is reviewed at phone size; each redesigned surface is captured for a human to compare
+// with the v4 handoff (test-results/…/redesign-*.png).
+test.use({ viewport: { width: 390, height: 800 } });
+const shot = (page: Page, name: string) => page.screenshot({ path: test.info().outputPath(`redesign-${name}.png`) });
+
 const prompt = (page: Page) => page.getByRole("dialog", { name: "Payment waiting for your answer" });
 
 // Every purchase of the run has its engine decision (asks may still be waiting for the customer: a run stays
@@ -79,29 +84,38 @@ async function dismissAsks(page: Page) {
 
 test("the customer controls the agent from instruction to revoke", async ({ page, request }) => {
   await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Hello" })).toBeVisible();  // Home (LEASH-198)
+  await shot(page, "0-home-no-permission");
 
   // 1. Instruction → clarification → the exact platform draft → confirm.
-  await page.getByRole("button", { name: "Agent" }).click();
+  await page.getByRole("button", { name: "Agent", exact: true }).click();
+  await expect(page.getByLabel("What may the agent buy?")).toBeVisible();
+  await shot(page, "1-agent-empty");
   await page.getByLabel("What may the agent buy?").fill(INSTRUCTION);
   await page.getByRole("button", { name: "Read my instruction" }).click();
   const rules = page.getByRole("list", { name: "Rules as I read them" });
   await expect(rules.getByText(/At most CHF 400.00 per order/)).toBeVisible();
+  await shot(page, "2-agent-clarifying");
   const split = page.getByRole("group", { name: /split in two/ });
   await split.getByRole("button", { name: "Yes, ask me" }).click();
   await expect(split).toBeHidden();
-  await page.getByRole("button", { name: "Review what Viseca will receive" }).click();
+  await page.getByRole("button", { name: "Review permission" }).click();
   const posted = page.getByRole("region", { name: "What Viseca received" });
+  await posted.getByText(/^Exact rules/).click();  // the exact posted rules sit behind a disclosure (LEASH-191)
   await expect(posted.getByText("items.item_id in IT0017")).toBeVisible();
   await expect(posted.getByText(/When unsure: ask me/)).toBeVisible();
+  await shot(page, "3-agent-summary");
   expect((await (await request.get("/api/mandates")).json()).current_mandate_id).toBeFalsy();  // nothing active yet
-  await page.getByRole("button", { name: "Confirm this permission" }).click();
+  await page.getByRole("button", { name: "Confirm permission" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Confirmed. Version 1 is active" })).toBeVisible();
+  await shot(page, "4-agent-active");
 
   // 2. A run with this permission: the step-up prompt opens by itself.
   const first = await startRun(request, "SCEN0004");
   expect(first.mandate_version).toBe(1);
   await expect(prompt(page)).toBeVisible({ timeout: 60_000 });
   const shown = await prompt(page).locator(".p-amt").textContent();
+  await shot(page, "5-step-up");
 
   // 3. Reloading mid-journey loses no open ask: every ask waiting before is still offered after (more may arrive).
   const waiting = async () => ((await (await request.get("/api/asks")).json()).asks as { authorization_id: string }[])
@@ -112,7 +126,7 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   await expect(prompt(page)).toBeVisible();
   await expect(prompt(page).locator(".p-amt")).toHaveText(shown ?? "");
   expect(await waiting()).toEqual(expect.arrayContaining(before));
-  const offered = Number((await prompt(page).locator(".agentbadge").textContent())?.match(/of (\d+)/)?.[1] ?? 1);
+  const offered = Number((await prompt(page).locator(".chip.agent").textContent())?.match(/of (\d+)/)?.[1] ?? 1);
   expect(offered).toBeGreaterThanOrEqual(before.length);
 
   // 4. Answer: reject the double charge, confirm the converted order.
@@ -121,17 +135,22 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   await dismissAsks(page);
 
   // 5. The Cockpit shows the outcomes; the manipulated order's detail shows the shop's text as untrusted.
-  await page.getByRole("button", { name: "Cockpit" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   await expect(page.getByRole("button", { name: /PixelHarbor.*CHF 289.00.*You declined/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Paid · you approved/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Approved · you approved/ })).toBeVisible();
+  await page.evaluate(() => document.querySelector(".view")?.scrollTo(0, 0));
+  await shot(page, "6-home");
   await page.getByRole("button", { name: /PixelHarbor.*CHF 520.00.*Blocked/ }).click();
   const detail = page.getByRole("dialog", { name: "Payment details" });
   await expect(detail.getByText("Engine: declined")).toBeVisible();
   await expect(detail.getByText("Shop's text · untrusted")).toBeVisible();
+  await shot(page, "7-payment-detail");
   await detail.getByRole("button", { name: "Close" }).click();
 
   // 6. Tighten: a lower limit, for runs started from now on.
-  await page.getByRole("button", { name: "Permission" }).click();
+  await page.getByRole("button", { name: "Permission", exact: true }).click();
+  await expect(page.getByLabel("New limit per order (CHF)")).toBeVisible();
+  await shot(page, "8-permission");
   await page.getByLabel("New limit per order (CHF)").fill("300");
   await page.getByRole("button", { name: "Lower the limit" }).click();
   await expect(page.getByRole("status")).toHaveText(/The limit is now CHF 300.00 per order/);
@@ -151,19 +170,21 @@ test("the customer controls the agent from instruction to revoke", async ({ page
 
   // 7b. The cockpit shows one run at a time and switches between them (LEASH-133): the converted order the customer
   // confirmed in the first run is over the new CHF 300 limit in the later one.
-  await page.getByRole("button", { name: "Cockpit" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   const runPicker = page.getByLabel("Run", { exact: true });
   await runPicker.selectOption(later.run_id);
   await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Blocked/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Paid · you approved/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Approved · you approved/ })).toHaveCount(0);
   await runPicker.selectOption(first.run_id);
-  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Paid · you approved/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /HarborByte.*CHF 391.50.*Approved · you approved/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /PixelHarbor.*CHF 289.00.*You declined/ })).toBeVisible();
   await expect(runPicker).toHaveValue(first.run_id);
-  await page.getByRole("button", { name: "Permission" }).click();
+  await page.getByRole("button", { name: "Permission", exact: true }).click();
 
   // 8. Revoke, shown only once Viseca confirms.
   await page.getByRole("button", { name: "Revoke permission" }).click();
+  await expect(page.getByRole("dialog", { name: "Revoke permission?" })).toBeVisible();
+  await shot(page, "9-revoke-sheet");
   await page.getByRole("button", { name: "Yes, revoke" }).click();
   await expect(page.getByRole("status")).toHaveText("Revoked. Viseca confirmed: the agent can no longer pay.");
 });

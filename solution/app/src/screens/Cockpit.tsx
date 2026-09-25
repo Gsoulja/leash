@@ -6,9 +6,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { PaymentDetail } from "./PaymentDetail";
-import { stageOf, statusOf, type Stage } from "./status";
+import { stageOf, statusOf, type Stage, type Tone } from "./status";
+import { Icon } from "../components/icons";
+import { Chip, type ChipTone } from "../components/ui/Chip";
 import { PATHS, api, type Payment, type Run, type Spending } from "../api/client";
 import type { RunSelection } from "../api/useSelectedRun";
+
+// status.ts decides the wording and tone; the handoff's hues only repeat it (DEC-044).
+const HUE: Record<Tone, ChipTone> = { ok: "allowed", warn: "attention", bad: "stopped", dim: "neutral", off: "neutral" };
 
 const zurichDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", year: "numeric" });
 const zurichTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", hour: "2-digit", minute: "2-digit" });
@@ -81,11 +86,11 @@ function SpendingCard({ spending, state, payments }: { spending?: Spending; stat
       )}
       <div className="counts">
         {/* "approved", never "paid": the bank accepting a decision is not evidence of settlement. */}
-        <span className="chip ok">{at("accepted", "approved")} approved</span>
-        {at("submitted") > 0 && <span className="chip warn">{at("submitted")} sending</span>}
-        <span className="chip warn">{waiting} waiting for you</span>
-        <span className="chip bad">{blocked} blocked</span>
-        {at("not_sent") > 0 && <span className="chip dim">{at("not_sent")} not accepted</span>}
+        <Chip tone="allowed">{at("accepted", "approved")} approved</Chip>
+        {at("submitted") > 0 && <Chip tone="attention">{at("submitted")} sending</Chip>}
+        <Chip tone="attention">{waiting} waiting for you</Chip>
+        <Chip tone="stopped">{blocked} blocked</Chip>
+        {at("not_sent") > 0 && <Chip tone="neutral">{at("not_sent")} not accepted</Chip>}
       </div>
     </section>
   );
@@ -97,15 +102,15 @@ function PaymentRow({ payment, onOpen }: { payment: Payment; onOpen: (id: string
   const more = payment.items.length > 1 ? ` +${payment.items.length - 1}` : "";
   return (
     <button type="button" className="row" onClick={() => onOpen(payment.authorization_id)}>
-      <div className="ico" aria-hidden="true" />
+      <div className="ico" aria-hidden="true"><Icon name="store" /></div>
       <div className="rmain">
-        <div className="rname">{payment.merchant.name}</div>
+        <div className="rname"><span className="rname-text">{payment.merchant.name}</span> <Chip tone="agent">AGENT</Chip></div>
         <div className="rsub">{zurichTime.format(new Date(payment.sim_time))} · via agent · {first}{more}</div>
       </div>
       <div className="ramt">
         CHF {payment.billing_amount_chf}
         {payment.currency !== "CHF" && <small>{payment.currency} {payment.amount}</small>}
-        <span className={`chip ${tone}`} data-status={tone}>{label}</span>
+        <Chip tone={HUE[tone]} data-status={tone}>{label}</Chip>
       </div>
     </button>
   );
@@ -123,7 +128,7 @@ function RunPicker({ runs, run, onSelect }: { runs: Run[]; run?: Run; onSelect: 
             {runs.map((r) => <option key={r.run_id} value={r.run_id}>{r.scenario_id} · {r.run_id} · {RUN_STATE[r.status]}</option>)}
           </select>
         ) : <div className="k">{run.scenario_id} · {run.run_id}</div>}
-        <span className={`chip ${run.status === "running" ? "ok" : "dim"}`}>{RUN_STATE[run.status]}</span>
+        <Chip tone={run.status === "running" ? "allowed" : "neutral"}>{RUN_STATE[run.status]}</Chip>
       </div>
       {run.status === "finished" && <p className="small">Finished: no more payments will arrive in this run.</p>}
       {run.status === "failed" && <p className="small">Stopped by the platform: no more payments will arrive in this run.</p>}
@@ -132,7 +137,8 @@ function RunPicker({ runs, run, onSelect }: { runs: Run[]; run?: Run; onSelect: 
 }
 
 // The run selection is owned by App.tsx, so the inspector panel beside the phone follows the same run.
-export function Cockpit({ selection }: { selection: RunSelection }) {
+// `showSpending: false` on Home, where the agent banner takes the spending card's place (DEC-046).
+export function Cockpit({ selection, showSpending = true }: { selection: RunSelection; showSpending?: boolean }) {
   const { payments, spending, spendingState, loading, failed } = useCockpitData(selection.runId);
   const [open, setOpen] = useState<string | null>(null);
   const byDay = new Map<string, Payment[]>();
@@ -146,7 +152,7 @@ export function Cockpit({ selection }: { selection: RunSelection }) {
   return (
     <>
       <RunPicker runs={selection.runs} run={selection.run} onSelect={selection.select} />
-      <SpendingCard spending={spending} state={spendingState} payments={payments} />
+      {showSpending && <SpendingCard spending={spending} state={spendingState} payments={payments} />}
       {failed && <p className="empty">Payments couldn't be loaded right now.</p>}
       {!loading && !failed && payments.length === 0 && <p className="empty">No agent payments in this run yet.</p>}
       {[...byDay].map(([day, list]) => (

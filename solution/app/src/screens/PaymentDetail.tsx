@@ -3,12 +3,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
-import { deliveryNote, statusOf } from "./status";
+import { deliveryNote, statusOf, type Tone } from "./status";
+import { Icon } from "../components/icons";
+import { Chip, type ChipTone } from "../components/ui/Chip";
 
 const STATUS: Record<string, string> = { pass: "Passed", fail: "Failed", warn: "Check", info: "Info", integrity: "Check" };
 // What stopped the payment reads first: failed and doubtful rows, then info, then passed ones.
 const RANK: Record<string, number> = { fail: 0, integrity: 1, warn: 2, info: 3, pass: 4 };
 const ENGINE: Record<string, string> = { approve: "Engine: approved", decline: "Engine: declined", step_up: "Engine: asked you" };
+const HUE: Record<Tone, ChipTone> = { ok: "allowed", warn: "attention", bad: "stopped", dim: "neutral", off: "neutral" };
+
+// The mono source line of the "Why" section: the recorded facts in order, as the API names them (handoff V5).
+function source(p: { engine_verdict: string | null; final_state: string; resolved_by: string | null; delivery: string | null }) {
+  const parts = [p.engine_verdict ?? "no engine verdict", p.resolved_by ? `${p.final_state} by ${p.resolved_by}` : p.final_state];
+  if (p.delivery) parts.push(`platform ${p.delivery}`);
+  return parts.join(" → ");
+}
+
 const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Zurich", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function PaymentDetail({ authorizationId, onClose }: { authorizationId: string; onClose: () => void }) {
@@ -57,8 +68,10 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
         {p && (
           <>
             <div className="sheet-head">
+              <div className="ico" aria-hidden="true"><Icon name="store" /></div>
               <div>
                 <div className="rname">{p.merchant.name}</div>
+                {p.items[0] && <div className="rsub">{p.items.map((i) => i.name).join(" + ")}</div>}
                 <div className="rsub">{when.format(new Date(p.sim_time))}{p.merchant.city ? ` · ${p.merchant.city}` : ""}, {p.merchant.country}</div>
               </div>
               <div className="ramt">
@@ -67,11 +80,16 @@ export function PaymentDetail({ authorizationId, onClose }: { authorizationId: s
               </div>
             </div>
             <div className="counts">
-              {p.engine_verdict && <span className="chip dim">{ENGINE[p.engine_verdict]}</span>}
-              <span className={`chip ${statusOf(p)[1]}`}>{statusOf(p)[0]}</span>
+              <Chip tone="agent">AGENT</Chip>
+              <Chip tone={HUE[statusOf(p)[1]]}>{statusOf(p)[0]}</Chip>
+              {p.engine_verdict && <Chip tone="neutral">{ENGINE[p.engine_verdict]}</Chip>}
             </div>
-            {p.customer_message && <p className="message">{p.customer_message}</p>}
-            {deliveryNote(p) && <p className="small">{deliveryNote(p)}</p>}
+            <section className="why-card" aria-label="Why">
+              <div className="overline">Why</div>
+              {p.customer_message && <p className="message">{p.customer_message}</p>}
+              {deliveryNote(p) && <p className="small">{deliveryNote(p)}</p>}
+              <p className="source">{source(p)}</p>
+            </section>
             {p.checks.length > 0 && (
               <table className="cmp" aria-label="What you agreed vs this payment">
                 <thead>

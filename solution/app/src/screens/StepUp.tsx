@@ -11,6 +11,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Ask, type Payment } from "../api/client";
+import { Icon } from "../components/icons";
+import { Button } from "../components/ui/Button";
+import { Chip } from "../components/ui/Chip";
 
 const ARM_MS = 800;
 const ANSWER_TIMEOUT_MS = 15_000;
@@ -186,11 +189,12 @@ export function StepUp({ asks }: { asks: Ask[] }) {
   }
 
   return (
-    <div className="prompt" role="dialog" aria-modal="true" aria-label="Payment waiting for your answer" tabIndex={-1}
+    <div className="prompt your-turn" role="dialog" aria-modal="true" aria-label="Payment waiting for your answer" tabIndex={-1}
          ref={dialog}>
+      <div className="p-turn">YOUR ANSWER NEEDED</div>
       <div className="p-top">
         <span>{p.sim_time ? when.format(new Date(p.sim_time)) : ""}</span>
-        <span className="agentbadge">AI agent{waiting.length > 1 ? ` · 1 of ${waiting.length}` : ""}</span>
+        <Chip tone="agent">AI agent{waiting.length > 1 ? ` · 1 of ${waiting.length}` : ""}</Chip>
       </div>
       <div className="p-mid">
         <div className="p-amt">CHF {p.billing_amount_chf}</div>
@@ -201,8 +205,10 @@ export function StepUp({ asks }: { asks: Ask[] }) {
       </div>
       <section className="why" aria-label="Why I'm asking">
         <b className="why-title">Why I'm asking</b>
-        {ask.reasons.map((r) => <div key={r} className="st-warn"><span>{r}</span></div>)}
-        {ask.passed.length > 0 && <div className="st-pass"><span>{ask.passed.join(", ")}: OK</span></div>}
+        {ask.reasons.map((r) => <div key={r} className="st-warn"><Icon name="ask" /><span>{r}</span></div>)}
+        {ask.passed.length > 0 && (
+          <div className="passed">{ask.passed.map((c) => <Chip key={c} tone="allowed">{c} OK</Chip>)}</div>
+        )}
       </section>
       <div className="p-foot">
         <p className="timer">
@@ -210,8 +216,8 @@ export function StepUp({ asks }: { asks: Ask[] }) {
             : "The time may have run out. You can still answer; the platform decides whether it counts."}
         </p>
         <div aria-live="polite">{reason && <p className="p-blocked">{reason}</p>}</div>
-        {!reason && <button type="button" className="pill" disabled={busy || !armed} onClick={() => answer("approve")}>Confirm payment</button>}
-        <button type="button" className="link" disabled={busy || !armed} onClick={() => answer("decline")}>Reject</button>
+        {!reason && <Button variant="approve" decision disabled={busy || !armed} onClick={() => answer("approve")}>Confirm payment</Button>}
+        <Button variant="secondary" decision disabled={busy || !armed} onClick={() => answer("decline")}>Reject</Button>
         <button type="button" className="link later" disabled={busy} onClick={deferCurrent}>Decide later</button>
       </div>
     </div>
