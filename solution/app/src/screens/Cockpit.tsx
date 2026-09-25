@@ -136,10 +136,19 @@ function RunPicker({ runs, run, onSelect, names }: { runs: Run[]; run?: Run; onS
 }
 
 // The run selection is owned by App.tsx, so the inspector panel beside the phone follows the same run.
+function useRunMandate(selection: RunSelection) {
+  return useQuery({ queryKey: ["mandate", selection.run?.mandate_id], enabled: !!selection.run,
+    queryFn: () => api().mandate(selection.run!.mandate_id) });
+}
+
+/** The logo mark in front of the Cockpit heading: its dot shows the selected run's permission status. */
+export function CockpitMark({ selection }: { selection: RunSelection }) {
+  return <LogoMark state={logoState(useRunMandate(selection).data?.status)} size={24} />;
+}
+
 export function Cockpit({ selection, onPermission, onChat }: { selection: RunSelection; onPermission?: () => void; onChat?: () => void }) {
   const { payments, spending, spendingState, loading, failed } = useCockpitData(selection.runId);
-  const mandate = useQuery({ queryKey: ["mandate", selection.run?.mandate_id], enabled: !!selection.run,
-    queryFn: () => api().mandate(selection.run!.mandate_id) });
+  const mandate = useRunMandate(selection);
   const versions = useQuery({ queryKey: ["mandateVersions", selection.run?.mandate_id], enabled: !!selection.run,
     queryFn: () => api().mandateVersions(selection.run!.mandate_id) });
   const catalogue = useQuery({ queryKey: ["scenarios"], enabled: !!selection.run, queryFn: () => api().scenarios() });
@@ -163,7 +172,7 @@ export function Cockpit({ selection, onPermission, onChat }: { selection: RunSel
       <section className="card cockpit-status" aria-label="Agent spending status">
         <div className="k">{catalogue.data?.scenarios?.find((s) => s.scenario_id === selection.run?.scenario_id)?.scenario_name ?? "Shopping simulation"}</div>
         <h2>{selection.run?.status === "finished" ? "Simulation finished" : selection.run?.status === "failed" ? "Simulation stopped" : "Simulation running"}</h2>
-        <div className="counts"><LogoMark state={logoState(mandate.data?.status)} size={24} /><span className={`chip ${mandate.data?.status === "active" ? "ok" : "dim"}`}>
+        <div className="counts"><span className={`chip ${mandate.data?.status === "active" ? "ok" : "dim"}`}>
           {mandate.data?.status ? permissionStatus(mandate.data) : mandate.isError ? "Permission status unavailable" : "Checking permission…"}</span>
           <span className="chip dim">Uses version {selection.run?.mandate_version}</span></div>
         {limit !== null && <p className="order-boundary">CHF {limit.toFixed(2)} <span>per order{snapshot?.hard_rules.some((r) => r.field === "authorization.billing_amount_chf" && r.operator === "<" && r.value === limit && !r.period_days) ? " · strictly below this amount" : " maximum"}</span></p>}

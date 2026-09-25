@@ -83,10 +83,10 @@ test("the customer controls the agent from instruction to revoke", async ({ page
   // 1. Conversation → clarification → the exact platform draft → confirm (LEASH-145).
   await page.getByRole("button", { name: "Agent" }).click();
   const composer = page.getByRole("region", { name: "Say something" });
-  await expect(page.getByText(/I'm Leash, your permission assistant/)).toBeVisible();
+  await expect(page.getByText(/I'm your Wallet Control, your permission assistant/)).toBeVisible();
   await composer.getByRole("textbox").fill(INSTRUCTION);
   await composer.getByRole("button", { name: "Send" }).click();
-  // the customer's own words stay on screen as their message, beside how Leash read them
+  // the customer's own words stay on screen as their message, beside how Wallet Control read them
   await expect(page.locator(".bubble.me .message").first()).toHaveText(INSTRUCTION);
   const rules = page.getByRole("list", { name: "Rules as I read them" });
   await expect(rules.getByText(/At most CHF 400.00 per order/)).toBeVisible();

@@ -1,4 +1,4 @@
-// Agent screen (LEASH-092, rebuilt as a conversation for LEASH-145): the customer talks to Leash's
+// Agent screen (LEASH-092, rebuilt as a conversation for LEASH-145): the customer talks to Wallet Control's
 // permission assistant, sees how it reads each thing they say, answers what is unclear, and only then
 // reviews exactly what was posted to Viseca and confirms. Nothing is active, and nothing can be paid,
 // before the explicit Confirm. The draft lives in the policy service (LEASH-123); this screen keeps its
@@ -20,7 +20,7 @@ const TALK = "leash.talk";
 const UNSURE = { ask: "ask me", decline: "decline", approve: "approve" } as const;
 
 const GREETING =
-  "I'm Leash, your permission assistant. Tell me what the shopping agent may buy with your card — " +
+  "I'm your Wallet Control, your permission assistant. Tell me what the shopping agent may buy with your card — " +
   "I don't search or buy anything myself, I only set the boundaries it has to stay inside.";
 
 /** The order things happened in this tab. What is *true* comes from the draft; this only orders it.
@@ -105,13 +105,13 @@ function Clarification({ q, busy, onAnswer }: { q: Question; busy: boolean;
   return (
     <div role="group" aria-labelledby={id} className="bubble leash question">
       <div className="question-heading">
-        <div className="who">Leash</div>
+        <div className="who">Wallet Control agent</div>
         <span className={q.blocking ? "chip ask" : "chip dim"}>{q.blocking ? "Needs your answer" : "Optional"}</span>
       </div>
       <p id={id} className="message">{questionText(q.text)}</p>
       {q.origin === "model" && (
         // DEC-045, LEASH-174: this sentence is the assistant's own prose, not generated from a rule or
-        // a registry field. Unlabelled it reads like one of Leash's deterministic questions, and the
+        // a registry field. Unlabelled it reads like one of Wallet Control's deterministic questions, and the
         // customer cannot tell which of the two they are answering.
         <p className="small from-background">
           <span className="chip dim">In my own words</span>{" "}
@@ -361,7 +361,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       <header className="chat-header">
         {onBack && <button className="chat-back" type="button" aria-label="Back to Cockpit" onClick={onBack}><Icon name="back" /></button>}
         <div className="chat-avatar" aria-hidden="true"><LogoMark state={confirmedId ? "active" : "idle"} size={24} onDark /></div>
-        <div className="chat-heading"><h1>Leash</h1><p>{activity ?? (query.isLoading ? "Loading your conversation…" : confirmedId ? "Permission confirmed" : "Let’s set your shopping boundaries")}</p></div>
+        <div className="chat-heading"><h1>Wallet Control agent</h1><p>{activity ?? (query.isLoading ? "Loading your conversation…" : confirmedId ? "Permission confirmed" : "Let’s set your shopping boundaries")}</p></div>
         {draftId !== null && <details className="chat-menu">
           <summary aria-label="Conversation options">•••</summary>
           <div className="chat-menu-actions">
@@ -382,7 +382,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
         </div>
       </div>
       <div className="chat-messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions">
-      <Bubble from="leash" label="Leash">
+      <Bubble from="leash" label="Wallet Control agent">
         <p className="message">{GREETING}</p>
       </Bubble>
 
@@ -409,7 +409,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
         </section>
       )}
       {transcript.map((line) => (
-        <Bubble key={line.key} from={line.who} label={line.who === "leash" ? "Leash" : undefined}>
+        <Bubble key={line.key} from={line.who} label={line.who === "leash" ? "Wallet Control agent" : undefined}>
           {line.snapshot ? <details className="chat-details">
             <summary>Earlier draft · revision {line.snapshot.revision}</summary>
             <p className="small">Replaced by a later draft. These are historical rules.</p>
@@ -422,7 +422,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {query.isLoading && <div className="chat-loading" role="status"><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span>Restoring your saved conversation…</div>}
 
       {query.isError && (
-        <Bubble from="leash" label="Leash">
+        <Bubble from="leash" label="Wallet Control agent">
           <p role="alert" className="p-blocked">I couldn't load your draft, so I can't show you where it
             got to. Nothing becomes active without your confirmation.</p>
           <button type="button" className="btn ghost" onClick={startOver}>Start a new conversation</button>
@@ -430,7 +430,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       )}
 
       {d && (
-        <Bubble from="leash" label="Leash">
+        <Bubble from="leash" label="Wallet Control agent">
           <p className="message">{confirmedId ? "Your confirmed permission." : "Got it. Here is the draft interpretation. Nothing is active yet."}</p>
           {d.assistant?.history_checked && <p className="small">{d.assistant.history_checked}</p>}
           <div className="sum-row">
@@ -459,18 +459,18 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
           above, so rendering the exchanges and the in-flight message here is what puts the
           conversation in the order it happened — before this, every acknowledgement (DEC-059) and
           history answer appeared above the draft it replied to, which read as the customer's messages
-          bunched together with Leash answering at the end. Earlier revisions stay interleaved inside
+          bunched together with Wallet Control answering at the end. Earlier revisions stay interleaved inside
           `transcript`; this is the current one, which is always the latest thing to have happened. */}
       {(talk.history ?? []).map((exchange, i) => (
         <div key={`preface-${i}`}>
           <Bubble from="me"><p className="message">{exchange.text}</p></Bubble>
-          <Bubble from="leash" label="Leash · history checked"><p className="message">{exchange.reply}</p></Bubble>
+          <Bubble from="leash" label="Wallet Control agent · history checked"><p className="message">{exchange.reply}</p></Bubble>
         </div>
       ))}
       {(!d?.revisions?.length ? d?.messages ?? [] : []).map((exchange, i) => (
         <div key={`history-${i}`}>
           <Bubble from="me"><p className="message">{exchange.text}</p></Bubble>
-          <Bubble from="leash" label="Leash · history checked"><p className="message">{exchange.reply}</p></Bubble>
+          <Bubble from="leash" label="Wallet Control agent · history checked"><p className="message">{exchange.reply}</p></Bubble>
         </div>
       ))}
 
@@ -487,7 +487,7 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       )}
 
       {message && (
-        <Bubble from="leash" label="Leash">
+        <Bubble from="leash" label="Wallet Control agent">
           <p role="alert" className="p-blocked">{message}</p>
           <p className="small">
             {posted
@@ -571,13 +571,13 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
                 checkout it sends and ask you about anything the boundaries don't settle.</p>
             : <>
                 <button type="button" className="btn primary" disabled={busy} onClick={() => handOff()}>Start shopping</button>
-                <p className="small">Leash checks each checkout; the simulated platform records whether it accepts
+                <p className="small">Wallet Control checks each checkout; the simulated platform records whether it accepts
                   the decision. A started run is not proof of a real merchant integration, and no real payment is made.</p>
               </>}
         </section>
       )}
       {done && (
-        <Bubble from="leash" label="Leash">
+        <Bubble from="leash" label="Wallet Control agent">
           <p className="message" role="status">{done}</p>
           <p className="small">Nothing is bought yet. When the shopping agent checks out, I check it
             against these boundaries and ask you about anything they don't settle.</p>
@@ -589,9 +589,9 @@ export function Agent({ onRunStarted, onBack }: { onRunStarted?: (id: string) =>
       {!posted && !confirmedId && (
         <section className="composer" aria-label="Say something">
           <label className="k" htmlFor="composer">
-            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking ? "Reply to Leash" : "Anything to add or change?"}
+            {editing ? "Correct your task — a fresh review is required" : draftId === null ? "What may the agent buy?" : asking ? "Reply to Wallet Control" : "Anything to add or change?"}
           </label>
-          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing ? "Your answer or question…" : "Message Leash…"} aria-describedby={asking && !editing ? `q-${asking.question_id}` : undefined} value={composer}
+          <div className="composer-input"><textarea id="composer" ref={composerInput} className="field" rows={2} placeholder={asking && !editing ? "Your answer or question…" : "Message Wallet Control…"} aria-describedby={asking && !editing ? `q-${asking.question_id}` : undefined} value={composer}
                     onChange={(e) => setComposer(e.target.value)} />
           <button type="button" className="btn primary" disabled={busy || sending !== null || !composer.trim()}
                   onClick={() => say(composer.trim())} aria-label="Send"><Icon name="send" /></button></div>

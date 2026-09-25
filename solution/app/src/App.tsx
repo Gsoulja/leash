@@ -7,7 +7,7 @@ import { PhoneFrame } from "./components/PhoneFrame";
 import { TABS, TabBar, type Tab } from "./components/TabBar";
 import { Inspector } from "./inspector/Inspector";
 import { Agent } from "./screens/Agent";
-import { Cockpit } from "./screens/Cockpit";
+import { Cockpit, CockpitMark } from "./screens/Cockpit";
 import { Permission } from "./screens/Permission";
 import { StepUp } from "./screens/StepUp";
 
@@ -28,7 +28,7 @@ function Shell() {
     <div className="shell">
       <PhoneFrame>
         <main className={`view${tab === "agent" ? " chat-view" : ""}`}>
-          {tab !== "agent" && <h1>{label}</h1>}
+          {tab === "home" ? <h1 className="with-mark"><CockpitMark selection={selection} />{label}</h1> : tab !== "agent" && <h1>{label}</h1>}
           {tab === "home" ? <Cockpit selection={selection} onPermission={() => setTab("rules")} onChat={() => setTab("agent")} /> : tab === "rules" ? <Permission selectedRun={selection.run} onChat={() => setTab("agent")} /> : <Agent onBack={() => setTab("home")} onRunStarted={(id) => { selection.select(id); setTab("home"); }} />}
         </main>
         {tab !== "agent" && <TabBar current={tab} onSelect={setTab} />}
